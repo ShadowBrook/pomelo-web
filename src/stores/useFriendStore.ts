@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import * as api from '@/utils/api';
+import type { FriendNotify, FriendDeleteNotify } from '@/sdk/types';
+import { getIMClient } from '@/hooks/useIMClient';
 
 export interface Friend {
   userId: string;
@@ -38,6 +40,11 @@ interface FriendState {
   removeFriend: (userId: string, friendId: string) => Promise<{ success: boolean; message: string }>;
   clearSearchResults: () => void;
   clearError: () => void;
+
+  // Notify 处理（由 useIMClient 事件桥接调用）
+  onFriendRequestReceived: (notify: FriendNotify) => void;
+  onFriendAccepted: (notify: FriendNotify) => void;
+  onFriendDeleted: (notify: FriendDeleteNotify) => void;
 }
 
 export const useFriendStore = create<FriendState>()((set) => ({
@@ -47,6 +54,7 @@ export const useFriendStore = create<FriendState>()((set) => ({
   loading: false,
   error: null,
 
+  // HTTP 接口仍保留：首次加载与离线补全
   loadFriends: async (userId: string) => {
     try {
       set({ loading: true, error: null });
@@ -67,6 +75,7 @@ export const useFriendStore = create<FriendState>()((set) => ({
     }
   },
 
+  // 以下 4 个 action 已迁移到 WebSocket SDK
   searchUsers: async (keyword: string) => {
     if (!keyword.trim()) {
       set({ searchResults: [] });
@@ -74,16 +83,25 @@ export const useFriendStore = create<FriendState>()((set) => ({
     }
     try {
       set({ loading: true, error: null });
-      const res = await api.searchUsers(keyword);
+      const client = getIMClient();
+      if (!client) {
+        set({ loading: false, error: 'IMClient 未连接' });
+        return;
+      }
+      const res = await client.searchUsers(keyword);
       set({ searchResults: res.users || [], loading: false });
     } catch (e: any) {
       set({ loading: false, error: e.message || '搜索失败' });
     }
   },
 
-  sendFriendRequest: async (userId: string, friendId: string) => {
+  sendFriendRequest: async (_userId: string, friendId: string) => {
     try {
-      const res = await api.addFriend(userId, friendId);
+      const client = getIMClient();
+      if (!client) {
+        return { success: false, message: 'IMClient 未连接' };
+      }
+      const res = await client.addFriend(friendId);
       if (res.code === 0) {
         return { success: true, message: '好友申请已发送' };
       }
@@ -93,9 +111,13 @@ export const useFriendStore = create<FriendState>()((set) => ({
     }
   },
 
-  acceptFriendRequest: async (userId: string, friendId: string) => {
+  acceptFriendRequest: async (_userId: string, friendId: string) => {
     try {
-      const res = await api.acceptFriend(userId, friendId);
+      const client = getIMClient();
+      if (!client) {
+        return { success: false, message: 'IMClient 未连接' };
+      }
+      const res = await client.acceptFriend(friendId);
       if (res.code === 0) {
         // 从待处理列表中移除
         set((state) => ({
@@ -109,11 +131,15 @@ export const useFriendStore = create<FriendState>()((set) => ({
     }
   },
 
-  removeFriend: async (userId: string, friendId: string) => {
+  removeFriend: async (_userId: string, friendId: string) => {
     try {
-      const res = await api.removeFriend(userId, friendId);
+      const client = getIMClient();
+      if (!client) {
+        return { success: false, message: 'IMClient 未连接' };
+      }
+      const res = await client.deleteFriend(friendId);
       if (res.code === 0) {
-        // 从好友列表中移除
+        // 从好友列表中移除（Notify 也会触发，过滤是幂等的）
         set((state) => ({
           friends: state.friends.filter((f) => f.userId !== friendId),
         }));
@@ -127,4 +153,56 @@ export const useFriendStore = create<FriendState>()((set) => ({
 
   clearSearchResults: () => set({ searchResults: [] }),
   clearError: () => set({ error: null }),
+
+  // ================================================================
+  // Notify 处理器（由 useIMClient 的事件监听调用）
+  // ================================================================
+
+  onFriendRequestReceived: (notify: FriendNotify) => {
+    set((state) => {
+      // 去重：如果已存在相同 userId 的待处理申请，不重复添加
+      if (state.pendingRequests.some((r) => r.userId === notify.userId)) {
+        return state;
+      }
+      return {
+        pendingRequests: [
+          ...state.pendingRequests,
+          {
+            userId: notify.userId,
+            nickname: notify.nickname,
+            avatar: notify.avatar,
+            requestedAt: Date.now(),
+          },
+        ],
+      };
+    });
+  },
+
+  onFriendAccepted: (notify: FriendNotify) => {
+    set((state) => {
+      // 如果好友列表已有该用户，不重复添加
+      if (state.friends.some((f) => f.userId === notify.userId)) {
+        return state;
+      }
+      return {
+        friends: [
+          ...state.friends,
+          {
+            userId: notify.userId,
+            nickname: notify.nickname,
+            avatar: notify.avatar,
+            online: true, // 能推送 Notify 说明对方在线
+            friendedAt: Date.now(),
+          },
+        ],
+      };
+    });
+  },
+
+  onFriendDeleted: (notify: FriendDeleteNotify) => {
+    set((state) => ({
+      friends: state.friends.filter((f) => f.userId !== notify.userId),
+    }));
+  },
 }));
+

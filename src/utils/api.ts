@@ -67,37 +67,6 @@ export async function getFriends(userId: string) {
   >(`/friends/${userId}`);
 }
 
-// 搜索用户（按 userId 或昵称模糊匹配）
-export async function searchUsers(keyword: string) {
-  return request<{ userId: string; nickname: string; avatar: string }[]>(
-    `/user/search?keyword=${encodeURIComponent(keyword)}`
-  );
-}
-
-// 发起好友申请
-export async function addFriend(userId: string, friendId: string) {
-  return request('/friends/add', {
-    method: 'POST',
-    body: JSON.stringify({ userId, friendId }),
-  });
-}
-
-// 同意好友申请
-export async function acceptFriend(userId: string, friendId: string) {
-  return request('/friends/accept', {
-    method: 'POST',
-    body: JSON.stringify({ userId, friendId }),
-  });
-}
-
-// 删除好友（双向）
-export async function removeFriend(userId: string, friendId: string) {
-  return request('/friends/remove', {
-    method: 'DELETE',
-    body: JSON.stringify({ userId, friendId }),
-  });
-}
-
 // 获取待处理的好友申请
 export async function getPendingFriends(userId: string) {
   return request<
