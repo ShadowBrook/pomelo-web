@@ -6,6 +6,12 @@ interface Props {
   messages: ChatMessage[];
   currentUserId: string;
   onRetry?: (messageId: string) => void;
+  // 滚动到顶部时加载更早的历史消息
+  onLoadMore?: () => void;
+  // 是否正在加载历史（用于显示提示 + 阻止重复触发）
+  loadingHistory?: boolean;
+  // 是否还有更早的历史可加载
+  hasMore?: boolean;
 }
 
 function shouldShowTimeDivider(prev: ChatMessage | null, curr: ChatMessage): boolean {
@@ -22,23 +28,69 @@ function formatDividerTime(ts: number): string {
   return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-export function MessageList({ messages, currentUserId, onRetry }: Props) {
+export function MessageList({
+  messages,
+  currentUserId,
+  onRetry,
+  onLoadMore,
+  loadingHistory = false,
+  hasMore = false,
+}: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // 加载历史前的滚动位置（用于加载完成后恢复，避免内容跳动）
+  const prevScrollHeightRef = useRef(0);
+  const prevScrollTopRef = useRef(0);
 
+  // 滚动事件：到顶部时触发加载更早的历史
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!el) return;
+    // 50px 阈值，避免边界抖动
+    if (el.scrollTop < 50 && onLoadMore && !loadingHistory && hasMore && prevScrollHeightRef.current === 0) {
+      // 保存加载前的滚动尺寸，便于加载后恢复
+      prevScrollHeightRef.current = el.scrollHeight;
+      prevScrollTopRef.current = el.scrollTop;
+      onLoadMore();
+    }
+  };
+
+  // 历史加载完成（loadingHistory 从 true 变 false）时恢复滚动位置
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = scrollRef.current;
+    if (!el) return;
+    if (!loadingHistory && prevScrollHeightRef.current > 0) {
+      const newScrollHeight = el.scrollHeight;
+      el.scrollTop = newScrollHeight - prevScrollHeightRef.current + prevScrollTopRef.current;
+      prevScrollHeightRef.current = 0;
+      prevScrollTopRef.current = 0;
+    }
+  }, [loadingHistory]);
+
+  // 新消息到达时自动滚动到底部；历史加载恢复期间不滚动，避免跳动
+  useEffect(() => {
+    if (prevScrollHeightRef.current === 0) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-wechat-text-secondary text-sm">
-        暂无消息记录
+        {loadingHistory ? '加载历史消息...' : '暂无消息记录'}
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto py-3">
+    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto py-3">
+      {/* 顶部加载提示 */}
+      {loadingHistory && (
+        <div className="text-center py-2">
+          <span className="text-xs text-wechat-text-secondary">加载历史消息...</span>
+        </div>
+      )}
       {messages.map((msg, idx) => {
         const prev = idx > 0 ? messages[idx - 1] : null;
         const showTime = shouldShowTimeDivider(prev, msg);
