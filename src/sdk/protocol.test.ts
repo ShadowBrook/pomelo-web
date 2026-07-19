@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { encode, decode, generateId } from './protocol';
-import { Cmd, MAGIC, VERSION, CODEC_JSON } from './types';
+import { Cmd, VERSION, CODEC_JSON } from './types';
 
 describe('protocol encode/decode', () => {
   const userId = 'alice';

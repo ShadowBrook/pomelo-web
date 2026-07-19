@@ -103,9 +103,9 @@ export function decode(buffer: ArrayBuffer): {
     throw new Error(`Invalid magic: 0x${magic.toString(16)}, expected 0x${MAGIC.toString(16)}`);
   }
 
-  // version + codecId
-  const _version = view.getUint8(p); p += 1;
-  const _codecId = view.getUint8(p); p += 1;
+  // version + codecId（解析后未使用，仅跳过字节）
+  p += 1; // version
+  p += 1; // codecId
 
   // cmd
   const cmd = view.getInt32(p, false); p += 4;

@@ -7,7 +7,7 @@ interface Props {
 
 export function SearchBar({ placeholder = '搜索', onSearch }: Props) {
   const [value, setValue] = useState('');
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const handleChange = (v: string) => {
     setValue(v);

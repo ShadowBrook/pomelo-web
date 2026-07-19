@@ -35,3 +35,5 @@ export function EmojiPicker({ onSelect, onClose }: Props) {
     </div>
   );
 }
+
+export default EmojiPicker;
