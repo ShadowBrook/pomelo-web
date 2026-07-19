@@ -25,6 +25,19 @@ export enum Cmd {
   ACK_REQ = 0x0052,
   ACK_RESP = 0x0053,
   ACK_NOTIFY = 0x0054,
+
+  // 好友相关命令字 0x0060-0x006A
+  FRIEND_SEARCH_REQ = 0x0060,
+  FRIEND_SEARCH_RESP = 0x0061,
+  FRIEND_ADD_REQ = 0x0062,
+  FRIEND_ADD_RESP = 0x0063,
+  FRIEND_ADD_NOTIFY = 0x0064,
+  FRIEND_ACCEPT_REQ = 0x0065,
+  FRIEND_ACCEPT_RESP = 0x0066,
+  FRIEND_ACCEPT_NOTIFY = 0x0067,
+  FRIEND_DELETE_REQ = 0x0068,
+  FRIEND_DELETE_RESP = 0x0069,
+  FRIEND_DELETE_NOTIFY = 0x006A,
 }
 
 // 消息类型
@@ -84,4 +97,35 @@ export interface IMClientEvents {
   connectionChange: (state: ConnectionState) => void;
   kicked: (reason: string) => void;
   error: (err: Error) => void;
+  // 好友相关事件
+  searchResult: (resp: SearchUserResp) => void;
+  friendRequest: (notify: FriendNotify) => void;
+  friendAccepted: (notify: FriendNotify) => void;
+  friendDeleted: (notify: FriendDeleteNotify) => void;
+}
+
+// 好友相关类型
+export interface SearchUserResp {
+  code: number;
+  message: string;
+  users: Array<{
+    userId: string;
+    nickname: string;
+    avatar: string;
+  }>;
+}
+
+export interface FriendOpResp {
+  code: number;
+  message: string;
+}
+
+export interface FriendNotify {
+  userId: string;
+  nickname: string;
+  avatar: string;
+}
+
+export interface FriendDeleteNotify {
+  userId: string;
 }
