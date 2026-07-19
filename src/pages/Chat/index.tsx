@@ -1,8 +1,9 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useIMClient } from '@/hooks/useIMClient';
 import { useConversationStore } from '@/stores/useConversationStore';
-import { useChatStore } from '@/stores/useChatStore';
+import { useChatStore, ChatMessage } from '@/stores/useChatStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { getProfile } from '@/utils/api';
 import { ConversationItem } from '@/components/ConversationItem';
@@ -11,21 +12,53 @@ import { MessageInput } from '@/components/MessageInput';
 import { SearchBar } from '@/components/SearchBar';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
 
+// 稳定的空数组引用，避免 selector 每次返回新引用导致重渲染
+const EMPTY_MESSAGES: ChatMessage[] = [];
+
 export default function ChatPage() {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
 
-  const { connect, disconnect, sendMessage, connectionState, markSeen } = useIMClient();
+  const {
+    connect,
+    disconnect,
+    sendMessage,
+    retrySend,
+    connectionState,
+    markSeen,
+    errorMessage,
+    kickedReason,
+  } = useIMClient();
 
-  const conversations = useConversationStore((s) => s.conversations);
   const activePeerId = useConversationStore((s) => s.activePeerId);
   const setActivePeer = useConversationStore((s) => s.setActivePeer);
   const createConversation = useConversationStore((s) => s.createConversation);
-  const getSortedList = useConversationStore((s) => s.getSortedList);
   const updateDraft = useConversationStore((s) => s.updateDraft);
 
-  const messages = useChatStore((s) => s.messages);
+  // 窄 selector：只订阅当前活动会话（避免任意会话变更触发全组件树重渲染）
+  const activeConversation = useConversationStore((s) =>
+    activePeerId ? s.conversations[activePeerId] ?? null : null,
+  );
+  // 窄 selector：只订阅排序后的 peerId 列表（useShallow 避免数组引用变化导致重渲染）
+  const sortedPeerIds = useConversationStore(
+    useShallow((s) =>
+      Object.keys(s.conversations).sort(
+        (a, b) =>
+          (s.conversations[b].lastMessageTime || 0) -
+          (s.conversations[a].lastMessageTime || 0),
+      ),
+    ),
+  );
+  // 窄 selector：只订阅当前活动会话的消息
+  const activeMessages = useChatStore((s) =>
+    activePeerId ? s.messages[activePeerId] ?? EMPTY_MESSAGES : EMPTY_MESSAGES,
+  );
+
   const { totalUnread } = useUnreadCount();
+
+  // 搜索聊天记录结果
+  const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // 页面加载时连接 IM
   useEffect(() => {
@@ -46,11 +79,16 @@ export default function ChatPage() {
 
   // 搜索
   const handleSearch = useCallback(async (keyword: string) => {
-    if (!keyword) return;
+    if (!keyword) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
     if (activePeerId) {
       // 搜索当前会话聊天记录
       const results = useChatStore.getState().searchMessages(keyword, activePeerId);
-      console.log('搜索聊天记录:', results);
+      setSearchResults(results);
+      setShowSearchResults(true);
     } else {
       // 搜索好友
       try {
@@ -128,19 +166,45 @@ export default function ChatPage() {
     }
   }, [user, token, disconnect, connect]);
 
-  const sortedPeerIds = getSortedList();
-  const activeConversation = activePeerId ? conversations[activePeerId] : null;
-  const activeMessages = activePeerId ? (messages[activePeerId] || []) : [];
   const currentUserId = user?.userId || '';
 
   return (
     <div className="flex h-screen w-screen overflow-hidden min-w-[800px]">
+      {/* 错误提示 toast */}
+      {errorMessage && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          {errorMessage}
+        </div>
+      )}
+      {/* 被踢下线提示 */}
+      {kickedReason && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          已下线：{kickedReason}
+        </div>
+      )}
       {/* 左侧面板 */}
       <div className="w-[280px] flex-shrink-0 bg-wechat-sidebar flex flex-col border-r border-gray-300">
         {/* 搜索栏 + 新建会话 */}
         <div className="flex items-center gap-2">
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <SearchBar onSearch={handleSearch} />
+            {/* 搜索聊天记录结果面板 */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-200 max-h-[300px] overflow-y-auto z-50 shadow-lg">
+                {searchResults.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                    onClick={() => setShowSearchResults(false)}
+                  >
+                    <p className="text-sm text-wechat-text truncate">{msg.content}</p>
+                    <p className="text-xs text-wechat-text-secondary">
+                      {new Date(msg.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <button
             onClick={handleNewConversation}
@@ -158,18 +222,14 @@ export default function ChatPage() {
               暂无会话，点击 + 新建
             </div>
           ) : (
-            sortedPeerIds.map((peerId) => {
-              const conv = conversations[peerId];
-              if (!conv) return null;
-              return (
-                <ConversationItem
-                  key={peerId}
-                  conversation={conv}
-                  isActive={activePeerId === peerId}
-                  onClick={() => handleSelectConversation(peerId)}
-                />
-              );
-            })
+            sortedPeerIds.map((peerId) => (
+              <ConversationItem
+                key={peerId}
+                peerId={peerId}
+                isActive={activePeerId === peerId}
+                onClick={() => handleSelectConversation(peerId)}
+              />
+            ))
           )}
         </div>
 
@@ -193,7 +253,11 @@ export default function ChatPage() {
             </div>
 
             {/* 消息列表 */}
-            <MessageList messages={activeMessages} currentUserId={currentUserId} />
+            <MessageList
+              messages={activeMessages}
+              currentUserId={currentUserId}
+              onRetry={retrySend}
+            />
 
             {/* 消息输入框 */}
             <MessageInput

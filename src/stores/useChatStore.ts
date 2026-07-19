@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { IncomingMessage, StatusUpdate, MsgType, MessageStatus } from '@/sdk/types';
+import { generateId } from '@/sdk/protocol';
 
 // 聊天消息（Store 内部表示）
 export interface ChatMessage {
@@ -26,6 +27,10 @@ interface ChatState {
   onStatusChange: (update: StatusUpdate) => void;
   searchMessages: (keyword: string, peerId?: string) => ChatMessage[];
   clearMessages: (peerId: string) => void;
+  retryMessage: (
+    messageId: string,
+    sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
+  ) => void;
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
@@ -69,24 +74,54 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   sendImage: (peerId, file, sendFn) => {
     // 读取文件为 base64
     const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      const msgId = sendFn({ recipientId: peerId, msgType: MsgType.IMAGE, content: base64 });
-      const msg: ChatMessage = {
-        id: msgId,
-        senderId: '__self__',
-        recipientId: peerId,
-        msgType: MsgType.IMAGE,
-        content: base64,
-        status: 'sending',
-        timestamp: Date.now(),
-      };
+    // 创建一条 failed 状态的消息（用于 onerror / sendFn 异常）
+    const createFailedMsg = (): ChatMessage => ({
+      id: generateId(),
+      senderId: '__self__',
+      recipientId: peerId,
+      msgType: MsgType.IMAGE,
+      content: '',
+      status: 'failed',
+      timestamp: Date.now(),
+    });
+    reader.onerror = () => {
+      const msg = createFailedMsg();
       set((state) => ({
         messages: {
           ...state.messages,
           [peerId]: [...(state.messages[peerId] || []), msg],
         },
       }));
+    };
+    reader.onload = () => {
+      try {
+        const base64 = reader.result as string;
+        const msgId = sendFn({ recipientId: peerId, msgType: MsgType.IMAGE, content: base64 });
+        const msg: ChatMessage = {
+          id: msgId,
+          senderId: '__self__',
+          recipientId: peerId,
+          msgType: MsgType.IMAGE,
+          content: base64,
+          status: 'sending',
+          timestamp: Date.now(),
+        };
+        set((state) => ({
+          messages: {
+            ...state.messages,
+            [peerId]: [...(state.messages[peerId] || []), msg],
+          },
+        }));
+      } catch {
+        // sendFn 抛异常（如未连接），创建 failed 消息
+        const msg = createFailedMsg();
+        set((state) => ({
+          messages: {
+            ...state.messages,
+            [peerId]: [...(state.messages[peerId] || []), msg],
+          },
+        }));
+      }
     };
     reader.readAsDataURL(file);
   },
@@ -176,6 +211,40 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       const newMessages = { ...state.messages };
       delete newMessages[peerId];
       return { messages: newMessages };
+    });
+  },
+
+  retryMessage: (messageId, sendFn) => {
+    // 查找失败的消息，重新发送并替换为新的 sending 消息
+    set((state) => {
+      const newMessages = { ...state.messages };
+      for (const peerId of Object.keys(newMessages)) {
+        const msgs = newMessages[peerId];
+        const idx = msgs.findIndex((m) => m.id === messageId);
+        if (idx !== -1) {
+          const oldMsg = msgs[idx];
+          try {
+            const newMsgId = sendFn({
+              recipientId: oldMsg.recipientId,
+              msgType: oldMsg.msgType,
+              content: oldMsg.content,
+            });
+            const updated = [...msgs];
+            updated[idx] = {
+              ...oldMsg,
+              id: newMsgId,
+              status: 'sending',
+              timestamp: Date.now(),
+            };
+            newMessages[peerId] = updated;
+            return { messages: newMessages };
+          } catch {
+            // 重新发送仍然失败，保持 failed 状态
+            return state;
+          }
+        }
+      }
+      return state;
     });
   },
 }));
