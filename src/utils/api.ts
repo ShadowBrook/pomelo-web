@@ -73,3 +73,30 @@ export async function getPendingFriends(userId: string) {
     { userId: string; nickname: string; avatar: string; requestedAt: number }[]
   >(`/friends/${userId}/pending`);
 }
+
+// 历史消息（后端返回结构）
+export interface HistoryMessage {
+  id: number; // 雪花 ID（Long）
+  senderId: string;
+  recipientId: string;
+  seq: number;
+  msgType: number; // 1=text, 2=image, 3=file, 4=emoji
+  content: string;
+  createdAt: number;
+}
+
+// 拉取历史消息（按 seq ASC 返回，最早在前）
+export async function getMessageHistory(
+  userId: string,
+  peerId: string,
+  beforeSeq?: number,
+  limit = 50,
+) {
+  const params = new URLSearchParams({ peerId, limit: String(limit) });
+  if (beforeSeq && beforeSeq > 0) params.set('beforeSeq', String(beforeSeq));
+  // 后端响应：{ code, messages, hasMore }，因 ApiResponse 有 [key: string]: any，
+  // messages / hasMore 会直接挂在返回对象顶层
+  return request<{ messages: HistoryMessage[]; hasMore: boolean }>(
+    `/messages/${userId}/history?${params.toString()}`,
+  );
+}

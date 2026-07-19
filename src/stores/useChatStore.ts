@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { IncomingMessage, StatusUpdate, MsgType, MessageStatus } from '@/sdk/types';
 import { generateId } from '@/sdk/protocol';
+import { getMessageHistory, type HistoryMessage } from '@/utils/api';
 
 // 聊天消息（Store 内部表示）
 export interface ChatMessage {
@@ -17,6 +18,10 @@ export interface ChatMessage {
 interface ChatState {
   // 按 peerId 分桶的消息列表
   messages: Record<string, ChatMessage[]>;
+  // 历史消息加载状态
+  loadingHistory: boolean;
+  // 按 peerId 记录是否还有更早的历史可加载（undefined 表示尚未加载过）
+  hasMoreHistory: Record<string, boolean>;
 
   // Actions
   addMessage: (msg: ChatMessage) => void;
@@ -32,10 +37,14 @@ interface ChatState {
     messageId: string,
     sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
   ) => void;
+  // 拉取历史消息并合并到对应 peerId 的消息列表前面
+  loadHistory: (userId: string, peerId: string, beforeSeq?: number) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
   messages: {},
+  loadingHistory: false,
+  hasMoreHistory: {},
 
   addMessage: (msg: ChatMessage) => {
     set((state) => {
@@ -216,7 +225,48 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   },
 
   clearAll: () => {
-    set({ messages: {} });
+    set({ messages: {}, hasMoreHistory: {}, loadingHistory: false });
+  },
+
+  loadHistory: async (userId, peerId, beforeSeq) => {
+    const state = get();
+    // 避免重复加载
+    if (state.loadingHistory) return;
+    // 如果指定了 beforeSeq 且已知没有更多，直接返回
+    if (beforeSeq && state.hasMoreHistory[peerId] === false) return;
+
+    set({ loadingHistory: true });
+    try {
+      const res = await getMessageHistory(userId, peerId, beforeSeq);
+      const existingMessages = state.messages[peerId] || [];
+      // 将历史消息转换为 ChatMessage 格式
+      const historyMessages: ChatMessage[] = ((res.messages || []) as HistoryMessage[]).map((m) => ({
+        id: String(m.id),
+        senderId: m.senderId,
+        recipientId: m.recipientId,
+        msgType: m.msgType as MsgType,
+        content: m.content,
+        status: 'seen' as MessageStatus, // 历史消息默认已读
+        timestamp: m.createdAt,
+        seq: m.seq,
+      }));
+
+      // 合并：历史消息在前，现有消息在后，按 id 去重，再按 timestamp 排序
+      const existingIds = new Set(existingMessages.map((m) => m.id));
+      const newMessages = historyMessages.filter((m) => !existingIds.has(m.id));
+      const merged = [...newMessages, ...existingMessages].sort(
+        (a, b) => a.timestamp - b.timestamp,
+      );
+
+      set((s) => ({
+        messages: { ...s.messages, [peerId]: merged },
+        loadingHistory: false,
+        hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
+      }));
+    } catch (e) {
+      set({ loadingHistory: false });
+      console.error('加载历史消息失败:', e);
+    }
   },
 
   retryMessage: (messageId, sendFn) => {

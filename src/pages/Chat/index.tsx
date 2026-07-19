@@ -56,6 +56,11 @@ export default function ChatPage() {
   const activeMessages = useChatStore((s) =>
     activePeerId ? s.messages[activePeerId] ?? EMPTY_MESSAGES : EMPTY_MESSAGES,
   );
+  // 历史消息加载状态：undefined（未加载过）视为可加载，false 表示已无更多
+  const loadingHistory = useChatStore((s) => s.loadingHistory);
+  const hasMoreHistory = useChatStore((s) =>
+    activePeerId ? s.hasMoreHistory[activePeerId] !== false : false,
+  );
 
   const { totalUnread } = useUnreadCount();
 
@@ -121,12 +126,16 @@ export default function ChatPage() {
     document.title = totalUnread > 0 ? `(${totalUnread}) Pomelo Chat` : 'Pomelo Chat';
   }, [totalUnread]);
 
-  // 选择会话 + 自动 markSeen
+  // 选择会话 + 自动 markSeen + 首次加载历史
   const handleSelectConversation = useCallback((peerId: string) => {
     setActivePeer(peerId);
-    // 获取该会话中对方发来的未读消息 ID，发送 SEEN ACK
     const currentUserId = user?.userId || '';
     const msgs = useChatStore.getState().messages[peerId] || [];
+    // 如果该会话没有任何消息，首次加载历史
+    if (msgs.length === 0 && currentUserId) {
+      useChatStore.getState().loadHistory(currentUserId, peerId);
+    }
+    // 获取该会话中对方发来的未读消息 ID，发送 SEEN ACK
     const incomingIds = msgs
       .filter(m => m.senderId !== currentUserId && m.senderId !== '__self__' && m.status !== 'seen')
       .map(m => m.id);
@@ -134,6 +143,17 @@ export default function ChatPage() {
       markSeen(incomingIds);
     }
   }, [setActivePeer, markSeen, user]);
+
+  // 滚动到顶部时加载更早的历史：以当前最早一条消息的 seq 作为 beforeSeq
+  const handleLoadMoreHistory = useCallback(() => {
+    const uid = user?.userId || '';
+    if (!activePeerId || !uid) return;
+    const msgs = useChatStore.getState().messages[activePeerId] || [];
+    const oldestSeq = msgs[0]?.seq;
+    if (oldestSeq !== undefined) {
+      useChatStore.getState().loadHistory(uid, activePeerId, oldestSeq);
+    }
+  }, [activePeerId, user]);
 
   // 发送文本
   const handleSendText = useCallback((text: string) => {
@@ -327,6 +347,9 @@ export default function ChatPage() {
               messages={activeMessages}
               currentUserId={currentUserId}
               onRetry={retrySend}
+              loadingHistory={loadingHistory}
+              hasMore={hasMoreHistory}
+              onLoadMore={handleLoadMoreHistory}
             />
 
             {/* 消息输入框 */}

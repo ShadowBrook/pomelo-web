@@ -92,11 +92,16 @@ export class IMClient {
 
     return new Promise<void>((resolve, reject) => {
       try {
+        let settled = false;
+        let errorPending = false;
         this._setState('connecting');
         this.ws = new WebSocket(this.url);
         this.ws.binaryType = 'arraybuffer';
 
         this.ws.onopen = async () => {
+          if (settled) return;
+          settled = true;
+          errorPending = false;
           try {
             this._authenticate();
             this.connected = true;
@@ -125,6 +130,15 @@ export class IMClient {
               msg.timer = undefined;
             }
           }
+          // 如果 onopen 未触发且 onerror 已标记错误，则 emit error 并 reject Promise
+          if (!settled) {
+            settled = true;
+            if (errorPending) {
+              const err = new Error('WebSocket error');
+              this._emit('error', err);
+              reject(err);
+            }
+          }
           // Fix 5：主动断开不再触发重连
           if (this.intentionallyDisconnected) return;
           this._setState('disconnected');
@@ -132,8 +146,10 @@ export class IMClient {
         };
 
         this.ws.onerror = () => {
-          this._emit('error', new Error('WebSocket error'));
-          reject(new Error('WebSocket error'));
+          // 不立即 reject 也不 emit error：onerror 后标准行为是 onclose。
+          // 但某些场景下 onopen 也可能到达（连接实际成功），
+          // 因此延迟到 onclose 时再决定是否 reject。
+          errorPending = true;
         };
       } catch (e) {
         reject(e);
