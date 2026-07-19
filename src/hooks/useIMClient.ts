@@ -1,12 +1,24 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { IMClient } from '@/sdk/client';
 import { ConnectionState, IncomingMessage, StatusUpdate, MsgType } from '@/sdk/types';
+import type { FriendNotify, FriendDeleteNotify } from '@/sdk/types';
 import { useChatStore } from '@/stores/useChatStore';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useFriendStore } from '@/stores/useFriendStore';
 
 // 模块级单例
 let clientInstance: IMClient | null = null;
+
+/**
+ * 获取当前 IMClient 单例。
+ * 供 Store 在 action 中调用 SDK 方法（避免 Store 直接导入 useIMClient Hook）。
+ * 循环依赖安全：useFriendStore 仅在 action 体内部运行时调用此函数，
+ * 而非模块加载期；useIMClient 也仅在事件回调中引用 useFriendStore。
+ */
+export function getIMClient(): IMClient | null {
+  return clientInstance;
+}
 
 export function useIMClient() {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
@@ -59,6 +71,19 @@ export function useIMClient() {
       setTimeout(() => setErrorMessage(null), 3000);
     });
 
+    // 好友相关 Notify 事件 —— 桥接到 useFriendStore
+    client.on('friendRequest', (notify: FriendNotify) => {
+      useFriendStore.getState().onFriendRequestReceived(notify);
+    });
+
+    client.on('friendAccepted', (notify: FriendNotify) => {
+      useFriendStore.getState().onFriendAccepted(notify);
+    });
+
+    client.on('friendDeleted', (notify: FriendDeleteNotify) => {
+      useFriendStore.getState().onFriendDeleted(notify);
+    });
+
     // 发起连接
     client.connect(userId, token);
     clientInstance = client;
@@ -93,6 +118,35 @@ export function useIMClient() {
     });
   }, [sendMessage]);
 
+  // 好友操作：转发到 SDK 单例（供组件直接调用；Store 通过 getIMClient 调用）
+  const searchUsers = useCallback((keyword: string) => {
+    if (!clientInstance) {
+      return Promise.reject(new Error('IMClient not connected'));
+    }
+    return clientInstance.searchUsers(keyword);
+  }, []);
+
+  const addFriend = useCallback((friendId: string) => {
+    if (!clientInstance) {
+      return Promise.reject(new Error('IMClient not connected'));
+    }
+    return clientInstance.addFriend(friendId);
+  }, []);
+
+  const acceptFriend = useCallback((friendId: string) => {
+    if (!clientInstance) {
+      return Promise.reject(new Error('IMClient not connected'));
+    }
+    return clientInstance.acceptFriend(friendId);
+  }, []);
+
+  const deleteFriend = useCallback((friendId: string) => {
+    if (!clientInstance) {
+      return Promise.reject(new Error('IMClient not connected'));
+    }
+    return clientInstance.deleteFriend(friendId);
+  }, []);
+
   // 组件卸载时断开
   useEffect(() => {
     return () => {
@@ -112,6 +166,10 @@ export function useIMClient() {
     sendMessage,
     markSeen,
     retrySend,
+    searchUsers,
+    addFriend,
+    acceptFriend,
+    deleteFriend,
     client: clientInstance,
   };
 }
