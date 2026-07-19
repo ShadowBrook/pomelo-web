@@ -27,13 +27,20 @@ export class IMClient {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private pongTimer: ReturnType<typeof setTimeout> | null = null;
   private pongMissCount: number = 0;
+  // Fix 3：保存重连定时器，便于 disconnect 清理
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  // Fix 5：主动断开标志，阻止 onclose 触发虚假重连/error
+  private intentionallyDisconnected: boolean = false;
 
   // 发送队列
   private pendingQueue: Map<string, OutgoingMessage> = new Map();
 
-  // ACK 批量聚合
-  private receivedBuffer: string[] = [];
+  // ACK 批量聚合（Fix 6：改 Set 去重）
+  private receivedBuffer: Set<string> = new Set();
   private ackTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Fix 7：已接收消息 ID 去重，避免重复计数
+  private receivedMessageIds: Set<string> = new Set();
 
   // 事件系统
   private handlers: { [K in keyof IMClientEvents]?: IMClientEvents[K][] } = {};
@@ -64,6 +71,8 @@ export class IMClient {
   async connect(userId: string, token: string): Promise<void> {
     this.userId = userId;
     this.token = token;
+    // Fix 5：连接时重置主动断开标志
+    this.intentionallyDisconnected = false;
 
     return new Promise<void>((resolve, reject) => {
       try {
@@ -93,6 +102,15 @@ export class IMClient {
         this.ws.onclose = () => {
           this.connected = false;
           this._stopHeartbeat();
+          // Fix 4：清理所有发送定时器，避免重连期间触发 InvalidStateError
+          for (const [, msg] of this.pendingQueue) {
+            if (msg.timer) {
+              clearTimeout(msg.timer);
+              msg.timer = undefined;
+            }
+          }
+          // Fix 5：主动断开不再触发重连
+          if (this.intentionallyDisconnected) return;
           this._setState('disconnected');
           this._tryReconnect();
         };
@@ -108,8 +126,16 @@ export class IMClient {
   }
 
   disconnect(): void {
+    // Fix 5：置位主动断开标志
+    this.intentionallyDisconnected = true;
     this.maxReconnectAttempts = 0;
     this._stopHeartbeat();
+
+    // Fix 3：清理重连定时器，避免 disconnect 后连接“复活”
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     // 清理 ack 批量定时器
     if (this.ackTimer) {
@@ -155,6 +181,20 @@ export class IMClient {
   markSeen(messageIds: string[]): void {
     if (!this.connected) return;
     this._sendAck(messageIds, AckType.SEEN);
+  }
+
+  /** Fix 8：重发 failed 状态的消息 */
+  retrySend(messageId: string): void {
+    const msg = this.pendingQueue.get(messageId);
+    if (msg && msg.status === 'failed') {
+      msg.status = 'pending';
+      msg.retryCount = 0;
+      if (msg.timer) {
+        clearTimeout(msg.timer);
+        msg.timer = undefined;
+      }
+      this._send(msg);
+    }
   }
 
   on<K extends keyof IMClientEvents>(event: K, handler: IMClientEvents[K]): void {
@@ -225,6 +265,8 @@ export class IMClient {
   }
 
   private async _tryReconnect(): Promise<void> {
+    // Fix 5：主动断开不再重连
+    if (this.intentionallyDisconnected) return;
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.warn('[IMClient] 重连次数已达上限');
       this._setState('disconnected');
@@ -242,13 +284,18 @@ export class IMClient {
       `[IMClient] 重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts}) 等待 ${delay}ms...`,
     );
 
-    await new Promise<void>((r) => setTimeout(r, delay));
-
-    try {
-      await this.connect(this.userId, this.token);
-    } catch {
-      // onclose 会触发再次重连
-    }
+    // Fix 3：保存 timer 以便 disconnect 清理
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      // Fix 5：双重检查，定时器触发时可能已主动断开
+      if (this.intentionallyDisconnected) return;
+      try {
+        await this.connect(this.userId, this.token);
+      } catch {
+        // 连接失败，继续重连
+        this._tryReconnect();
+      }
+    }, delay);
   }
 
   // ================================================================
@@ -264,6 +311,13 @@ export class IMClient {
   }
 
   private _send(msg: OutgoingMessage): void {
+    // Fix 4：readyState 守卫，连接未就绪时保留在队列等重连后 _resendPending 处理
+    const ws = this.ws;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      msg.status = 'pending';
+      return;
+    }
+
     msg.status = 'sending';
 
     const body = {
@@ -273,7 +327,7 @@ export class IMClient {
     };
 
     const buf = encode(Cmd.C2C_REQ, msg.id, body, this.userId);
-    this.ws!.send(buf);
+    ws.send(buf);
 
     this._startSendTimer(msg);
     this._emit('statusChange', { id: msg.id, status: msg.status });
@@ -312,8 +366,11 @@ export class IMClient {
   private _onC2CResp(messageId: string, body: any): void {
     const msg = this.pendingQueue.get(messageId);
     if (msg) {
-      if (msg.timer) clearTimeout(msg.timer);
-      this.pendingQueue.delete(messageId);
+      if (msg.timer) {
+        clearTimeout(msg.timer);
+        msg.timer = undefined;
+      }
+      // Fix 2：不再 delete，保留以接收后续 ACK_NOTIFY（delivered/seen）
       msg.status = 'sent';
       this._emit('statusChange', {
         id: msg.id,
@@ -335,10 +392,13 @@ export class IMClient {
 
       if (ackType === AckType.SEEN) {
         msg.status = 'seen';
-      } else if (msg.status === 'sent') {
+        this._emit('statusChange', { id: msg.id, status: 'seen' });
+        // Fix 2：seen 是终态，可以删除
+        this.pendingQueue.delete(msg.id);
+      } else if (ackType === AckType.RECEIVED && msg.status === 'sent') {
         msg.status = 'delivered';
+        this._emit('statusChange', { id: msg.id, status: 'delivered' });
       }
-      this._emit('statusChange', { id: msg.id, status: msg.status });
     }
   }
 
@@ -348,32 +408,37 @@ export class IMClient {
 
   private _onMessageReceived(body: any): void {
     const msg: IncomingMessage = {
-      id: String(body.id),
-      senderId: body.senderId,
-      recipientId: body.recipientId,
-      msgType: body.message ? body.message.msgType : body.msgType,
-      content: body.message ? body.message.content : body.content,
-      seq: body.seq ?? 0,
-      createdAt: body.createdAt ?? Date.now(),
+      id: String(body.id || ''),
+      senderId: body.senderId || '',
+      recipientId: body.recipientId || '',
+      msgType: body.message?.msgType ?? body.msgType ?? MsgType.TEXT,
+      content: body.message?.content ?? body.content ?? '',
+      seq: body.seq || 0,
+      createdAt: body.createdAt || Date.now(),
     };
+
+    // Fix 7：去重，避免重复消息触发多次 message 事件导致未读数重复计数
+    if (this.receivedMessageIds.has(msg.id)) return;
+    this.receivedMessageIds.add(msg.id);
 
     if (msg.seq > this.lastSeq) this.lastSeq = msg.seq;
 
     this._emit('message', msg);
 
-    this.receivedBuffer.push(msg.id);
+    // Fix 6：Set 去重聚合
+    this.receivedBuffer.add(msg.id);
     this._scheduleBatchAck();
   }
 
   private _scheduleBatchAck(): void {
     if (this.ackTimer) return;
     this.ackTimer = setTimeout(() => {
-      const ids = [...this.receivedBuffer];
-      this.receivedBuffer = [];
       this.ackTimer = null;
-      if (ids.length > 0) {
-        this._sendAck(ids, AckType.RECEIVED);
-      }
+      // Fix 6：Set 操作，天然去重
+      if (this.receivedBuffer.size === 0) return;
+      const ids = Array.from(this.receivedBuffer);
+      this.receivedBuffer.clear();
+      this._sendAck(ids, AckType.RECEIVED);
     }, this.batchWindow);
   }
 
@@ -409,6 +474,17 @@ export class IMClient {
 
   private _onPullResp(body: any): void {
     console.log(`[IMClient] Pull 响应: hasMore=${body?.hasMore}, code=${body?.code}`);
+    // Fix 1：处理 PULL_RESP body 中的消息列表，否则离线消息被丢弃
+    const messages: any[] = body?.messages ?? body?.list ?? [];
+    for (const record of messages) {
+      // 即使消息被 _onMessageReceived 去重也要推进 lastSeq，避免死循环
+      if (record.seq && record.seq > this.lastSeq) {
+        this.lastSeq = record.seq;
+      }
+      // 复用 _onMessageReceived 的归一化与去重逻辑派发到 UI
+      this._onMessageReceived(record);
+    }
+    // 继续拉取（lastSeq 已更新，不会死循环）
     if (body?.hasMore) {
       this._pullOfflineMessages();
     }
