@@ -11,6 +11,8 @@ import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { SearchBar } from '@/components/SearchBar';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
+import { AddFriendDialog } from '@/components/AddFriendDialog';
+import { FriendsPanel } from '@/components/FriendsPanel';
 
 // 稳定的空数组引用，避免 selector 每次返回新引用导致重渲染
 const EMPTY_MESSAGES: ChatMessage[] = [];
@@ -60,6 +62,11 @@ export default function ChatPage() {
   const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  // 侧边栏 Tab：'chats' 会话列表 / 'friends' 好友列表
+  const [sidebarTab, setSidebarTab] = useState<'chats' | 'friends'>('chats');
+  // 添加好友弹窗
+  const [showAddFriend, setShowAddFriend] = useState(false);
+
   // 页面加载时连接 IM
   useEffect(() => {
     if (user && token) {
@@ -67,15 +74,17 @@ export default function ChatPage() {
     }
   }, [user, token, connect]);
 
-  // 新建会话
-  const handleNewConversation = useCallback(() => {
-    const peerId = prompt('输入对方 userId');
-    if (peerId && peerId.trim()) {
-      const id = peerId.trim();
-      createConversation(id);
-      setActivePeer(id);
-    }
-  }, [createConversation, setActivePeer]);
+  // 点击好友发起会话
+  const handleChatWithFriend = useCallback((peerId: string, nickname: string, avatar: string) => {
+    useConversationStore.getState().createConversation(peerId, nickname, avatar);
+    useConversationStore.getState().setActivePeer(peerId);
+    setSidebarTab('chats');
+  }, []);
+
+  // 打开添加好友弹窗
+  const handleOpenAddFriend = useCallback(() => {
+    setShowAddFriend(true);
+  }, []);
 
   // 搜索
   const handleSearch = useCallback(async (keyword: string) => {
@@ -184,54 +193,76 @@ export default function ChatPage() {
       )}
       {/* 左侧面板 */}
       <div className="w-[280px] flex-shrink-0 bg-wechat-sidebar flex flex-col border-r border-gray-300">
-        {/* 搜索栏 + 新建会话 */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <SearchBar onSearch={handleSearch} />
-            {/* 搜索聊天记录结果面板 */}
-            {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-200 max-h-[300px] overflow-y-auto z-50 shadow-lg">
-                {searchResults.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                    onClick={() => setShowSearchResults(false)}
-                  >
-                    <p className="text-sm text-wechat-text truncate">{msg.content}</p>
-                    <p className="text-xs text-wechat-text-secondary">
-                      {new Date(msg.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Tab 切换 */}
+        <div className="flex border-b border-gray-300">
           <button
-            onClick={handleNewConversation}
-            className="w-8 h-8 flex items-center justify-center rounded bg-wechat-green text-white text-lg hover:bg-wechat-green-dark transition-colors flex-shrink-0 mr-3"
-            title="新建会话"
+            onClick={() => setSidebarTab('chats')}
+            className={`flex-1 py-2 text-sm transition-colors ${sidebarTab === 'chats' ? 'text-wechat-green border-b-2 border-wechat-green font-medium' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            +
+            聊天
+          </button>
+          <button
+            onClick={() => setSidebarTab('friends')}
+            className={`flex-1 py-2 text-sm transition-colors ${sidebarTab === 'friends' ? 'text-wechat-green border-b-2 border-wechat-green font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            好友
           </button>
         </div>
 
-        {/* 会话列表 */}
-        <div className="flex-1 overflow-y-auto">
-          {sortedPeerIds.length === 0 ? (
-            <div className="text-center text-wechat-text-secondary text-sm mt-10 px-4">
-              暂无会话，点击 + 新建
+        {/* 搜索栏 + 新建按钮（仅在 chats tab 显示） */}
+        {sidebarTab === 'chats' && (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 relative">
+              <SearchBar onSearch={handleSearch} />
+              {/* 搜索聊天记录结果面板 */}
+              {showSearchResults && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-200 max-h-[300px] overflow-y-auto z-50 shadow-lg">
+                  {searchResults.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                      onClick={() => setShowSearchResults(false)}
+                    >
+                      <p className="text-sm text-wechat-text truncate">{msg.content}</p>
+                      <p className="text-xs text-wechat-text-secondary">
+                        {new Date(msg.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            sortedPeerIds.map((peerId) => (
-              <ConversationItem
-                key={peerId}
-                peerId={peerId}
-                isActive={activePeerId === peerId}
-                onClick={() => handleSelectConversation(peerId)}
-              />
-            ))
-          )}
-        </div>
+            <button
+              onClick={handleOpenAddFriend}
+              className="w-8 h-8 flex items-center justify-center rounded bg-wechat-green text-white text-lg hover:bg-wechat-green-dark transition-colors flex-shrink-0 mr-3"
+              title="添加好友"
+            >
+              +
+            </button>
+          </div>
+        )}
+
+        {/* Tab 内容 */}
+        {sidebarTab === 'chats' ? (
+          <div className="flex-1 overflow-y-auto">
+            {sortedPeerIds.length === 0 ? (
+              <div className="text-center text-wechat-text-secondary text-sm mt-10 px-4">
+                暂无会话，点击 + 添加好友
+              </div>
+            ) : (
+              sortedPeerIds.map((peerId) => (
+                <ConversationItem
+                  key={peerId}
+                  peerId={peerId}
+                  isActive={activePeerId === peerId}
+                  onClick={() => handleSelectConversation(peerId)}
+                />
+              ))
+            )}
+          </div>
+        ) : (
+          <FriendsPanel onChatWithFriend={handleChatWithFriend} />
+        )}
 
         {/* 底部状态 */}
         <div className="px-3 py-2 text-xs text-wechat-text-secondary border-t border-gray-300">
@@ -277,6 +308,9 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* 添加好友弹窗 */}
+      <AddFriendDialog open={showAddFriend} onClose={() => setShowAddFriend(false)} />
     </div>
   );
 }
