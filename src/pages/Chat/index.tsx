@@ -3,15 +3,19 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useIMClient } from '@/hooks/useIMClient';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useChatStore } from '@/stores/useChatStore';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { getProfile } from '@/utils/api';
 import { ConversationItem } from '@/components/ConversationItem';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
+import { SearchBar } from '@/components/SearchBar';
+import { ConnectionBanner } from '@/components/ConnectionBanner';
 
 export default function ChatPage() {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
 
-  const { connect, sendMessage, connectionState } = useIMClient();
+  const { connect, disconnect, sendMessage, connectionState, markSeen } = useIMClient();
 
   const conversations = useConversationStore((s) => s.conversations);
   const activePeerId = useConversationStore((s) => s.activePeerId);
@@ -21,6 +25,7 @@ export default function ChatPage() {
   const updateDraft = useConversationStore((s) => s.updateDraft);
 
   const messages = useChatStore((s) => s.messages);
+  const { totalUnread } = useUnreadCount();
 
   // 页面加载时连接 IM
   useEffect(() => {
@@ -39,10 +44,46 @@ export default function ChatPage() {
     }
   }, [createConversation, setActivePeer]);
 
-  // 选择会话
+  // 搜索
+  const handleSearch = useCallback(async (keyword: string) => {
+    if (!keyword) return;
+    if (activePeerId) {
+      // 搜索当前会话聊天记录
+      const results = useChatStore.getState().searchMessages(keyword, activePeerId);
+      console.log('搜索聊天记录:', results);
+    } else {
+      // 搜索好友
+      try {
+        const res = await getProfile(keyword);
+        if (res.data) {
+          const profile = res.data;
+          createConversation(profile.userId, profile.nickname, profile.avatar);
+          setActivePeer(profile.userId);
+        }
+      } catch (err) {
+        console.error('搜索好友失败:', err);
+      }
+    }
+  }, [activePeerId, createConversation, setActivePeer]);
+
+  // 未读计数更新 title
+  useEffect(() => {
+    document.title = totalUnread > 0 ? `(${totalUnread}) Pomelo Chat` : 'Pomelo Chat';
+  }, [totalUnread]);
+
+  // 选择会话 + 自动 markSeen
   const handleSelectConversation = useCallback((peerId: string) => {
     setActivePeer(peerId);
-  }, [setActivePeer]);
+    // 获取该会话中对方发来的未读消息 ID，发送 SEEN ACK
+    const currentUserId = user?.userId || '';
+    const msgs = useChatStore.getState().messages[peerId] || [];
+    const incomingIds = msgs
+      .filter(m => m.senderId !== currentUserId && m.senderId !== '__self__' && m.status !== 'seen')
+      .map(m => m.id);
+    if (incomingIds.length > 0) {
+      markSeen(incomingIds);
+    }
+  }, [setActivePeer, markSeen, user]);
 
   // 发送文本
   const handleSendText = useCallback((text: string) => {
@@ -76,25 +117,34 @@ export default function ChatPage() {
     updateDraft(activePeerId, text);
   }, [activePeerId, updateDraft]);
 
+  // 断线重连
+  const handleReconnect = useCallback(() => {
+    if (user && token) {
+      disconnect();
+      // 短暂延迟后重连
+      setTimeout(() => {
+        connect(user.userId, token);
+      }, 300);
+    }
+  }, [user, token, disconnect, connect]);
+
   const sortedPeerIds = getSortedList();
   const activeConversation = activePeerId ? conversations[activePeerId] : null;
   const activeMessages = activePeerId ? (messages[activePeerId] || []) : [];
   const currentUserId = user?.userId || '';
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
+    <div className="flex h-screen w-screen overflow-hidden min-w-[800px]">
       {/* 左侧面板 */}
       <div className="w-[280px] flex-shrink-0 bg-wechat-sidebar flex flex-col border-r border-gray-300">
         {/* 搜索栏 + 新建会话 */}
-        <div className="p-3 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="搜索"
-            className="flex-1 bg-gray-200/70 rounded px-3 py-1.5 text-sm text-wechat-text placeholder-wechat-text-secondary focus:outline-none focus:ring-1 focus:ring-wechat-green"
-          />
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <SearchBar onSearch={handleSearch} />
+          </div>
           <button
             onClick={handleNewConversation}
-            className="w-8 h-8 flex items-center justify-center rounded bg-wechat-green text-white text-lg hover:bg-wechat-green-dark transition-colors flex-shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded bg-wechat-green text-white text-lg hover:bg-wechat-green-dark transition-colors flex-shrink-0 mr-3"
             title="新建会话"
           >
             +
@@ -131,6 +181,8 @@ export default function ChatPage() {
 
       {/* 右侧面板 */}
       <div className="flex-1 flex flex-col bg-wechat-bg">
+        {/* 连接状态条 */}
+        <ConnectionBanner state={connectionState} onReconnect={handleReconnect} />
         {activePeerId && activeConversation ? (
           <>
             {/* 聊天对象昵称 */}
