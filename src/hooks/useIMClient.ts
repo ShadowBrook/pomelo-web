@@ -85,7 +85,12 @@ export function useIMClient() {
     });
 
     // 发起连接
-    client.connect(userId, token);
+    // Fix: 捕获 connect Promise 的 rejection，避免 onerror 触发 reject 时
+    // 产生 Uncaught (in promise) Error: WebSocket error
+    client.connect(userId, token).catch((err) => {
+      console.error('[useIMClient] connect failed:', err);
+      setErrorMessage(err?.message || '连接失败');
+    });
     clientInstance = client;
     setConnectionState('connecting');
   }, []);

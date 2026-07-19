@@ -60,15 +60,19 @@ export const useAuthStore = create<AuthState>()(
       register: async (userId: string, nickname: string, password: string, avatar?: string) => {
         const res = await api.register(userId, nickname, password, avatar);
         if (res.code === 0) {
+          // 注册成功
           set({
             user: { userId, nickname, avatar: avatar || '' },
             token: 'test-token',
             isLoggedIn: true,
           });
         } else if (res.code === 409) {
-          throw new Error('用户名已存在');
+          // 用户已存在，走“注册即登录”流程，复用 login 逻辑
+          // 后端无独立 login API，login 内部会再次调用 register 接口
+          // 并将 409 视为登录成功，同时拉取用户 profile
+          await get().login(userId, password);
         } else {
-          throw new Error(res.message || 'Registration failed');
+          throw new Error(res.message || '注册失败');
         }
       },
 
