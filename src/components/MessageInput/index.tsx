@@ -1,4 +1,5 @@
 import { useState, useRef, KeyboardEvent, useEffect } from 'react';
+import { EmojiPicker } from '@/components/EmojiPicker';
 
 interface Props {
   peerId: string;
@@ -12,6 +13,7 @@ interface Props {
 
 export function MessageInput({ peerId, draft, onSendText, onSendImage, onSendFile, onDraftChange, disabled }: Props) {
   const [text, setText] = useState(draft || '');
+  const [showEmoji, setShowEmoji] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,9 +69,21 @@ export function MessageInput({ peerId, draft, onSendText, onSendImage, onSendFil
         <button onClick={() => fileInputRef.current?.click()} className="hover:opacity-70 transition-opacity" title="发送文件">
           📎
         </button>
-        <button className="hover:opacity-70 transition-opacity" title="表情">
-          😊
-        </button>
+        <div className="relative">
+          <button onClick={() => setShowEmoji(!showEmoji)} className="hover:opacity-70 transition-opacity" title="表情">
+            😊
+          </button>
+          {showEmoji && (
+            <EmojiPicker
+              onSelect={(emoji) => {
+                setText(prev => prev + emoji);
+                setShowEmoji(false);
+                textareaRef.current?.focus();
+              }}
+              onClose={() => setShowEmoji(false)}
+            />
+          )}
+        </div>
       </div>
 
       {/* 输入区域 */}

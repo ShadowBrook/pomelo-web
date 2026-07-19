@@ -10,3 +10,29 @@
   --color-wechat-text: #1D1D1D;
   --color-wechat-text-secondary: #B2B2B2;
 }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #EBEBEB;
+}
+
+/* 气泡小三角 */
+.bubble-self::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 8px;
+  border: 6px solid transparent;
+  border-left-color: #95EC69;
+  border-right: none;
+}
+
+.bubble-other::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  border: 6px solid transparent;
+  border-right-color: #FFFFFF;
+  border-left: none;
+}
