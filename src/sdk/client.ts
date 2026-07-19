@@ -3,11 +3,9 @@ import {
   Cmd,
   MsgType,
   AckType,
-  MessageStatus,
   ConnectionState,
   OutgoingMessage,
   IncomingMessage,
-  StatusUpdate,
   IMClientEvents,
 } from './types';
 
@@ -92,14 +90,14 @@ export class IMClient {
           this._onWsMessage(event);
         };
 
-        this.ws.onclose = (event: CloseEvent) => {
+        this.ws.onclose = () => {
           this.connected = false;
           this._stopHeartbeat();
           this._setState('disconnected');
           this._tryReconnect();
         };
 
-        this.ws.onerror = (event: Event) => {
+        this.ws.onerror = () => {
           this._emit('error', new Error('WebSocket error'));
           reject(new Error('WebSocket error'));
         };
@@ -258,7 +256,7 @@ export class IMClient {
   // ================================================================
 
   private _flush(): void {
-    for (const [id, msg] of this.pendingQueue) {
+    for (const [, msg] of this.pendingQueue) {
       if (msg.status === 'pending') {
         this._send(msg);
       }
@@ -299,7 +297,7 @@ export class IMClient {
   }
 
   private _resendPending(): void {
-    for (const [id, msg] of this.pendingQueue) {
+    for (const [, msg] of this.pendingQueue) {
       if (msg.timer) clearTimeout(msg.timer);
       msg.retryCount = 0;
       msg.status = 'pending';

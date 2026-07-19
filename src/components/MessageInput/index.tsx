@@ -1,5 +1,6 @@
-import { useState, useRef, KeyboardEvent, useEffect } from 'react';
-import { EmojiPicker } from '@/components/EmojiPicker';
+import { useState, useRef, KeyboardEvent, useEffect, lazy, Suspense } from 'react';
+
+const EmojiPicker = lazy(() => import('@/components/EmojiPicker'));
 
 interface Props {
   peerId: string;
@@ -74,14 +75,16 @@ export function MessageInput({ peerId, draft, onSendText, onSendImage, onSendFil
             😊
           </button>
           {showEmoji && (
-            <EmojiPicker
-              onSelect={(emoji) => {
-                setText(prev => prev + emoji);
-                setShowEmoji(false);
-                textareaRef.current?.focus();
-              }}
-              onClose={() => setShowEmoji(false)}
-            />
+            <Suspense fallback={<div className="absolute bottom-full left-0 mb-2 w-[280px] h-[200px] bg-white border rounded-lg animate-pulse" />}>
+              <EmojiPicker
+                onSelect={(emoji) => {
+                  setText(prev => prev + emoji);
+                  setShowEmoji(false);
+                  textareaRef.current?.focus();
+                }}
+                onClose={() => setShowEmoji(false)}
+              />
+            </Suspense>
           )}
         </div>
       </div>

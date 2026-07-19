@@ -1,8 +1,10 @@
+import { lazy, Suspense } from 'react'
+import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/useAuthStore'
-import LoginPage from '@/pages/Login'
-import ChatPage from '@/pages/Chat'
-import type { ReactNode } from 'react'
+
+const LoginPage = lazy(() => import('@/pages/Login'))
+const ChatPage = lazy(() => import('@/pages/Chat'))
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
@@ -17,18 +19,20 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to={isLoggedIn ? '/chat' : '/login'} replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/chat"
-          element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<Navigate to={isLoggedIn ? '/chat' : '/login'} replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <ChatPage />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

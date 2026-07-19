@@ -18,4 +18,21 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id: string) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react')) {
+              return 'vendor';
+            }
+            if (id.includes('zustand')) {
+              return 'state';
+            }
+          }
+          return null;
+        },
+      },
+    },
+  },
 })
