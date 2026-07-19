@@ -1,0 +1,87 @@
+// 协议常量
+export const MAGIC = 0x504D454C; // "PMEL"
+export const VERSION = 1;
+export const CODEC_JSON = 1;
+
+// Cmd 命令字枚举（对齐 im-sdk.js L67-74）
+export enum Cmd {
+  AUTH_REQ = 0x0001,
+  AUTH_RESP = 0x0002,
+  LOGOUT_REQ = 0x0003,
+  LOGOUT_RESP = 0x0004,
+  C2C_REQ = 0x0010,
+  C2C_RESP = 0x0011,
+  C2C_NOTIFY = 0x0012,
+  C2G_REQ = 0x0020,
+  C2G_RESP = 0x0021,
+  C2G_NOTIFY = 0x0022,
+  PULL_REQ = 0x0030,
+  PULL_RESP = 0x0031,
+  CTRL_REQ = 0x0040,
+  CTRL_RESP = 0x0041,
+  CTRL_NOTIFY = 0x0042,
+  PING = 0x0050,
+  PONG = 0x0051,
+  ACK_REQ = 0x0052,
+  ACK_RESP = 0x0053,
+  ACK_NOTIFY = 0x0054,
+}
+
+// 消息类型
+export enum MsgType {
+  TEXT = 1,
+  IMAGE = 2,
+  FILE = 3,
+  EMOJI = 4,
+}
+
+// ACK 类型
+export enum AckType {
+  RECEIVED = 0,
+  SEEN = 1,
+}
+
+// 消息状态
+export type MessageStatus = 'pending' | 'sending' | 'sent' | 'delivered' | 'seen' | 'failed';
+
+// 连接状态
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
+// 发送队列项
+export interface OutgoingMessage {
+  id: string;
+  recipientId: string;
+  msgType: MsgType;
+  content: string;
+  status: MessageStatus;
+  createdAt: number;
+  retryCount: number;
+  timer?: ReturnType<typeof setTimeout>;
+}
+
+// 接收消息（归一化）
+export interface IncomingMessage {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  msgType: MsgType;
+  content: string;
+  seq: number;
+  createdAt: number;
+}
+
+// 消息状态变化
+export interface StatusUpdate {
+  id: string;
+  status: MessageStatus;
+  seq?: number;
+}
+
+// 事件映射
+export interface IMClientEvents {
+  message: (msg: IncomingMessage) => void;
+  statusChange: (update: StatusUpdate) => void;
+  connectionChange: (state: ConnectionState) => void;
+  kicked: (reason: string) => void;
+  error: (err: Error) => void;
+}
