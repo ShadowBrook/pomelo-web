@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useIMClient } from '@/hooks/useIMClient';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useChatStore, ChatMessage } from '@/stores/useChatStore';
+import { useFriendStore } from '@/stores/useFriendStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { getProfile } from '@/utils/api';
 import { ConversationItem } from '@/components/ConversationItem';
@@ -66,6 +67,8 @@ export default function ChatPage() {
   const [sidebarTab, setSidebarTab] = useState<'chats' | 'friends'>('chats');
   // 添加好友弹窗
   const [showAddFriend, setShowAddFriend] = useState(false);
+  // 退出登录确认弹窗
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // 页面加载时连接 IM
   useEffect(() => {
@@ -175,6 +178,20 @@ export default function ChatPage() {
     }
   }, [user, token, disconnect, connect]);
 
+  // 退出登录
+  const handleLogout = useCallback(() => {
+    // 1. 先断开 WebSocket（避免状态清除后还有事件回调修改 state）
+    disconnect();
+    // 2. 清理所有用户状态（消息、会话、好友列表）
+    useChatStore.getState().clearAll();
+    useConversationStore.getState().clearAll();
+    useFriendStore.getState().clearAll();
+    // 3. 清除认证状态（persist 中间件会自动同步 localStorage）
+    //    ProtectedRoute 检测到 isLoggedIn=false 后会自动跳转到 /login
+    useAuthStore.getState().logout();
+    setShowLogoutConfirm(false);
+  }, [disconnect]);
+
   const currentUserId = user?.userId || '';
 
   return (
@@ -264,9 +281,31 @@ export default function ChatPage() {
           <FriendsPanel onChatWithFriend={handleChatWithFriend} />
         )}
 
-        {/* 底部状态 */}
-        <div className="px-3 py-2 text-xs text-wechat-text-secondary border-t border-gray-300">
-          {connectionState === 'connected' ? '已连接' : connectionState === 'connecting' ? '连接中...' : '未连接'}
+        {/* 底部用户信息 + 连接状态 + 退出 */}
+        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-300 bg-wechat-sidebar">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* 用户头像 */}
+            {user?.avatar ? (
+              <img src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-wechat-green text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
+                {user?.nickname?.charAt(0).toUpperCase() || 'U'}
+              </div>
+            )}
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm text-wechat-text truncate">{user?.nickname || '用户'}</span>
+              <span className="text-xs text-wechat-text-secondary">
+                {connectionState === 'connected' ? '已连接' : connectionState === 'connecting' ? '连接中...' : '未连接'}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="text-xs text-wechat-text-secondary hover:text-red-500 px-2 py-1 transition-colors flex-shrink-0"
+            title="退出登录"
+          >
+            退出
+          </button>
         </div>
       </div>
 
@@ -311,6 +350,37 @@ export default function ChatPage() {
 
       {/* 添加好友弹窗 */}
       <AddFriendDialog open={showAddFriend} onClose={() => setShowAddFriend(false)} />
+
+      {/* 退出登录确认弹窗 */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl w-[300px] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-5 text-center">
+              <p className="text-sm text-wechat-text">确认退出登录吗？</p>
+            </div>
+            <div className="flex border-t border-gray-200">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2.5 text-sm text-wechat-text-secondary hover:bg-gray-50 border-r border-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 py-2.5 text-sm text-red-500 hover:bg-gray-50 font-medium transition-colors"
+              >
+                退出
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

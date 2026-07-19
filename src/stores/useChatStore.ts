@@ -27,6 +27,7 @@ interface ChatState {
   onStatusChange: (update: StatusUpdate) => void;
   searchMessages: (keyword: string, peerId?: string) => ChatMessage[];
   clearMessages: (peerId: string) => void;
+  clearAll: () => void;
   retryMessage: (
     messageId: string,
     sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
@@ -212,6 +213,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       delete newMessages[peerId];
       return { messages: newMessages };
     });
+  },
+
+  clearAll: () => {
+    set({ messages: {} });
   },
 
   retryMessage: (messageId, sendFn) => {
