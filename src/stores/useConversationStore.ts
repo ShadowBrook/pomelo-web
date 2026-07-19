@@ -22,6 +22,7 @@ interface ConversationState {
   onNewMessage: (msg: IncomingMessage, selfUserId: string) => void;
   createConversation: (peerId: string, nickname?: string, avatar?: string) => void;
   removeConversation: (peerId: string) => void;
+  clearAll: () => void;
   getSortedList: () => string[];
 }
 
@@ -129,6 +130,10 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
         activePeerId: state.activePeerId === peerId ? null : state.activePeerId,
       };
     });
+  },
+
+  clearAll: () => {
+    set({ conversations: {}, activePeerId: null });
   },
 
   getSortedList: () => {

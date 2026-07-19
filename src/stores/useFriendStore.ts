@@ -40,6 +40,7 @@ interface FriendState {
   removeFriend: (userId: string, friendId: string) => Promise<{ success: boolean; message: string }>;
   clearSearchResults: () => void;
   clearError: () => void;
+  clearAll: () => void;
 
   // Notify 处理（由 useIMClient 事件桥接调用）
   onFriendRequestReceived: (notify: FriendNotify) => void;
@@ -153,6 +154,10 @@ export const useFriendStore = create<FriendState>()((set) => ({
 
   clearSearchResults: () => set({ searchResults: [] }),
   clearError: () => set({ error: null }),
+
+  clearAll: () => {
+    set({ friends: [], pendingRequests: [], searchResults: [], loading: false, error: null });
+  },
 
   // ================================================================
   // Notify 处理器（由 useIMClient 的事件监听调用）
