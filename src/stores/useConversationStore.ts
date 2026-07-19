@@ -7,6 +7,7 @@ export interface Conversation {
   avatar: string;
   lastMessage: string; // 最后一条消息预览（截断50字）
   lastMessageTime: number;
+  lastMessageId?: string; // 最后一条消息 ID，用于去重
   unreadCount: number;
   draft?: string;
 }
@@ -69,6 +70,8 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
 
     set((state) => {
       const existing = state.conversations[peerId];
+      // 去重：如果最后一条消息 ID 相同，不更新（避免重复消息导致未读数重复计数）
+      if (existing && existing.lastMessageId === msg.id) return state;
       const isSelfActive = state.activePeerId === peerId;
 
       const conv: Conversation = existing
@@ -76,6 +79,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
             ...existing,
             lastMessage,
             lastMessageTime,
+            lastMessageId: msg.id,
             unreadCount: isSelfActive ? existing.unreadCount : existing.unreadCount + 1,
           }
         : {
@@ -84,6 +88,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
             avatar: '',
             lastMessage,
             lastMessageTime,
+            lastMessageId: msg.id,
             unreadCount: isSelfActive ? 0 : 1,
           };
 

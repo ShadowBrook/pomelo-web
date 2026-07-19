@@ -1,13 +1,17 @@
 import React from 'react';
-import { Conversation } from '@/stores/useConversationStore';
+import { useConversationStore } from '@/stores/useConversationStore';
 
 interface Props {
-  conversation: Conversation;
+  peerId: string;
   isActive: boolean;
   onClick: () => void;
 }
 
-export const ConversationItem = React.memo(function ConversationItem({ conversation, isActive, onClick }: Props) {
+export const ConversationItem = React.memo(function ConversationItem({ peerId, isActive, onClick }: Props) {
+  // 各自从 store 订阅自己的数据，避免接收整个 conversation 对象作为 props
+  const conversation = useConversationStore((s) => s.conversations[peerId]);
+  if (!conversation) return null;
+
   const { nickname, avatar, lastMessage, lastMessageTime, unreadCount } = conversation;
 
   const formatTime = (ts: number) => {

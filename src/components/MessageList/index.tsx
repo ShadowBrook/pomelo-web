@@ -5,6 +5,7 @@ import { MessageBubble } from '@/components/MessageBubble';
 interface Props {
   messages: ChatMessage[];
   currentUserId: string;
+  onRetry?: (messageId: string) => void;
 }
 
 function shouldShowTimeDivider(prev: ChatMessage | null, curr: ChatMessage): boolean {
@@ -21,7 +22,7 @@ function formatDividerTime(ts: number): string {
   return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-export function MessageList({ messages, currentUserId }: Props) {
+export function MessageList({ messages, currentUserId, onRetry }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function MessageList({ messages, currentUserId }: Props) {
                 </span>
               </div>
             )}
-            <MessageBubble message={msg} isSelf={isSelf} />
+            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} />
           </div>
         );
       })}

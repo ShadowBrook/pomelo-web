@@ -3,12 +3,15 @@ import { IMClient } from '@/sdk/client';
 import { ConnectionState, IncomingMessage, StatusUpdate, MsgType } from '@/sdk/types';
 import { useChatStore } from '@/stores/useChatStore';
 import { useConversationStore } from '@/stores/useConversationStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 // 模块级单例
 let clientInstance: IMClient | null = null;
 
 export function useIMClient() {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [kickedReason, setKickedReason] = useState<string | null>(null);
   const userIdRef = useRef<string>('');
 
   const connect = useCallback((userId: string, token: string) => {
@@ -18,6 +21,9 @@ export function useIMClient() {
     }
 
     userIdRef.current = userId;
+    // 重置错误状态
+    setErrorMessage(null);
+    setKickedReason(null);
 
     const client = new IMClient({
       url: 'ws://localhost:9001',
@@ -41,10 +47,16 @@ export function useIMClient() {
 
     client.on('kicked', (reason: string) => {
       console.warn('Kicked:', reason);
+      setKickedReason(reason);
+      // 触发登出
+      useAuthStore.getState().logout();
     });
 
     client.on('error', (err: Error) => {
       console.error('IMClient error:', err);
+      setErrorMessage(err.message);
+      // 3 秒后清除
+      setTimeout(() => setErrorMessage(null), 3000);
     });
 
     // 发起连接
@@ -74,6 +86,13 @@ export function useIMClient() {
     }
   }, []);
 
+  // 重试发送失败的消息：从 chat store 查找原始内容并重新发送
+  const retrySend = useCallback((messageId: string) => {
+    useChatStore.getState().retryMessage(messageId, (params) => {
+      return sendMessage(params);
+    });
+  }, [sendMessage]);
+
   // 组件卸载时断开
   useEffect(() => {
     return () => {
@@ -86,10 +105,13 @@ export function useIMClient() {
 
   return {
     connectionState,
+    errorMessage,
+    kickedReason,
     connect,
     disconnect,
     sendMessage,
     markSeen,
+    retrySend,
     client: clientInstance,
   };
 }
