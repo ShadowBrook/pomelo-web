@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wechat-green: #07C160;
+  --color-wechat-green-dark: #06AD56;
+  --color-wechat-bg: #EBEBEB;
+  --color-wechat-sidebar: #E3E3E3;
+  --color-wechat-bubble-self: #95EC69;
+  --color-wechat-bubble-other: #FFFFFF;
+  --color-wechat-text: #1D1D1D;
+  --color-wechat-text-secondary: #B2B2B2;
+}
