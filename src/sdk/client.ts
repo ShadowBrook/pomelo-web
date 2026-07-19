@@ -7,6 +7,10 @@ import {
   OutgoingMessage,
   IncomingMessage,
   IMClientEvents,
+  SearchUserResp,
+  FriendOpResp,
+  FriendNotify,
+  FriendDeleteNotify,
 } from './types';
 
 interface IMClientOptions {
@@ -41,6 +45,18 @@ export class IMClient {
 
   // Fix 7：已接收消息 ID 去重，避免重复计数
   private receivedMessageIds: Set<string> = new Set();
+
+  // 好友操作待处理 Map：messageId -> { resolve, reject, timeoutId, expectedCmd }
+  // 好友操作无 ACK 机制，使用 messageId 关联请求和响应，5 秒超时
+  private pendingFriendOps: Map<
+    string,
+    {
+      resolve: (value: any) => void;
+      reject: (reason: any) => void;
+      timeoutId: ReturnType<typeof setTimeout>;
+      expectedCmd: Cmd;
+    }
+  > = new Map();
 
   // 事件系统
   private handlers: { [K in keyof IMClientEvents]?: IMClientEvents[K][] } = {};
@@ -151,6 +167,13 @@ export class IMClient {
       this._emit('statusChange', { id: msg.id, status: 'failed' });
     }
 
+    // 清理待处理的好友操作
+    for (const [, pending] of this.pendingFriendOps) {
+      clearTimeout(pending.timeoutId);
+      pending.reject(new Error('连接已断开'));
+    }
+    this.pendingFriendOps.clear();
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -213,6 +236,77 @@ export class IMClient {
 
   getState(): ConnectionState {
     return this.state;
+  }
+
+  // ================================================================
+  // Friend Operations
+  // ================================================================
+
+  /**
+   * 发送好友操作请求并等待响应
+   * 不进入发送队列、不重试（好友操作无 ACK 机制），使用 messageId 关联请求和响应，5 秒超时
+   */
+  private _sendFriendOp<T>(
+    reqCmd: Cmd,
+    respCmd: Cmd,
+    body: Record<string, unknown>,
+    idPrefix: string,
+    timeoutMs = 5000,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      if (this.ws?.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket 未连接'));
+        return;
+      }
+      const messageId = `${idPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const timeoutId = setTimeout(() => {
+        this.pendingFriendOps.delete(messageId);
+        reject(new Error('操作超时'));
+      }, timeoutMs);
+      this.pendingFriendOps.set(messageId, { resolve, reject, timeoutId, expectedCmd: respCmd });
+      const buf = encode(reqCmd, messageId, body, this.userId);
+      this.ws!.send(buf);
+    });
+  }
+
+  /** 搜索用户 */
+  searchUsers(keyword: string): Promise<SearchUserResp> {
+    return this._sendFriendOp<SearchUserResp>(
+      Cmd.FRIEND_SEARCH_REQ,
+      Cmd.FRIEND_SEARCH_RESP,
+      { keyword },
+      'search',
+    );
+  }
+
+  /** 添加好友 */
+  addFriend(friendId: string): Promise<FriendOpResp> {
+    return this._sendFriendOp<FriendOpResp>(
+      Cmd.FRIEND_ADD_REQ,
+      Cmd.FRIEND_ADD_RESP,
+      { userId: this.userId, friendId },
+      'add',
+    );
+  }
+
+  /** 接受好友申请（friendId 是申请发起方） */
+  acceptFriend(friendId: string): Promise<FriendOpResp> {
+    return this._sendFriendOp<FriendOpResp>(
+      Cmd.FRIEND_ACCEPT_REQ,
+      Cmd.FRIEND_ACCEPT_RESP,
+      { userId: this.userId, friendId },
+      'accept',
+    );
+  }
+
+  /** 删除好友 */
+  deleteFriend(friendId: string): Promise<FriendOpResp> {
+    return this._sendFriendOp<FriendOpResp>(
+      Cmd.FRIEND_DELETE_REQ,
+      Cmd.FRIEND_DELETE_RESP,
+      { userId: this.userId, friendId },
+      'delete',
+    );
   }
 
   // ================================================================
@@ -495,6 +589,22 @@ export class IMClient {
   // ================================================================
 
   private _dispatchMessage(cmd: number, messageId: string, body: any): void {
+    // 处理好友操作的错误响应（cmd=400/409/500，body 是纯字符串）
+    // 错误响应的 cmd 为 HTTP 风格状态码，body 为 UTF-8 字符串（非 JSON），需在 switch 之前拦截避免 JSON.parse 抛异常
+    if (cmd === 400 || cmd === 409 || cmd === 500) {
+      const errorMessage = typeof body === 'string' ? body : JSON.stringify(body);
+      const pending = this.pendingFriendOps.get(messageId);
+      if (pending) {
+        clearTimeout(pending.timeoutId);
+        this.pendingFriendOps.delete(messageId);
+        pending.reject(new Error(errorMessage));
+      } else {
+        // 未找到对应的 pending，作为通用错误事件
+        this._emit('error', new Error(errorMessage));
+      }
+      return;
+    }
+
     switch (cmd) {
       case Cmd.AUTH_RESP:
         console.log('[IMClient] 认证成功');
@@ -531,6 +641,53 @@ export class IMClient {
       case Cmd.ACK_RESP:
         // ACK 已确认，无需处理
         break;
+
+      // 好友操作响应
+      case Cmd.FRIEND_SEARCH_RESP: {
+        const resp = body as SearchUserResp;
+        // 关联到 pendingFriendOps（通过 messageId）
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          pending.resolve(resp);
+        } else {
+          // 未找到待处理请求，可能是重复响应，触发事件
+          this._emit('searchResult', resp);
+        }
+        break;
+      }
+      case Cmd.FRIEND_ADD_RESP:
+      case Cmd.FRIEND_ACCEPT_RESP:
+      case Cmd.FRIEND_DELETE_RESP: {
+        const resp = body as FriendOpResp;
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          if (resp.code === 0) {
+            pending.resolve(resp);
+          } else {
+            pending.reject(new Error(resp.message));
+          }
+        }
+        break;
+      }
+      case Cmd.FRIEND_ADD_NOTIFY: {
+        const notify = body as FriendNotify;
+        this._emit('friendRequest', notify);
+        break;
+      }
+      case Cmd.FRIEND_ACCEPT_NOTIFY: {
+        const notify = body as FriendNotify;
+        this._emit('friendAccepted', notify);
+        break;
+      }
+      case Cmd.FRIEND_DELETE_NOTIFY: {
+        const notify = body as FriendDeleteNotify;
+        this._emit('friendDeleted', notify);
+        break;
+      }
 
       default:
         console.log('[IMClient] Unhandled cmd:', '0x' + cmd.toString(16), body);
