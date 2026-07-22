@@ -5,6 +5,7 @@ import { getIMClient } from '@/hooks/useIMClient';
 
 export interface Friend {
   userId: string;
+  userName: string;
   nickname: string;
   avatar: string;
   online: boolean;
@@ -12,7 +13,8 @@ export interface Friend {
 }
 
 export interface PendingRequest {
-  userId: string; // 申请发起方
+  userId: string;   // 申请发起方（NanoID）
+  userName: string;
   nickname: string;
   avatar: string;
   requestedAt: number;
@@ -20,6 +22,7 @@ export interface PendingRequest {
 
 export interface SearchUser {
   userId: string;
+  userName: string;
   nickname: string;
   avatar: string;
 }
@@ -174,6 +177,7 @@ export const useFriendStore = create<FriendState>()((set) => ({
           ...state.pendingRequests,
           {
             userId: notify.userId,
+            userName: notify.userName || '',
             nickname: notify.nickname,
             avatar: notify.avatar,
             requestedAt: Date.now(),
@@ -194,6 +198,7 @@ export const useFriendStore = create<FriendState>()((set) => ({
           ...state.friends,
           {
             userId: notify.userId,
+            userName: notify.userName || '',
             nickname: notify.nickname,
             avatar: notify.avatar,
             online: true, // 能推送 Notify 说明对方在线

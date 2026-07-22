@@ -6,7 +6,7 @@ type Tab = 'login' | 'register';
 
 export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<Tab>('login');
-  const [userId, setUserId] = useState('');
+  const [userName, setUserName] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [avatar, setAvatar] = useState('');
@@ -18,14 +18,14 @@ export default function LoginPage() {
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!userId.trim() || !password.trim()) {
-      setError('请输入用户 ID 和密码');
+    if (!userName.trim() || !password.trim()) {
+      setError('请输入用户名和密码');
       return;
     }
     setError('');
     setLoading(true);
     try {
-      await login(userId.trim(), password);
+      await login(userName.trim(), password);
       navigate('/chat', { replace: true });
     } catch (err: any) {
       setError(err.message || '登录失败');
@@ -36,14 +36,14 @@ export default function LoginPage() {
 
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
-    if (!userId.trim() || !password.trim()) {
-      setError('请输入用户 ID 和密码');
+    if (!userName.trim() || !password.trim()) {
+      setError('请输入用户名和密码');
       return;
     }
     setError('');
     setLoading(true);
     try {
-      await register(userId.trim(), nickname.trim() || userId.trim(), password, avatar.trim() || undefined);
+      await register(userName.trim(), nickname.trim() || userName.trim(), password, avatar.trim() || undefined);
       navigate('/chat', { replace: true });
     } catch (err: any) {
       setError(err.message || '注册失败');
@@ -98,12 +98,12 @@ export default function LoginPage() {
           {activeTab === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">用户 ID</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">用户名</label>
                 <input
                   type="text"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  placeholder="请输入用户 ID"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="请输入用户名"
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-wechat-green transition-colors"
                 />
               </div>
@@ -132,12 +132,12 @@ export default function LoginPage() {
           {activeTab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">用户 ID</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">用户名</label>
                 <input
                   type="text"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  placeholder="请输入用户 ID"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="请输入用户名"
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-wechat-green transition-colors"
                 />
               </div>

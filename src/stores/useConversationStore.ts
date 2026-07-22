@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { IncomingMessage } from '@/sdk/types';
 
 export interface Conversation {
@@ -26,7 +27,9 @@ interface ConversationState {
   getSortedList: () => string[];
 }
 
-export const useConversationStore = create<ConversationState>()((set, get) => ({
+export const useConversationStore = create<ConversationState>()(
+  persist(
+    (set, get) => ({
   conversations: {},
   activePeerId: null,
 
@@ -85,7 +88,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
           }
         : {
             peerId,
-            nickname: peerId, // 默认用 peerId 作为昵称
+            nickname: msg.senderNickname || msg.senderUserName || peerId,
             avatar: '',
             lastMessage,
             lastMessageTime,
@@ -142,4 +145,12 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
       (a, b) => (conversations[b].lastMessageTime || 0) - (conversations[a].lastMessageTime || 0)
     );
   },
-}));
+}),
+    {
+      name: 'pomelo-conversations',
+      partialize: (state) => ({
+        conversations: state.conversations,
+      }),
+    }
+  )
+);
