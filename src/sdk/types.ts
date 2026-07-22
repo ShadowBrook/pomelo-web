@@ -38,6 +38,9 @@ export enum Cmd {
   FRIEND_DELETE_REQ = 0x0068,
   FRIEND_DELETE_RESP = 0x0069,
   FRIEND_DELETE_NOTIFY = 0x006A,
+
+  // 通用错误响应
+  CMD_ERROR = 0xFFFF,
 }
 
 // 消息类型
@@ -77,6 +80,8 @@ export interface IncomingMessage {
   id: string;
   senderId: string;
   recipientId: string;
+  senderUserName?: string;
+  senderNickname?: string;
   msgType: MsgType;
   content: string;
   seq: number;
@@ -110,6 +115,7 @@ export interface SearchUserResp {
   message: string;
   users: Array<{
     userId: string;
+    userName: string;
     nickname: string;
     avatar: string;
   }>;
@@ -122,10 +128,25 @@ export interface FriendOpResp {
 
 export interface FriendNotify {
   userId: string;
+  userName: string;
   nickname: string;
   avatar: string;
 }
 
 export interface FriendDeleteNotify {
   userId: string;
+}
+
+// 通用错误响应体
+export interface ErrorBody {
+  code: number;
+  message: string;
+}
+
+// 拉取历史消息响应
+export interface PullHistoryResp {
+  code: number;
+  message: string;
+  messages: IncomingMessage[];
+  hasMore: boolean;
 }

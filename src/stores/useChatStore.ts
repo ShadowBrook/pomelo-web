@@ -1,9 +1,9 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { IncomingMessage, StatusUpdate, MsgType, MessageStatus } from '@/sdk/types';
 import { generateId } from '@/sdk/protocol';
-import { getMessageHistory, type HistoryMessage } from '@/utils/api';
+import { getIMClient } from '@/hooks/useIMClient';
 
-// 聊天消息（Store 内部表示）
 export interface ChatMessage {
   id: string;
   senderId: string;
@@ -11,19 +11,15 @@ export interface ChatMessage {
   msgType: MsgType;
   content: string;
   status: MessageStatus;
-  timestamp: number; // 服务端时间戳或本地创建时间
+  timestamp: number;
   seq?: number;
 }
 
 interface ChatState {
-  // 按 peerId 分桶的消息列表
   messages: Record<string, ChatMessage[]>;
-  // 历史消息加载状态
   loadingHistory: boolean;
-  // 按 peerId 记录是否还有更早的历史可加载（undefined 表示尚未加载过）
   hasMoreHistory: Record<string, boolean>;
 
-  // Actions
   addMessage: (msg: ChatMessage) => void;
   sendText: (peerId: string, text: string, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
   sendImage: (peerId: string, file: File, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
@@ -37,269 +33,242 @@ interface ChatState {
     messageId: string,
     sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
   ) => void;
-  // 拉取历史消息并合并到对应 peerId 的消息列表前面
-  loadHistory: (userId: string, peerId: string, beforeSeq?: number) => Promise<void>;
+  /** 打开会话时调用：有缓存则直接显示，同时拉取增量；无缓存则全量拉取 */
+  openConversation: (peerId: string) => Promise<void>;
+  /** 滚动到顶加载更早历史 */
+  loadMoreHistory: (peerId: string) => Promise<void>;
 }
 
-export const useChatStore = create<ChatState>()((set, get) => ({
-  messages: {},
-  loadingHistory: false,
-  hasMoreHistory: {},
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set, get) => ({
+      messages: {},
+      loadingHistory: false,
+      hasMoreHistory: {},
 
-  addMessage: (msg: ChatMessage) => {
-    set((state) => {
-      // 确定 peerId：如果是自己发的，peerId 是 recipientId；如果是收到的，peerId 是 senderId
-      const peerId = msg.senderId === '__self__' ? msg.recipientId : msg.senderId;
-      const existing = state.messages[peerId] || [];
-      // 基于 id 去重
-      if (existing.some(m => m.id === msg.id)) return state;
-      return {
-        messages: {
-          ...state.messages,
-          [peerId]: [...existing, msg].sort((a, b) => a.timestamp - b.timestamp),
-        },
-      };
-    });
-  },
-
-  sendText: (peerId, text, sendFn) => {
-    const msgId = sendFn({ recipientId: peerId, msgType: MsgType.TEXT, content: text });
-    const msg: ChatMessage = {
-      id: msgId,
-      senderId: '__self__', // 会被 hooks 层替换为实际 userId
-      recipientId: peerId,
-      msgType: MsgType.TEXT,
-      content: text,
-      status: 'sending',
-      timestamp: Date.now(),
-    };
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [peerId]: [...(state.messages[peerId] || []), msg],
+      addMessage: (msg: ChatMessage) => {
+        set((state) => {
+          const peerId = msg.senderId === '__self__' ? msg.recipientId : msg.senderId;
+          const existing = state.messages[peerId] || [];
+          if (existing.some(m => m.id === msg.id)) return state;
+          return {
+            messages: {
+              ...state.messages,
+              [peerId]: [...existing, msg].sort((a, b) => a.timestamp - b.timestamp),
+            },
+          };
+        });
       },
-    }));
-  },
 
-  sendImage: (peerId, file, sendFn) => {
-    // 读取文件为 base64
-    const reader = new FileReader();
-    // 创建一条 failed 状态的消息（用于 onerror / sendFn 异常）
-    const createFailedMsg = (): ChatMessage => ({
-      id: generateId(),
-      senderId: '__self__',
-      recipientId: peerId,
-      msgType: MsgType.IMAGE,
-      content: '',
-      status: 'failed',
-      timestamp: Date.now(),
-    });
-    reader.onerror = () => {
-      const msg = createFailedMsg();
-      set((state) => ({
-        messages: {
-          ...state.messages,
-          [peerId]: [...(state.messages[peerId] || []), msg],
-        },
-      }));
-    };
-    reader.onload = () => {
-      try {
-        const base64 = reader.result as string;
-        const msgId = sendFn({ recipientId: peerId, msgType: MsgType.IMAGE, content: base64 });
+      sendText: (peerId, text, sendFn) => {
+        const msgId = sendFn({ recipientId: peerId, msgType: MsgType.TEXT, content: text });
         const msg: ChatMessage = {
-          id: msgId,
-          senderId: '__self__',
-          recipientId: peerId,
-          msgType: MsgType.IMAGE,
-          content: base64,
-          status: 'sending',
-          timestamp: Date.now(),
+          id: msgId, senderId: '__self__', recipientId: peerId,
+          msgType: MsgType.TEXT, content: text, status: 'sending', timestamp: Date.now(),
         };
         set((state) => ({
-          messages: {
-            ...state.messages,
-            [peerId]: [...(state.messages[peerId] || []), msg],
-          },
+          messages: { ...state.messages, [peerId]: [...(state.messages[peerId] || []), msg] },
         }));
-      } catch {
-        // sendFn 抛异常（如未连接），创建 failed 消息
-        const msg = createFailedMsg();
-        set((state) => ({
-          messages: {
-            ...state.messages,
-            [peerId]: [...(state.messages[peerId] || []), msg],
-          },
-        }));
-      }
-    };
-    reader.readAsDataURL(file);
-  },
-
-  sendFile: (peerId, file, sendFn) => {
-    const fileInfo = JSON.stringify({ name: file.name, size: file.size, type: file.type });
-    const msgId = sendFn({ recipientId: peerId, msgType: MsgType.FILE, content: fileInfo });
-    const msg: ChatMessage = {
-      id: msgId,
-      senderId: '__self__',
-      recipientId: peerId,
-      msgType: MsgType.FILE,
-      content: fileInfo,
-      status: 'sending',
-      timestamp: Date.now(),
-    };
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [peerId]: [...(state.messages[peerId] || []), msg],
       },
-    }));
-  },
 
-  onIncomingMessage: (msg: IncomingMessage) => {
-    // msg 来自 SDK，senderId 是对方 userId
-    const chatMsg: ChatMessage = {
-      id: msg.id,
-      senderId: msg.senderId,
-      recipientId: msg.recipientId,
-      msgType: msg.msgType,
-      content: msg.content,
-      status: 'delivered', // 收到的消息默认 delivered
-      timestamp: msg.createdAt || Date.now(),
-      seq: msg.seq,
-    };
-    // peerId 是 senderId（对方）
-    const peerId = msg.senderId;
-    set((state) => {
-      const existing = state.messages[peerId] || [];
-      // 基于 id 去重
-      if (existing.some(m => m.id === msg.id)) return state;
-      return {
-        messages: {
-          ...state.messages,
-          [peerId]: [...existing, chatMsg].sort((a, b) => a.timestamp - b.timestamp),
-        },
-      };
-    });
-  },
-
-  onStatusChange: (update: StatusUpdate) => {
-    set((state) => {
-      const newMessages = { ...state.messages };
-      // 遍历所有桶查找匹配的消息
-      for (const peerId of Object.keys(newMessages)) {
-        const msgs = newMessages[peerId];
-        const idx = msgs.findIndex(m => m.id === update.id);
-        if (idx !== -1) {
-          const updated = [...msgs];
-          updated[idx] = { ...updated[idx], status: update.status, seq: update.seq ?? updated[idx].seq };
-          newMessages[peerId] = updated;
-          return { messages: newMessages };
-        }
-      }
-      return state;
-    });
-  },
-
-  searchMessages: (keyword, peerId) => {
-    const { messages } = get();
-    const results: ChatMessage[] = [];
-    const searchIn = peerId ? [peerId] : Object.keys(messages);
-    for (const pid of searchIn) {
-      const msgs = messages[pid] || [];
-      for (const msg of msgs) {
-        if (msg.content.toLowerCase().includes(keyword.toLowerCase())) {
-          results.push(msg);
-        }
-      }
-    }
-    return results;
-  },
-
-  clearMessages: (peerId) => {
-    set((state) => {
-      const newMessages = { ...state.messages };
-      delete newMessages[peerId];
-      return { messages: newMessages };
-    });
-  },
-
-  clearAll: () => {
-    set({ messages: {}, hasMoreHistory: {}, loadingHistory: false });
-  },
-
-  loadHistory: async (userId, peerId, beforeSeq) => {
-    const state = get();
-    // 避免重复加载
-    if (state.loadingHistory) return;
-    // 如果指定了 beforeSeq 且已知没有更多，直接返回
-    if (beforeSeq && state.hasMoreHistory[peerId] === false) return;
-
-    set({ loadingHistory: true });
-    try {
-      const res = await getMessageHistory(userId, peerId, beforeSeq);
-      const existingMessages = state.messages[peerId] || [];
-      // 将历史消息转换为 ChatMessage 格式
-      const historyMessages: ChatMessage[] = ((res.messages || []) as HistoryMessage[]).map((m) => ({
-        id: String(m.id),
-        senderId: m.senderId,
-        recipientId: m.recipientId,
-        msgType: m.msgType as MsgType,
-        content: m.content,
-        status: 'seen' as MessageStatus, // 历史消息默认已读
-        timestamp: m.createdAt,
-        seq: m.seq,
-      }));
-
-      // 合并：历史消息在前，现有消息在后，按 id 去重，再按 timestamp 排序
-      const existingIds = new Set(existingMessages.map((m) => m.id));
-      const newMessages = historyMessages.filter((m) => !existingIds.has(m.id));
-      const merged = [...newMessages, ...existingMessages].sort(
-        (a, b) => a.timestamp - b.timestamp,
-      );
-
-      set((s) => ({
-        messages: { ...s.messages, [peerId]: merged },
-        loadingHistory: false,
-        hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
-      }));
-    } catch (e) {
-      set({ loadingHistory: false });
-      console.error('加载历史消息失败:', e);
-    }
-  },
-
-  retryMessage: (messageId, sendFn) => {
-    // 查找失败的消息，重新发送并替换为新的 sending 消息
-    set((state) => {
-      const newMessages = { ...state.messages };
-      for (const peerId of Object.keys(newMessages)) {
-        const msgs = newMessages[peerId];
-        const idx = msgs.findIndex((m) => m.id === messageId);
-        if (idx !== -1) {
-          const oldMsg = msgs[idx];
+      sendImage: (peerId, file, sendFn) => {
+        const createFailedMsg = (): ChatMessage => ({
+          id: generateId(), senderId: '__self__', recipientId: peerId,
+          msgType: MsgType.IMAGE, content: '', status: 'failed', timestamp: Date.now(),
+        });
+        const reader = new FileReader();
+        reader.onerror = () => set((s) => ({ messages: { ...s.messages, [peerId]: [...(s.messages[peerId] || []), createFailedMsg()] } }));
+        reader.onload = () => {
           try {
-            const newMsgId = sendFn({
-              recipientId: oldMsg.recipientId,
-              msgType: oldMsg.msgType,
-              content: oldMsg.content,
-            });
-            const updated = [...msgs];
-            updated[idx] = {
-              ...oldMsg,
-              id: newMsgId,
-              status: 'sending',
-              timestamp: Date.now(),
-            };
-            newMessages[peerId] = updated;
-            return { messages: newMessages };
-          } catch {
-            // 重新发送仍然失败，保持 failed 状态
-            return state;
+            const base64 = reader.result as string;
+            const msgId = sendFn({ recipientId: peerId, msgType: MsgType.IMAGE, content: base64 });
+            const msg: ChatMessage = { id: msgId, senderId: '__self__', recipientId: peerId, msgType: MsgType.IMAGE, content: base64, status: 'sending', timestamp: Date.now() };
+            set((s) => ({ messages: { ...s.messages, [peerId]: [...(s.messages[peerId] || []), msg] } }));
+          } catch { set((s) => ({ messages: { ...s.messages, [peerId]: [...(s.messages[peerId] || []), createFailedMsg()] } })); }
+        };
+        reader.readAsDataURL(file);
+      },
+
+      sendFile: (peerId, file, sendFn) => {
+        const fileInfo = JSON.stringify({ name: file.name, size: file.size, type: file.type });
+        const msgId = sendFn({ recipientId: peerId, msgType: MsgType.FILE, content: fileInfo });
+        const msg: ChatMessage = { id: msgId, senderId: '__self__', recipientId: peerId, msgType: MsgType.FILE, content: fileInfo, status: 'sending', timestamp: Date.now() };
+        set((s) => ({ messages: { ...s.messages, [peerId]: [...(s.messages[peerId] || []), msg] } }));
+      },
+
+      onIncomingMessage: (msg: IncomingMessage) => {
+        const chatMsg: ChatMessage = {
+          id: msg.id, senderId: msg.senderId, recipientId: msg.recipientId,
+          msgType: msg.msgType, content: msg.content, status: 'delivered',
+          timestamp: msg.createdAt || Date.now(), seq: msg.seq,
+        };
+        const peerId = msg.senderId;
+        set((state) => {
+          const existing = state.messages[peerId] || [];
+          if (existing.some(m => m.id === msg.id)) return state;
+          return { messages: { ...state.messages, [peerId]: [...existing, chatMsg].sort((a, b) => a.timestamp - b.timestamp) } };
+        });
+      },
+
+      onStatusChange: (update: StatusUpdate) => {
+        set((state) => {
+          const newMessages = { ...state.messages };
+          for (const peerId of Object.keys(newMessages)) {
+            const msgs = newMessages[peerId];
+            const idx = msgs.findIndex(m => m.id === update.id);
+            if (idx !== -1) {
+              const updated = [...msgs];
+              updated[idx] = { ...updated[idx], status: update.status, seq: update.seq ?? updated[idx].seq };
+              newMessages[peerId] = updated;
+              return { messages: newMessages };
+            }
+          }
+          return state;
+        });
+      },
+
+      searchMessages: (keyword, peerId) => {
+        const { messages } = get();
+        const results: ChatMessage[] = [];
+        const searchIn = peerId ? [peerId] : Object.keys(messages);
+        for (const pid of searchIn) {
+          for (const msg of messages[pid] || []) {
+            if (msg.content.toLowerCase().includes(keyword.toLowerCase())) results.push(msg);
           }
         }
-      }
-      return state;
-    });
-  },
-}));
+        return results;
+      },
+
+      clearMessages: (peerId) => {
+        set((s) => { const m = { ...s.messages }; delete m[peerId]; return { messages: m }; });
+      },
+
+      clearAll: () => set({ messages: {}, hasMoreHistory: {}, loadingHistory: false }),
+
+      loadMoreHistory: async (peerId) => {
+        const state = get();
+        if (state.loadingHistory) return;
+        if (state.hasMoreHistory[peerId] === false) return;
+
+        const client = getIMClient();
+        if (!client) return;
+
+        const msgs = state.messages[peerId] || [];
+        // use oldest seq as beforeSeq to get messages before what we have
+        const oldestSeq = msgs.length > 0 ? msgs[0].seq ?? 0 : 0;
+        if (oldestSeq === 0) return;
+
+        set({ loadingHistory: true });
+        try {
+          const res = await client.pullHistory(peerId, oldestSeq);
+          const historyMsgs: ChatMessage[] = (res.messages || []).map(m => ({
+            id: String(m.id), senderId: m.senderId, recipientId: m.recipientId,
+            msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
+            timestamp: m.createdAt || Date.now(), seq: m.seq,
+          }));
+
+          set((s) => {
+            const existing = s.messages[peerId] || [];
+            const existingIds = new Set(existing.map(m => m.id));
+            const newMsgs = historyMsgs.filter(m => !existingIds.has(m.id));
+            const merged = [...newMsgs, ...existing].sort((a, b) => a.timestamp - b.timestamp);
+            return {
+              messages: { ...s.messages, [peerId]: merged },
+              loadingHistory: false,
+              hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
+            };
+          });
+        } catch (e) {
+          set({ loadingHistory: false });
+          console.error('加载历史消息失败:', e);
+        }
+      },
+
+      /** 打开会话：有缓存直接显示 + 后台拉增量 */
+      openConversation: async (peerId) => {
+        const state = get();
+        const cached = state.messages[peerId] || [];
+
+        const client = getIMClient();
+        if (!client) return;
+
+        // 计算本地最大 seq，用做拉取起点（只拉更新的消息）
+        const maxSeq = cached.reduce((max, m) => m.seq && m.seq > max ? m.seq : max, 0);
+
+        // 首次打开该会话：拉取最近 50 条
+        if (cached.length === 0) {
+          set({ loadingHistory: true });
+          try {
+            const res = await client.pullHistory(peerId, 0);
+            const msgs: ChatMessage[] = (res.messages || []).map(m => ({
+              id: String(m.id), senderId: m.senderId, recipientId: m.recipientId,
+              msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
+              timestamp: m.createdAt || Date.now(), seq: m.seq,
+            }));
+            set((s) => ({
+              messages: { ...s.messages, [peerId]: msgs.sort((a, b) => a.timestamp - b.timestamp) },
+              loadingHistory: false,
+              hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
+            }));
+          } catch (e) {
+            set({ loadingHistory: false });
+            console.error('加载历史消息失败:', e);
+          }
+          return;
+        }
+
+        // 有缓存：后台静默拉取增量（更新于 maxSeq 的消息）
+        if (maxSeq > 0) {
+          try {
+            const res = await client.pullHistory(peerId, maxSeq);
+            if (res.messages && res.messages.length > 0) {
+              const deltaMsgs: ChatMessage[] = res.messages.map(m => ({
+                id: String(m.id), senderId: m.senderId, recipientId: m.recipientId,
+                msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
+                timestamp: m.createdAt || Date.now(), seq: m.seq,
+              }));
+              set((s) => {
+                const existing = s.messages[peerId] || [];
+                const existingIds = new Set(existing.map(m => m.id));
+                const newMsgs = deltaMsgs.filter(m => !existingIds.has(m.id));
+                if (newMsgs.length === 0) return s;
+                const merged = [...newMsgs, ...existing].sort((a, b) => a.timestamp - b.timestamp);
+                return { messages: { ...s.messages, [peerId]: merged } };
+              });
+            }
+          } catch (e) {
+            console.error('拉取增量消息失败:', e);
+          }
+        }
+      },
+
+      retryMessage: (messageId, sendFn) => {
+        set((state) => {
+          const newMessages = { ...state.messages };
+          for (const peerId of Object.keys(newMessages)) {
+            const msgs = newMessages[peerId];
+            const idx = msgs.findIndex((m) => m.id === messageId);
+            if (idx !== -1) {
+              const oldMsg = msgs[idx];
+              try {
+                const newMsgId = sendFn({ recipientId: oldMsg.recipientId, msgType: oldMsg.msgType, content: oldMsg.content });
+                const updated = [...msgs];
+                updated[idx] = { ...oldMsg, id: newMsgId, status: 'sending', timestamp: Date.now() };
+                newMessages[peerId] = updated;
+                return { messages: newMessages };
+              } catch { return state; }
+            }
+          }
+          return state;
+        });
+      },
+    }),
+    {
+      name: 'pomelo-chat',
+      partialize: (state) => ({
+        messages: state.messages,
+        hasMoreHistory: state.hasMoreHistory,
+      }),
+    }
+  )
+);

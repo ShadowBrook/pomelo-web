@@ -78,7 +78,7 @@ export default function ChatPage() {
   // 页面加载时连接 IM
   useEffect(() => {
     if (user && token) {
-      connect(user.userId, token);
+      connect(user.userId, token, user.userName);
     }
   }, [user, token, connect]);
 
@@ -126,16 +126,14 @@ export default function ChatPage() {
     document.title = totalUnread > 0 ? `(${totalUnread}) Pomelo Chat` : 'Pomelo Chat';
   }, [totalUnread]);
 
-  // 选择会话 + 自动 markSeen + 首次加载历史
+  // 选择会话 → 自动 openConversation（有缓存则显示缓存 + 后台拉增量，无缓存则拉最近 50 条）
   const handleSelectConversation = useCallback((peerId: string) => {
     setActivePeer(peerId);
     const currentUserId = user?.userId || '';
+    // 加载/刷新消息（内部自动处理缓存与增量逻辑）
+    useChatStore.getState().openConversation(peerId);
+    // 未读消息标记已读
     const msgs = useChatStore.getState().messages[peerId] || [];
-    // 如果该会话没有任何消息，首次加载历史
-    if (msgs.length === 0 && currentUserId) {
-      useChatStore.getState().loadHistory(currentUserId, peerId);
-    }
-    // 获取该会话中对方发来的未读消息 ID，发送 SEEN ACK
     const incomingIds = msgs
       .filter(m => m.senderId !== currentUserId && m.senderId !== '__self__' && m.status !== 'seen')
       .map(m => m.id);
@@ -144,16 +142,17 @@ export default function ChatPage() {
     }
   }, [setActivePeer, markSeen, user]);
 
-  // 滚动到顶部时加载更早的历史：以当前最早一条消息的 seq 作为 beforeSeq
+  // 删除本地会话
+  const handleDeleteConversation = useCallback((peerId: string) => {
+    useConversationStore.getState().removeConversation(peerId);
+    useChatStore.getState().clearMessages(peerId);
+  }, []);
+
+  // 滚动到顶部时加载更早的历史
   const handleLoadMoreHistory = useCallback(() => {
-    const uid = user?.userId || '';
-    if (!activePeerId || !uid) return;
-    const msgs = useChatStore.getState().messages[activePeerId] || [];
-    const oldestSeq = msgs[0]?.seq;
-    if (oldestSeq !== undefined) {
-      useChatStore.getState().loadHistory(uid, activePeerId, oldestSeq);
-    }
-  }, [activePeerId, user]);
+    if (!activePeerId) return;
+    useChatStore.getState().loadMoreHistory(activePeerId);
+  }, [activePeerId]);
 
   // 发送文本
   const handleSendText = useCallback((text: string) => {
@@ -193,7 +192,7 @@ export default function ChatPage() {
       disconnect();
       // 短暂延迟后重连
       setTimeout(() => {
-        connect(user.userId, token);
+        connect(user.userId, token, user.userName);
       }, 300);
     }
   }, [user, token, disconnect, connect]);
@@ -293,6 +292,7 @@ export default function ChatPage() {
                   peerId={peerId}
                   isActive={activePeerId === peerId}
                   onClick={() => handleSelectConversation(peerId)}
+                  onDelete={handleDeleteConversation}
                 />
               ))
             )}

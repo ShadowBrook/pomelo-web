@@ -3,6 +3,7 @@ import {
   Cmd,
   MsgType,
   AckType,
+  ErrorBody,
   ConnectionState,
   OutgoingMessage,
   IncomingMessage,
@@ -11,6 +12,7 @@ import {
   FriendOpResp,
   FriendNotify,
   FriendDeleteNotify,
+  PullHistoryResp,
 } from './types';
 
 interface IMClientOptions {
@@ -22,6 +24,7 @@ interface IMClientOptions {
 export class IMClient {
   private ws: WebSocket | null = null;
   private userId: string = '';
+  private userName: string = '';
   private token: string = '';
   private connected: boolean = false;
   private reconnectAttempts: number = 0;
@@ -58,6 +61,17 @@ export class IMClient {
     }
   > = new Map();
 
+  // 历史消息拉取待处理 Map：messageId -> { resolve, reject, timeoutId }
+  // 复用 PULL_REQ/PULL_RESP 协议，通过 messageId 关联请求和响应，10 秒超时
+  private pendingHistoryPulls: Map<
+    string,
+    {
+      resolve: (value: PullHistoryResp) => void;
+      reject: (reason: any) => void;
+      timeoutId: ReturnType<typeof setTimeout>;
+    }
+  > = new Map();
+
   // 事件系统
   private handlers: { [K in keyof IMClientEvents]?: IMClientEvents[K][] } = {};
 
@@ -84,8 +98,9 @@ export class IMClient {
   // Public API
   // ================================================================
 
-  async connect(userId: string, token: string): Promise<void> {
+  async connect(userId: string, token: string, userName?: string): Promise<void> {
     this.userId = userId;
+    this.userName = userName || '';
     this.token = token;
     // Fix 5：连接时重置主动断开标志
     this.intentionallyDisconnected = false;
@@ -93,7 +108,6 @@ export class IMClient {
     return new Promise<void>((resolve, reject) => {
       try {
         let settled = false;
-        let errorPending = false;
         this._setState('connecting');
         this.ws = new WebSocket(this.url);
         this.ws.binaryType = 'arraybuffer';
@@ -101,7 +115,6 @@ export class IMClient {
         this.ws.onopen = async () => {
           if (settled) return;
           settled = true;
-          errorPending = false;
           try {
             this._authenticate();
             this.connected = true;
@@ -120,36 +133,34 @@ export class IMClient {
           this._onWsMessage(event);
         };
 
-        this.ws.onclose = () => {
+        this.ws.onclose = (event: CloseEvent) => {
           this.connected = false;
           this._stopHeartbeat();
-          // Fix 4：清理所有发送定时器，避免重连期间触发 InvalidStateError
           for (const [, msg] of this.pendingQueue) {
             if (msg.timer) {
               clearTimeout(msg.timer);
               msg.timer = undefined;
             }
           }
-          // 如果 onopen 未触发且 onerror 已标记错误，则 emit error 并 reject Promise
+          // 仅当 onopen 从未触发且 close code 是真异常时，才 reject Promise
+          // code 1005/1006 是浏览器自身关闭（瞬态），resolve 不报错 — 由 _tryReconnect 接管
           if (!settled) {
             settled = true;
-            if (errorPending) {
-              const err = new Error('WebSocket error');
+            if (!event.wasClean && event.code !== 1000 && event.code !== 1005 && event.code !== 1006) {
+              const err = new Error('WebSocket connection failed: code=' + event.code);
               this._emit('error', err);
               reject(err);
+            } else {
+              resolve();
             }
           }
-          // Fix 5：主动断开不再触发重连
           if (this.intentionallyDisconnected) return;
           this._setState('disconnected');
           this._tryReconnect();
         };
 
         this.ws.onerror = () => {
-          // 不立即 reject 也不 emit error：onerror 后标准行为是 onclose。
-          // 但某些场景下 onopen 也可能到达（连接实际成功），
-          // 因此延迟到 onclose 时再决定是否 reject。
-          errorPending = true;
+          // onerror 后标准行为是 onclose，错误判断统一在 onclose 中通过 CloseEvent.code 处理
         };
       } catch (e) {
         reject(e);
@@ -189,6 +200,13 @@ export class IMClient {
       pending.reject(new Error('连接已断开'));
     }
     this.pendingFriendOps.clear();
+
+    // 清理待处理的历史拉取
+    for (const [, pending] of this.pendingHistoryPulls) {
+      clearTimeout(pending.timeoutId);
+      pending.reject(new Error('连接已断开'));
+    }
+    this.pendingHistoryPulls.clear();
 
     if (this.ws) {
       this.ws.close();
@@ -325,6 +343,35 @@ export class IMClient {
     );
   }
 
+  /**
+   * 拉取会话历史消息（通过 PULL_REQ/PULL_RESP，与离线拉取共用协议）。
+   * 后端根据请求体中是否有 peerId 区分：
+   * - 有 peerId → 按 conversationId 拉取历史（所有已持久化消息）
+   * - 无 peerId → 拉取离线未送达消息
+   */
+  pullHistory(peerId: string, beforeSeq?: number, limit = 50): Promise<PullHistoryResp> {
+    return new Promise<PullHistoryResp>((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket 未连接'));
+        return;
+      }
+      const body: Record<string, unknown> = {
+        userId: this.userId,
+        peerId,
+        lastMsgId: beforeSeq || 0,
+        limit,
+      };
+      const messageId = `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const timeoutId = setTimeout(() => {
+        this.pendingHistoryPulls.delete(messageId);
+        reject(new Error('拉取历史消息超时'));
+      }, 10000);
+      this.pendingHistoryPulls.set(messageId, { resolve, reject, timeoutId });
+      const buf = encode(Cmd.PULL_REQ, messageId, body, this.userId);
+      this.ws.send(buf);
+    });
+  }
+
   // ================================================================
   // Connection & Heartbeat
   // ================================================================
@@ -333,6 +380,7 @@ export class IMClient {
     const body = {
       token: this.token,
       userId: this.userId,
+      userName: this.userName,
       deviceId: 'web',
       platform: 'web',
       appVersion: '1.0.0',
@@ -521,6 +569,8 @@ export class IMClient {
       id: String(body.id || ''),
       senderId: body.senderId || '',
       recipientId: body.recipientId || '',
+      senderUserName: body.senderUserName,
+      senderNickname: body.senderNickname,
       msgType: body.message?.msgType ?? body.msgType ?? MsgType.TEXT,
       content: body.message?.content ?? body.content ?? '',
       seq: body.seq || 0,
@@ -600,33 +650,57 @@ export class IMClient {
     }
   }
 
+  /**
+   * 将 PULL_RESP body 中的消息数组归一化为 IncomingMessage[]。
+   * 与 _onMessageReceived 的解析逻辑一致，但不触发事件、不更新 lastSeq、不去重。
+   */
+  private _normalizePullMessages(body: any): IncomingMessage[] {
+    const rawMessages: any[] = body?.messages ?? body?.list ?? [];
+    return rawMessages.map((record: any) => ({
+      id: String(record.id || ''),
+      senderId: record.senderId || '',
+      recipientId: record.recipientId || '',
+      msgType: record.msgType ?? MsgType.TEXT,
+      content: record.content ?? '',
+      seq: record.seq || 0,
+      createdAt: record.createdAt || Date.now(),
+    }));
+  }
+
   // ================================================================
   // Message Dispatch
   // ================================================================
 
   private _dispatchMessage(cmd: number, messageId: string, body: any): void {
-    // 处理好友操作的错误响应（cmd=400/409/500，body 是纯字符串）
-    // 错误响应的 cmd 为 HTTP 风格状态码，body 为 UTF-8 字符串（非 JSON），需在 switch 之前拦截避免 JSON.parse 抛异常
-    if (cmd === 400 || cmd === 409 || cmd === 500) {
-      const errorMessage = typeof body === 'string' ? body : JSON.stringify(body);
+    // 通用错误响应（CMD_ERROR）
+    if (cmd === Cmd.CMD_ERROR) {
+      const err = body as ErrorBody;
+      const errorMessage = err?.message || JSON.stringify(body);
       const pending = this.pendingFriendOps.get(messageId);
       if (pending) {
         clearTimeout(pending.timeoutId);
         this.pendingFriendOps.delete(messageId);
         pending.reject(new Error(errorMessage));
       } else {
-        // 未找到对应的 pending，作为通用错误事件
-        this._emit('error', new Error(errorMessage));
+        this._emit('error', new Error(`[${err?.code ?? 'UNKNOWN'}] ${errorMessage}`));
       }
       return;
     }
 
     switch (cmd) {
       case Cmd.AUTH_RESP:
+        if (body?.code !== 0) {
+          this._emit('error', new Error(body?.message || '认证失败'));
+          return;
+        }
         console.log('[IMClient] 认证成功');
         break;
 
       case Cmd.C2C_RESP:
+        if (body?.code !== 0) {
+          this._emit('error', new Error(body?.message || '发送失败'));
+          return;
+        }
         this._onC2CResp(messageId, body);
         break;
 
@@ -646,9 +720,25 @@ export class IMClient {
         this._onAckNotify(body);
         break;
 
-      case Cmd.PULL_RESP:
+      case Cmd.PULL_RESP: {
+        // 优先检查是否为 pending history pull（Promise 模式）
+        const pendingPull = this.pendingHistoryPulls.get(messageId);
+        if (pendingPull) {
+          clearTimeout(pendingPull.timeoutId);
+          this.pendingHistoryPulls.delete(messageId);
+          const resp: PullHistoryResp = {
+            code: body?.code ?? 0,
+            message: body?.message ?? '',
+            messages: this._normalizePullMessages(body),
+            hasMore: body?.hasMore ?? false,
+          };
+          pendingPull.resolve(resp);
+          return;
+        }
+        // 否则处理为离线消息拉取（事件模式）
         this._onPullResp(body ?? {});
         break;
+      }
 
       case Cmd.CTRL_NOTIFY:
         this._emit('kicked', body?.reason ?? '被踢下线');

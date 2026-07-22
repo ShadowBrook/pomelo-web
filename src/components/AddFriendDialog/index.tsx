@@ -45,7 +45,7 @@ export function AddFriendDialog({ open, onClose }: Props) {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="输入用户ID或昵称搜索"
+              placeholder="输入用户名或昵称搜索"
               className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-wechat-green"
               autoFocus
             />
@@ -76,7 +76,7 @@ export function AddFriendDialog({ open, onClose }: Props) {
                 </div>
                 <div className="ml-3 flex-1">
                   <p className="text-sm font-medium text-wechat-text">{u.nickname}</p>
-                  <p className="text-xs text-gray-400">ID: {u.userId}</p>
+                  <p className="text-xs text-gray-400">ID: {u.userName || u.userId}</p>
                 </div>
                 <button
                   onClick={() => handleAddFriend(u.userId)}

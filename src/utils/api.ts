@@ -40,17 +40,28 @@ async function request<T = any>(path: string, options?: RequestInit): Promise<Ap
   return res.json();
 }
 
-// 用户注册（也用作登录，因后端无独立 login API）
-export async function register(userId: string, nickname: string, password: string, avatar?: string) {
+// 用户注册（入参 userName 替代原来的 userId）
+export async function register(userName: string, nickname: string, password: string, avatar?: string) {
   return request('/user/register', {
     method: 'POST',
-    body: JSON.stringify({ userId, nickname, password, avatar: avatar || '' }),
+    body: JSON.stringify({ userName, nickname, password, avatar: avatar || '' }),
   });
+}
+
+// 用户登录
+export async function login(userName: string, password: string) {
+  return request<{ userId: string; userName: string; nickname: string; avatar: string }>(
+    '/user/login',
+    {
+      method: 'POST',
+      body: JSON.stringify({ userName, password }),
+    },
+  );
 }
 
 // 查询用户信息
 export async function getProfile(userId: string) {
-  return request<{ userId: string; nickname: string; avatar: string; status: number }>(
+  return request<{ userId: string; userName: string; nickname: string; avatar: string; status: number }>(
     `/user/${userId}/profile`
   );
 }
@@ -63,40 +74,13 @@ export async function healthCheck() {
 // 好友列表（仅已接受的）
 export async function getFriends(userId: string) {
   return request<
-    { userId: string; nickname: string; avatar: string; online: boolean; friendedAt: number }[]
+    { userId: string; userName: string; nickname: string; avatar: string; online: boolean; friendedAt: number }[]
   >(`/friends/${userId}`);
 }
 
 // 获取待处理的好友申请
 export async function getPendingFriends(userId: string) {
   return request<
-    { userId: string; nickname: string; avatar: string; requestedAt: number }[]
+    { userId: string; userName: string; nickname: string; avatar: string; requestedAt: number }[]
   >(`/friends/${userId}/pending`);
-}
-
-// 历史消息（后端返回结构）
-export interface HistoryMessage {
-  id: number; // 雪花 ID（Long）
-  senderId: string;
-  recipientId: string;
-  seq: number;
-  msgType: number; // 1=text, 2=image, 3=file, 4=emoji
-  content: string;
-  createdAt: number;
-}
-
-// 拉取历史消息（按 seq ASC 返回，最早在前）
-export async function getMessageHistory(
-  userId: string,
-  peerId: string,
-  beforeSeq?: number,
-  limit = 50,
-) {
-  const params = new URLSearchParams({ peerId, limit: String(limit) });
-  if (beforeSeq && beforeSeq > 0) params.set('beforeSeq', String(beforeSeq));
-  // 后端响应：{ code, messages, hasMore }，因 ApiResponse 有 [key: string]: any，
-  // messages / hasMore 会直接挂在返回对象顶层
-  return request<{ messages: HistoryMessage[]; hasMore: boolean }>(
-    `/messages/${userId}/history?${params.toString()}`,
-  );
 }
