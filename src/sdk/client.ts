@@ -78,7 +78,7 @@ export class IMClient {
   // 连接状态
   private state: ConnectionState = 'disconnected';
 
-  // 最后收到的 seq（用于 Pull）
+  // 本账号已同步到的收件人 seq（同步水位；收到的消息都携带本账号的信箱 seq）
   private lastSeq: number = 0;
 
   // 重连延迟参数
@@ -346,10 +346,13 @@ export class IMClient {
   /**
    * 拉取会话历史消息（通过 PULL_REQ/PULL_RESP，与离线拉取共用协议）。
    * 后端根据请求体中是否有 peerId 区分：
-   * - 有 peerId → 按 conversationId 拉取历史（所有已持久化消息）
-   * - 无 peerId → 拉取离线未送达消息
+   * - 有 peerId → 按 conversationId 拉取历史（created_at 倒序，只回退不前进）
+   * - 无 peerId → 拉取离线未送达消息（seq > 收件人同步水位）
+   *
+   * @param beforeTime 时间游标：传入已拥有最旧消息的 createdAt，拉取更早一页；
+   *                   0 / 不传 = 拉取最新一页。走 wire 的 lastMsgId 字段。
    */
-  pullHistory(peerId: string, beforeSeq?: number, limit = 50): Promise<PullHistoryResp> {
+  pullHistory(peerId: string, beforeTime?: number, limit = 50): Promise<PullHistoryResp> {
     return new Promise<PullHistoryResp>((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
         reject(new Error('WebSocket 未连接'));
@@ -358,7 +361,7 @@ export class IMClient {
       const body: Record<string, unknown> = {
         userId: this.userId,
         peerId,
-        lastMsgId: beforeSeq || 0,
+        lastMsgId: beforeTime || 0,
         limit,
       };
       const messageId = `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -622,6 +625,7 @@ export class IMClient {
 
   private _pullOfflineMessages(): void {
     if (!this.connected) return;
+    // lastMsgId = 本账号同步水位（lastSeq）。后端 pullPending(recipient_id, seq > 水位) 增量拉取
     const body = {
       userId: this.userId,
       lastMsgId: this.lastSeq,
