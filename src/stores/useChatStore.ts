@@ -154,13 +154,13 @@ export const useChatStore = create<ChatState>()(
         if (!client) return;
 
         const msgs = state.messages[peerId] || [];
-        // use oldest seq as beforeSeq to get messages before what we have
-        const oldestSeq = msgs.length > 0 ? msgs[0].seq ?? 0 : 0;
-        if (oldestSeq === 0) return;
+        // 用已拥有最早消息的 createdAt 作时间游标，拉取更早一页（历史接口按 created_at 倒序回退）
+        const oldestTime = msgs.length > 0 ? msgs[0].timestamp ?? 0 : 0;
+        if (oldestTime === 0) return;
 
         set({ loadingHistory: true });
         try {
-          const res = await client.pullHistory(peerId, oldestSeq);
+          const res = await client.pullHistory(peerId, oldestTime);
           const historyMsgs: ChatMessage[] = (res.messages || []).map(m => ({
             id: String(m.id), senderId: m.senderId, recipientId: m.recipientId,
             msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
@@ -192,9 +192,6 @@ export const useChatStore = create<ChatState>()(
         const client = getIMClient();
         if (!client) return;
 
-        // 计算本地最大 seq，用做拉取起点（只拉更新的消息）
-        const maxSeq = cached.reduce((max, m) => m.seq && m.seq > max ? m.seq : max, 0);
-
         // 首次打开该会话：拉取最近 50 条
         if (cached.length === 0) {
           set({ loadingHistory: true });
@@ -217,29 +214,8 @@ export const useChatStore = create<ChatState>()(
           return;
         }
 
-        // 有缓存：后台静默拉取增量（更新于 maxSeq 的消息）
-        if (maxSeq > 0) {
-          try {
-            const res = await client.pullHistory(peerId, maxSeq);
-            if (res.messages && res.messages.length > 0) {
-              const deltaMsgs: ChatMessage[] = res.messages.map(m => ({
-                id: String(m.id), senderId: m.senderId, recipientId: m.recipientId,
-                msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
-                timestamp: m.createdAt || Date.now(), seq: m.seq,
-              }));
-              set((s) => {
-                const existing = s.messages[peerId] || [];
-                const existingIds = new Set(existing.map(m => m.id));
-                const newMsgs = deltaMsgs.filter(m => !existingIds.has(m.id));
-                if (newMsgs.length === 0) return s;
-                const merged = [...newMsgs, ...existing].sort((a, b) => a.timestamp - b.timestamp);
-                return { messages: { ...s.messages, [peerId]: merged } };
-              });
-            }
-          } catch (e) {
-            console.error('拉取增量消息失败:', e);
-          }
-        }
+        // 有缓存：直接返回。新消息已由实时推送(C2C_NOTIFY) + 重连离线同步(pullPending)
+        // 投递到 store；历史接口按 created_at 只回退不前进，无法增量拉"更新于某点"的消息。
       },
 
       retryMessage: (messageId, sendFn) => {

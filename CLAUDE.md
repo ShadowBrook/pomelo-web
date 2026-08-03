@@ -44,7 +44,7 @@ Four Zustand stores, all vanilla (no React Context needed). Event callbacks use 
 | Store | Key State | Notes |
 |---|---|---|
 | `useAuthStore` | `user`, `token`, `isLoggedIn` | Persisted to `localStorage` via Zustand `persist` middleware. Login and register both use the backend `/api/user/register` endpoint (409 = already exists → treated as login) |
-| `useChatStore` | `messages: Record<peerId, ChatMessage[]>` | Messages bucketed by peer ID. `senderId: '__self__'` for outgoing messages. `loadHistory(peerId, beforeSeq?)` fetches via WebSocket (`IMClient.pullHistory()`) and prepends to message arrays, merging by id dedup. `retryMessage()` creates a new message ID for retries |
+| `useChatStore` | `messages: Record<peerId, ChatMessage[]>` | Messages bucketed by peer ID, sorted by `timestamp` (createdAt). `senderId: '__self__'` for outgoing messages. `loadMoreHistory(peerId)` fetches an older page via WebSocket (`IMClient.pullHistory(peerId, oldestTimestamp)` — time cursor, not seq) and prepends, merging by id dedup. `retryMessage()` creates a new message ID for retries |
 | `useConversationStore` | `conversations: Record<peerId, Conversation>`, `activePeerId` | Tracks unread counts (increments for incoming messages unless that peer is active), last message preview (truncated at 50 chars), and per-conversation drafts. Sorted by `lastMessageTime` descending |
 | `useFriendStore` | `friends`, `pendingRequests`, `searchResults` | Friend operations call `getIMClient()` (singleton accessor) to use WebSocket SDK. Notify events (`onFriendRequestReceived`, `onFriendAccepted`, `onFriendDeleted`) bridge real-time updates |
 
@@ -60,11 +60,11 @@ Manages the `IMClient` singleton lifecycle. Key design decisions:
 
 ### HTTP API (`src/utils/api.ts`)
 
-REST calls to `/api/*` proxied by Vite to `localhost:8080`. Endpoints: user register, user profile, friend list, pending friend requests. The `request()` helper handles 409 responses specially (not thrown as errors, returned as `{code: 409}`).
+REST calls to `/api/*` proxied by Vite to `localhost:8888`. Endpoints: user register, user profile, friend list, pending friend requests. The `request()` helper handles 409 responses specially (not thrown as errors, returned as `{code: 409}`).
 
 **Message history is fetched over WebSocket**, not HTTP. The `PULL_REQ`/`PULL_RESP` protocol (cmd `0x0030`/`0x0031`) serves dual purpose:
 - **Without `peerId`** (body: `{userId, lastMsgId, limit}`): pulls offline undelivered messages (status < 2). Response messages are dispatched as events (`_onMessageReceived` → `'message'` event).
-- **With `peerId`** (body: `{userId, peerId, lastMsgId, limit}`): pulls conversation history for a specific peer. The backend computes `conversationId` (sorted `userId:peerId`) and calls `pullConversation`. The frontend's `IMClient.pullHistory()` wraps this as a Promise (10s timeout), matching request to response by `messageId`. Results are returned directly to the caller without triggering `'message'` events or unread count changes.
+- **With `peerId`** (body: `{userId, peerId, lastMsgId, limit}`): pulls conversation history for a specific peer. The backend computes `conversationId` (sorted `userId:peerId`) and calls `pullConversation`, ordered by `created_at DESC` (backward pagination; `lastMsgId` carries a time cursor = the oldest message's `createdAt`). The frontend's `IMClient.pullHistory()` wraps this as a Promise (10s timeout), matching request to response by `messageId`. Results are returned directly to the caller without triggering `'message'` events or unread count changes.
 
 ### Routing (`src/App.tsx`)
 
@@ -80,5 +80,5 @@ Two lazy-loaded routes: `/login` (public) and `/chat` (protected via `ProtectedR
 ### Vite Config (`vite.config.ts`)
 
 - Plugins: `@vitejs/plugin-react` + `@tailwindcss/vite`
-- Proxy: `/api` → `http://localhost:8080`
+- Proxy: `/api` → `http://localhost:8888`
 - Code splitting: React → `vendor` chunk, Zustand → `state` chunk
