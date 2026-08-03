@@ -33,7 +33,8 @@ export function MessageInput({ peerId, draft, onSendText, onSendImage, onSendFil
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // IME 组合态（中文输入法等）时 Enter 用于确认候选词，不发送消息
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
