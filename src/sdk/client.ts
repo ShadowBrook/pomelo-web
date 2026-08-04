@@ -25,6 +25,7 @@ export class IMClient {
   private ws: WebSocket | null = null;
   private userId: string = '';
   private userName: string = '';
+  private nickname: string = '';
   private token: string = '';
   private connected: boolean = false;
   private reconnectAttempts: number = 0;
@@ -98,9 +99,10 @@ export class IMClient {
   // Public API
   // ================================================================
 
-  async connect(userId: string, token: string, userName?: string): Promise<void> {
+  async connect(userId: string, token: string, userName?: string, nickname?: string): Promise<void> {
     this.userId = userId;
     this.userName = userName || '';
+    this.nickname = nickname || '';
     this.token = token;
     // Fix 5：连接时重置主动断开标志
     this.intentionallyDisconnected = false;
@@ -451,7 +453,7 @@ export class IMClient {
       // Fix 5：双重检查，定时器触发时可能已主动断开
       if (this.intentionallyDisconnected) return;
       try {
-        await this.connect(this.userId, this.token);
+        await this.connect(this.userId, this.token, this.userName, this.nickname);
       } catch {
         // 连接失败，继续重连
         this._tryReconnect();
@@ -487,7 +489,11 @@ export class IMClient {
       message: { msgType: msg.msgType, content: msg.content },
     };
 
-    const buf = encode(Cmd.C2C_REQ, msg.id, body, this.userId);
+    // 将 userName / nickname 放入 varHeaders，供后端填充 C2CNotify 的 senderNickname
+    const buf = encode(Cmd.C2C_REQ, msg.id, body, this.userId, {
+      userName: this.userName,
+      nickname: this.nickname,
+    });
     ws.send(buf);
 
     this._startSendTimer(msg);

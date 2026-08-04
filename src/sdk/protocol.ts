@@ -21,17 +21,27 @@ export function encode(
   messageId: string,
   body: object | null,
   userId: string,
+  extraHeaders?: Record<string, string>,
 ): ArrayBuffer {
   const msgIdBytes = encoder.encode(messageId);
   const bodyBytes = body ? encoder.encode(JSON.stringify(body)) : new Uint8Array(0);
 
-  // varHeaders: 始终包含 userId
+  // varHeaders: 始终包含 userId，可选附加 userName / nickname 等
   const hdrEntries: [string, Uint8Array, string, Uint8Array][] = [];
   if (userId) {
     const k = 'userId';
     const kb = encoder.encode(k);
     const vb = encoder.encode(userId);
     hdrEntries.push([k, kb, userId, vb]);
+  }
+  if (extraHeaders) {
+    for (const [k, v] of Object.entries(extraHeaders)) {
+      if (v) {
+        const kb = encoder.encode(k);
+        const vb = encoder.encode(v);
+        hdrEntries.push([k, kb, v, vb]);
+      }
+    }
   }
 
   // 预计算 header 区大小

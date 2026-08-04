@@ -78,7 +78,7 @@ export default function ChatPage() {
   // 页面加载时连接 IM
   useEffect(() => {
     if (user && token) {
-      connect(user.userId, token, user.userName);
+      connect(user.userId, token, user.userName, user.nickname);
     }
   }, [user, token, connect]);
 
@@ -192,7 +192,7 @@ export default function ChatPage() {
       disconnect();
       // 短暂延迟后重连
       setTimeout(() => {
-        connect(user.userId, token, user.userName);
+        connect(user.userId, token, user.userName, user.nickname);
       }, 300);
     }
   }, [user, token, disconnect, connect]);

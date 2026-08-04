@@ -2,7 +2,7 @@
 
 ## 1. 概述
 
-从零构建一个仿微信风格的 Web 端聊天页面，对接已有的 pomelo 后端 IM 服务（WebSocket 网关端口 9001 + HTTP API 端口 8080）。聚焦 C2C 单聊功能，支持富媒体消息、消息状态追踪、离线消息拉取等完整聊天体验。
+从零构建一个仿微信风格的 Web 端聊天页面，对接已有的 pomelo 后端 IM 服务（WebSocket 网关端口 9001 + HTTP API 端口 8888）。聚焦 C2C 单聊功能，支持富媒体消息、消息状态追踪、离线消息拉取等完整聊天体验。
 
 ## 2. 技术栈
 
@@ -294,7 +294,7 @@ SDK 事件 → useChatStore.onIncomingMessage()
 | 服务 | 地址 | 协议 | 用途 |
 |------|------|------|------|
 | WebSocket 网关 | ws://localhost:9001 | 二进制线协议 (JSON) | 实时消息 |
-| HTTP API | http://localhost:8080 | REST JSON | 注册/登录/用户查询/好友列表 |
+| HTTP API | http://localhost:8888 | REST JSON | 注册/登录/用户查询/好友列表 |
 
 ### 8.1 HTTP API
 

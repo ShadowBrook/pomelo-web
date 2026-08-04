@@ -26,7 +26,7 @@ export function useIMClient() {
   const [kickedReason, setKickedReason] = useState<string | null>(null);
   const userIdRef = useRef<string>('');
 
-  const connect = useCallback((userId: string, token: string, userName?: string) => {
+  const connect = useCallback((userId: string, token: string, userName?: string, nickname?: string) => {
     // 防止重复连接
     if (clientInstance && clientInstance.getState() !== 'disconnected') {
       clientInstance.disconnect();
@@ -87,7 +87,7 @@ export function useIMClient() {
     // 发起连接
     // Fix: 捕获 connect Promise 的 rejection，避免 onerror 触发 reject 时
     // 产生 Uncaught (in promise) Error: WebSocket error
-    client.connect(userId, token, userName).catch((err) => {
+    client.connect(userId, token, userName, nickname).catch((err) => {
       console.error('[useIMClient] connect failed:', err);
       setErrorMessage(err?.message || '连接失败');
     });
