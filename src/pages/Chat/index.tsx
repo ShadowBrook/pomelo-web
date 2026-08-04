@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useIMClient } from '@/hooks/useIMClient';
@@ -126,21 +126,41 @@ export default function ChatPage() {
     document.title = totalUnread > 0 ? `(${totalUnread}) Pomelo Chat` : 'Pomelo Chat';
   }, [totalUnread]);
 
+  // 跟踪已发送 markSeen 的消息 ID，避免重复发送
+  const markedSeenRef = useRef<Set<string>>(new Set());
+  // 跟踪当前活跃会话，用于检测切换
+  const lastPeerRef = useRef<string | null>(null);
+
+  // 当活跃会话的消息列表变化时，自动对未标记的收件消息发送已读回执
+  useEffect(() => {
+    if (!activePeerId) {
+      lastPeerRef.current = null;
+      markedSeenRef.current.clear();
+      return;
+    }
+
+    // 切换会话时清空标记缓存
+    if (lastPeerRef.current !== activePeerId) {
+      lastPeerRef.current = activePeerId;
+      markedSeenRef.current.clear();
+    }
+
+    const currentUserId = user?.userId || '';
+    const incomingIds = activeMessages
+      .filter(m => m.senderId !== currentUserId && m.senderId !== '__self__' && !markedSeenRef.current.has(m.id))
+      .map(m => m.id);
+    if (incomingIds.length > 0) {
+      incomingIds.forEach(id => markedSeenRef.current.add(id));
+      markSeen(incomingIds);
+    }
+  }, [activePeerId, activeMessages, markSeen, user]);
+
   // 选择会话 → 自动 openConversation（有缓存则显示缓存 + 后台拉增量，无缓存则拉最近 50 条）
   const handleSelectConversation = useCallback((peerId: string) => {
     setActivePeer(peerId);
-    const currentUserId = user?.userId || '';
-    // 加载/刷新消息（内部自动处理缓存与增量逻辑）
+    // 加载/刷新消息（内部自动处理缓存与增量逻辑；已读回执由上面的 useEffect 自动发送）
     useChatStore.getState().openConversation(peerId);
-    // 未读消息标记已读
-    const msgs = useChatStore.getState().messages[peerId] || [];
-    const incomingIds = msgs
-      .filter(m => m.senderId !== currentUserId && m.senderId !== '__self__' && m.status !== 'seen')
-      .map(m => m.id);
-    if (incomingIds.length > 0) {
-      markSeen(incomingIds);
-    }
-  }, [setActivePeer, markSeen, user]);
+  }, [setActivePeer]);
 
   // 删除本地会话
   const handleDeleteConversation = useCallback((peerId: string) => {
