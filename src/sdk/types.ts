@@ -101,6 +101,7 @@ export interface IMClientEvents {
   statusChange: (update: StatusUpdate) => void;
   connectionChange: (state: ConnectionState) => void;
   kicked: (reason: string) => void;
+  authExpired: (reason: string) => void;
   error: (err: Error) => void;
   // 好友相关事件
   searchResult: (resp: SearchUserResp) => void;

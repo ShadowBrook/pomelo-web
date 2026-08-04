@@ -64,6 +64,12 @@ export function useIMClient() {
       useAuthStore.getState().logout();
     });
 
+    client.on('authExpired', (reason: string) => {
+      console.warn('Auth expired:', reason);
+      setKickedReason(reason);
+      useAuthStore.getState().logout();
+    });
+
     client.on('error', (err: Error) => {
       console.error('IMClient error:', err);
       setErrorMessage(err.message);

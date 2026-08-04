@@ -700,7 +700,11 @@ export class IMClient {
     switch (cmd) {
       case Cmd.AUTH_RESP:
         if (body?.code !== 0) {
-          this._emit('error', new Error(body?.message || '认证失败'));
+          const reason = body?.message || '认证失败，请重新登录';
+          this._emit('authExpired', reason);
+          // 认证失败后断开连接，停止后续重连（token 已失效，重连无意义）
+          this.intentionallyDisconnected = true;
+          this.ws?.close();
           return;
         }
         console.log('[IMClient] 认证成功');

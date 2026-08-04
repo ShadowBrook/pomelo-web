@@ -15,6 +15,13 @@ async function request<T = any>(path: string, options?: RequestInit): Promise<Ap
     ...options,
   });
 
+  // 401 Unauthorized → token 失效，触发登出（延迟导入避免循环依赖）
+  if (res.status === 401) {
+    const { useAuthStore } = await import('@/stores/useAuthStore');
+    useAuthStore.getState().logout();
+    throw new Error('登录已过期，请重新登录');
+  }
+
   // 处理 409（用户已存在 / 已发送过好友申请）作为带 code 的特殊响应
   if (res.status === 409) {
     try {
