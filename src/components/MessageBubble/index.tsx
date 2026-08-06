@@ -14,13 +14,13 @@ function StatusIcon({ status, onRetry }: { status: MessageStatus; onRetry?: () =
     case 'sending':
       return <span className="text-xs text-gray-400 animate-pulse">⏳</span>;
     case 'sent':
-      return <span className="text-xs text-gray-400">✓</span>;
+      return <span className="text-xs text-gray-400" title="已发送">✓</span>;
     case 'delivered':
-      return <span className="text-xs text-gray-400">✓✓</span>;
+      return <span className="text-xs text-gray-400" title="已送达">✓✓</span>;
     case 'seen':
-      return <span className="text-xs text-blue-500">✓✓</span>;
+      return <span className="text-xs text-blue-500" title="已读">◯</span>;
     case 'failed':
-      return <span className="text-xs text-red-500 cursor-pointer" onClick={onRetry}>❌</span>;
+      return <span className="text-xs text-red-500 cursor-pointer" onClick={onRetry} title="发送失败">❌</span>;
     default:
       return null;
   }

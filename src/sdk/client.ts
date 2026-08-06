@@ -539,10 +539,14 @@ export class IMClient {
       }
       // Fix 2：不再 delete，保留以接收后续 ACK_NOTIFY（delivered/seen）
       msg.status = 'sent';
+      if (body?.messageId) {
+        msg.serverMessageId = String(body.messageId);
+      }
       this._emit('statusChange', {
         id: msg.id,
         status: 'sent',
         seq: body?.seq,
+        serverMessageId: msg.serverMessageId,
       });
     }
   }
@@ -554,7 +558,20 @@ export class IMClient {
 
     for (const rawId of messageIds) {
       const id = String(rawId);
-      const msg = this.pendingQueue.get(id);
+
+      // ACK_NOTIFY 携带的是服务端分配的 snowflake ID，
+      // 而 pendingQueue 的 key 是客户端生成的 ID。
+      // 因此需要同时按 key 和 serverMessageId 查找。
+      let msg = this.pendingQueue.get(id);
+      if (!msg) {
+        // 按 serverMessageId 回查
+        for (const [, m] of this.pendingQueue) {
+          if (m.serverMessageId === id) {
+            msg = m;
+            break;
+          }
+        }
+      }
       if (!msg) continue;
 
       if (ackType === AckType.SEEN) {
@@ -612,8 +629,9 @@ export class IMClient {
   }
 
   private _sendAck(messageIds: string[], ackType: AckType): void {
-    const body = {
-      messageIds: messageIds.map(Number),
+    // 保持 messageIds 为字符串，避免 JavaScript Number 精度丢失（snowflake ID > 2^53）
+    const body: Record<string, unknown> = {
+      messageIds,
       ackType,
     };
     const buf = encode(Cmd.ACK_REQ, 'ack-' + Date.now(), body, this.userId);

@@ -73,6 +73,7 @@ export interface OutgoingMessage {
   createdAt: number;
   retryCount: number;
   timer?: ReturnType<typeof setTimeout>;
+  serverMessageId?: string;
 }
 
 // 接收消息（归一化）
@@ -93,6 +94,7 @@ export interface StatusUpdate {
   id: string;
   status: MessageStatus;
   seq?: number;
+  serverMessageId?: string;
 }
 
 // 事件映射
