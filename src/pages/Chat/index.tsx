@@ -146,9 +146,9 @@ export default function ChatPage() {
   // 跟踪当前活跃会话，用于检测切换
   const lastPeerRef = useRef<string | null>(null);
 
-  // 当活跃会话的消息列表变化时，自动对未标记的收件消息发送已读回执
+  // 当活跃会话的消息列表变化时，自动对未标记的收件消息发送已读回执（仅 C2C）
   useEffect(() => {
-    if (!activePeerId) {
+    if (!activePeerId || activeConversation?.type === 'group') {
       lastPeerRef.current = null;
       markedSeenRef.current.clear();
       return;
@@ -168,7 +168,17 @@ export default function ChatPage() {
       incomingIds.forEach(id => markedSeenRef.current.add(id));
       markSeen(incomingIds);
     }
-  }, [activePeerId, activeMessages, markSeen, user]);
+  }, [activePeerId, activeConversation, activeMessages, markSeen, user]);
+
+  // 群聊已读回执：切换进群聊时 + 收到新消息时，用最大 seq 发送游标式 ACK
+  useEffect(() => {
+    if (!activePeerId || activeConversation?.type !== 'group') return;
+    const maxSeq = activeMessages.reduce((max, m) => Math.max(max, m.seq || 0), 0);
+    if (maxSeq > 0) {
+      sendGroupAck(activePeerId, maxSeq);
+      useGroupStore.getState().updateLastReadSeq(activePeerId, maxSeq);
+    }
+  }, [activePeerId, activeConversation?.type, activeMessages]);
 
   // 选择会话 → 自动 openConversation（有缓存则显示缓存 + 后台拉增量，无缓存则拉最近 50 条）
   const handleSelectConversation = useCallback((peerId: string) => {
