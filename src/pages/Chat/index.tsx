@@ -187,15 +187,18 @@ export default function ChatPage() {
     } catch { setReadStatus(null); }
   }, [activePeerId]);
 
-  // 群聊已读回执：切换进群聊时 + 收到新消息时，用最大 seq 发送游标式 ACK
+  // 群聊已读回执：只用他人消息的最大 seq 发游标式 ACK，己方消息无需 ACK
   useEffect(() => {
     if (!activePeerId || activeConversation?.type !== 'group') return;
-    const maxSeq = activeMessages.reduce((max, m) => Math.max(max, m.seq || 0), 0);
+    const currentUserId = user?.userId || '';
+    const maxSeq = activeMessages
+      .filter(m => m.senderId !== currentUserId && m.senderId !== '__self__')
+      .reduce((max, m) => Math.max(max, m.seq || 0), 0);
     if (maxSeq > 0) {
       sendGroupAck(activePeerId, maxSeq);
       useGroupStore.getState().updateLastReadSeq(activePeerId, maxSeq);
     }
-  }, [activePeerId, activeConversation?.type, activeMessages]);
+  }, [activePeerId, activeConversation?.type, activeMessages, sendGroupAck, user]);
 
   // 选择会话 → 自动 openConversation（有缓存则显示缓存 + 后台拉增量，无缓存则拉最近 50 条）
   const handleSelectConversation = useCallback((peerId: string) => {
