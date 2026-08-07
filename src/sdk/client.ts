@@ -450,6 +450,7 @@ export class IMClient {
     const buf = encode(Cmd.GROUP_ACK_REQ, 'gack-' + Date.now(), body, this.userId);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(buf);
+      console.log('[IMClient] sendGroupAck sent:', groupId, lastReadSeq);
     }
   }
 
