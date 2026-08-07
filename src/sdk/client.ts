@@ -20,6 +20,7 @@ import {
   GroupOpResp,
   PullGroupMsgResp,
   CreateGroupResp,
+  GroupMsgReadStatusResp,
   GroupMemberChangeNotify,
 } from './types';
 
@@ -444,13 +445,20 @@ export class IMClient {
     );
   }
 
+  getGroupMsgReadStatus(groupId: string, seq: number): Promise<GroupMsgReadStatusResp> {
+    return this._sendGroupOp<GroupMsgReadStatusResp>(
+      Cmd.GROUP_MSG_READ_REQ,
+      Cmd.GROUP_MSG_READ_RESP,
+      { groupId, seq },
+    );
+  }
+
   sendGroupAck(groupId: string, lastReadSeq: number): void {
     if (!this.connected) return;
     const body = { groupId, lastReadSeq };
     const buf = encode(Cmd.GROUP_ACK_REQ, 'gack-' + Date.now(), body, this.userId);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(buf);
-      console.log('[IMClient] sendGroupAck sent:', groupId, lastReadSeq);
     }
   }
 
@@ -1000,7 +1008,8 @@ export class IMClient {
       case Cmd.GROUP_GET_MEMBERS_RESP:
       case Cmd.GROUP_GET_MY_GROUPS_RESP:
       case Cmd.GROUP_PULL_MSG_RESP:
-      case Cmd.GROUP_ACK_RESP: {
+      case Cmd.GROUP_ACK_RESP:
+      case Cmd.GROUP_MSG_READ_RESP: {
         const pending = this.pendingFriendOps.get(messageId);
         if (pending) {
           clearTimeout(pending.timeoutId);

@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useIMClient } from '@/hooks/useIMClient';
+import { useIMClient, getIMClient } from '@/hooks/useIMClient';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useChatStore, ChatMessage } from '@/stores/useChatStore';
 import { useFriendStore } from '@/stores/useFriendStore';
@@ -81,6 +81,11 @@ export default function ChatPage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // 发起群聊弹窗
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  // 已读状态弹窗
+  const [readStatus, setReadStatus] = useState<{
+    readers: Array<{ userId: string; nickname: string; avatar: string }>;
+    loading: boolean;
+  } | null>(null);
 
   // 页面加载时连接 IM
   useEffect(() => {
@@ -169,6 +174,18 @@ export default function ChatPage() {
       markSeen(incomingIds);
     }
   }, [activePeerId, activeConversation, activeMessages, markSeen, user]);
+
+  // 点击群消息已读圈 → 查询已读用户列表
+  const handleReadClick = useCallback(async (messageId: string, seq: number) => {
+    if (!activePeerId) return;
+    setReadStatus({ readers: [], loading: true });
+    try {
+      const client = getIMClient();
+      if (!client) { setReadStatus(null); return; }
+      const resp = await client.getGroupMsgReadStatus(activePeerId, seq);
+      setReadStatus({ readers: resp.readers || [], loading: false });
+    } catch { setReadStatus(null); }
+  }, [activePeerId]);
 
   // 群聊已读回执：切换进群聊时 + 收到新消息时，用最大 seq 发送游标式 ACK
   useEffect(() => {
@@ -416,6 +433,8 @@ export default function ChatPage() {
               loadingHistory={loadingHistory}
               hasMore={hasMoreHistory}
               onLoadMore={handleLoadMoreHistory}
+              isGroup={activeConversation.type === 'group'}
+              onReadClick={handleReadClick}
             />
 
             {/* 消息输入框 */}
@@ -439,6 +458,33 @@ export default function ChatPage() {
 
       {/* 添加好友弹窗 */}
       <AddFriendDialog open={showAddFriend} onClose={() => setShowAddFriend(false)} />
+
+      {/* 已读状态弹窗 */}
+      {readStatus && (
+        <div className="fixed inset-0 bg-black/20 z-50 flex items-center justify-center"
+             onClick={() => setReadStatus(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-[260px] max-h-[360px] flex flex-col"
+               onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-gray-200 text-sm font-medium">已读成员</div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {readStatus.loading ? (
+                <div className="text-center text-xs text-gray-400 py-4">加载中...</div>
+              ) : readStatus.readers.length === 0 ? (
+                <div className="text-center text-xs text-gray-400 py-4">暂无已读</div>
+              ) : (
+                readStatus.readers.map((r) => (
+                  <div key={r.userId} className="flex items-center gap-2 px-2 py-2 hover:bg-gray-50 rounded">
+                    <div className="w-8 h-8 rounded-full bg-wechat-green/20 text-wechat-green flex items-center justify-center text-xs">
+                      {(r.nickname || r.userId).charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-sm text-wechat-text">{r.nickname || r.userId}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 发起群聊弹窗 */}
       <CreateGroupDialog
