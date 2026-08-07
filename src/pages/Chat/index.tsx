@@ -15,6 +15,7 @@ import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { AddFriendDialog } from '@/components/AddFriendDialog';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { GroupPanel } from '@/components/GroupPanel';
+import { CreateGroupDialog } from '@/components/CreateGroupDialog';
 import { useGroupStore } from '@/stores/useGroupStore';
 
 // 稳定的空数组引用，避免 selector 每次返回新引用导致重渲染
@@ -78,6 +79,8 @@ export default function ChatPage() {
   const [showAddFriend, setShowAddFriend] = useState(false);
   // 退出登录确认弹窗
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  // 发起群聊弹窗
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   // 页面加载时连接 IM
   useEffect(() => {
@@ -380,10 +383,19 @@ export default function ChatPage() {
         {activePeerId && activeConversation ? (
           <>
             {/* 聊天对象昵称 */}
-            <div className="h-14 border-b border-gray-300 flex items-center px-4 bg-white/50">
+            <div className="h-14 border-b border-gray-300 flex items-center px-4 bg-white/50 justify-between">
               <span className="text-base font-medium text-wechat-text">
                 {activeConversation.nickname}
               </span>
+              {activeConversation.type === 'c2c' && (
+                <button
+                  onClick={() => setShowCreateGroup(true)}
+                  className="w-7 h-7 flex items-center justify-center rounded text-wechat-green hover:bg-wechat-green/10 text-lg transition-colors"
+                  title="发起群聊"
+                >
+                  +
+                </button>
+              )}
             </div>
 
             {/* 消息列表 */}
@@ -417,6 +429,18 @@ export default function ChatPage() {
 
       {/* 添加好友弹窗 */}
       <AddFriendDialog open={showAddFriend} onClose={() => setShowAddFriend(false)} />
+
+      {/* 发起群聊弹窗 */}
+      <CreateGroupDialog
+        open={showCreateGroup}
+        onClose={() => setShowCreateGroup(false)}
+        onGroupCreated={(groupId, name) => {
+          useConversationStore.getState().createConversation(groupId, name, '', 'group');
+          useConversationStore.getState().setActivePeer(groupId);
+          setShowCreateGroup(false);
+        }}
+        preSelectedFriend={activeConversation?.type === 'c2c' ? activePeerId ?? undefined : undefined}
+      />
 
       {/* 退出登录确认弹窗 */}
       {showLogoutConfirm && (
