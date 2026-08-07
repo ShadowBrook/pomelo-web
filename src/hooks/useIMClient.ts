@@ -93,20 +93,50 @@ export function useIMClient() {
 
     // 群聊相关事件
     client.on('groupMessage', (msg: GroupMessage) => {
-      const conv = useConversationStore.getState().conversations[msg.groupId];
+      const groupId = msg.groupId;
+      const state = useConversationStore.getState();
+      const conv = state.conversations[groupId];
       if (!conv) {
-        useConversationStore.getState().createConversation(msg.groupId,
+        useConversationStore.getState().createConversation(groupId,
           msg.groupId, '', 'group');
+      } else {
+        // 直接增量更新群会话（不走 onNewMessage 避免 peerId 算成 sender）
+        const isActive = state.activePeerId === groupId;
+        const lastMessage = (msg.content || '').slice(0, 50);
+        useConversationStore.setState((s) => ({
+          conversations: {
+            ...s.conversations,
+            [groupId]: {
+              ...s.conversations[groupId],
+              lastMessage,
+              lastMessageTime: msg.createdAt || Date.now(),
+              lastMessageId: String(msg.id),
+              unreadCount: isActive ? s.conversations[groupId].unreadCount : s.conversations[groupId].unreadCount + 1,
+            },
+          },
+        }));
       }
-      useConversationStore.getState().onNewMessage({
-        id: String(msg.id),
-        senderId: msg.senderId,
-        recipientId: msg.groupId,
-        msgType: msg.msgType,
-        content: msg.content,
-        seq: msg.seq,
-        createdAt: msg.createdAt,
-      }, userId);
+      // 写入消息到 chat store（key = groupId，不走 addMessage 避免 peerId 算成 sender）
+      useChatStore.setState((s) => {
+        const existing = s.messages[groupId] || [];
+        if (existing.some((m) => m.id === String(msg.id))) return s;
+        const newMsg = {
+          id: String(msg.id),
+          senderId: msg.senderId,
+          recipientId: groupId,
+          msgType: msg.msgType as any,
+          content: msg.content || '',
+          status: 'delivered' as const,
+          timestamp: msg.createdAt || Date.now(),
+          seq: msg.seq,
+        };
+        return {
+          messages: {
+            ...s.messages,
+            [groupId]: [...existing, newMsg].sort((a, b) => a.timestamp - b.timestamp),
+          },
+        };
+      });
     });
 
     client.on('groupMemberChange', (notify: GroupMemberChangeNotify) => {
