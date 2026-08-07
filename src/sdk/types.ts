@@ -39,6 +39,21 @@ export enum Cmd {
   FRIEND_DELETE_RESP = 0x0069,
   FRIEND_DELETE_NOTIFY = 0x006A,
 
+  // 群管理操作 0x0070-0x0097
+  GROUP_CREATE_REQ = 0x0070,
+  GROUP_CREATE_RESP = 0x0071,
+  GROUP_GET_INFO_REQ = 0x0086,
+  GROUP_GET_INFO_RESP = 0x0087,
+  GROUP_GET_MEMBERS_REQ = 0x0088,
+  GROUP_GET_MEMBERS_RESP = 0x0089,
+  GROUP_GET_MY_GROUPS_REQ = 0x0090,
+  GROUP_GET_MY_GROUPS_RESP = 0x0091,
+  GROUP_MEMBER_CHANGE_NOTIFY = 0x0093,
+  GROUP_PULL_MSG_REQ = 0x0094,
+  GROUP_PULL_MSG_RESP = 0x0095,
+  GROUP_ACK_REQ = 0x0096,
+  GROUP_ACK_RESP = 0x0097,
+
   // 通用错误响应
   CMD_ERROR = 0xFFFF,
 }
@@ -110,6 +125,9 @@ export interface IMClientEvents {
   friendRequest: (notify: FriendNotify) => void;
   friendAccepted: (notify: FriendNotify) => void;
   friendDeleted: (notify: FriendDeleteNotify) => void;
+  // 群聊相关事件
+  groupMessage: (msg: GroupMessage) => void;
+  groupMemberChange: (notify: GroupMemberChangeNotify) => void;
 }
 
 // 好友相关类型
@@ -138,6 +156,82 @@ export interface FriendNotify {
 
 export interface FriendDeleteNotify {
   userId: string;
+}
+
+// 会话类型
+export type ConversationType = 'c2c' | 'group';
+
+// 群聊相关类型
+export interface GroupInfo {
+  groupId: string;
+  name: string;
+  avatar: string;
+  description: string;
+  ownerId: string;
+  memberCount: number;
+  maxMembers: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface GroupMsgRecord {
+  id: string;
+  senderId: string;
+  groupId: string;
+  msgType: number;
+  content: string;
+  seq: number;
+  createdAt: number;
+  senderName?: string;
+  senderNickname?: string;
+}
+
+export interface GroupMember {
+  userId: string;
+  userName: string;
+  nickname: string;
+  avatar: string;
+  role: number;
+  joinedAt: number;
+}
+
+export interface GroupMessage {
+  id: string;
+  senderId: string;
+  groupId: string;
+  senderUserName?: string;
+  senderNickname?: string;
+  msgType: number;
+  content: string;
+  seq: number;
+  createdAt: number;
+}
+
+export interface GroupMemberChangeNotify {
+  groupId: string;
+  type: string;
+  userId: string;
+  operatorId?: string;
+  userName?: string;
+  nickname?: string;
+}
+
+export interface GroupOpResp {
+  code: number;
+  message: string;
+}
+
+export interface PullGroupMsgResp {
+  code: number;
+  message: string;
+  messages: GroupMsgRecord[];
+  hasMore: boolean;
+}
+
+export interface CreateGroupResp {
+  code: number;
+  message: string;
+  group: GroupInfo;
 }
 
 // 通用错误响应体
