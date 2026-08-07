@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { useFriendStore, type Friend } from '@/stores/useFriendStore';
 import type { GroupInfo } from '@/sdk/types';
 
 interface Props {
@@ -104,17 +105,15 @@ function GroupItem({ group, isActive, onClick }: {
   onClick: () => void;
 }) {
   const [showInvite, setShowInvite] = useState(false);
-  const [inviteId, setInviteId] = useState('');
   const [inviting, setInviting] = useState(false);
+  const friends = useFriendStore((s) => s.friends);
 
-  const handleInvite = async () => {
-    if (!inviteId.trim()) return;
+  const handleInvite = async (friendId: string) => {
     const client = getIMClient();
     if (!client) return;
     setInviting(true);
     try {
-      await client.inviteToGroup(group.groupId, inviteId.trim());
-      setInviteId('');
+      await client.inviteToGroup(group.groupId, friendId);
       setShowInvite(false);
     } catch { /* ignore */ }
     setInviting(false);
@@ -145,19 +144,24 @@ function GroupItem({ group, isActive, onClick }: {
         </button>
       </div>
       {showInvite && (
-        <div className="px-3 py-2 border-b border-gray-100 bg-gray-50 flex gap-2">
-          <input
-            autoFocus
-            value={inviteId}
-            onChange={e => setInviteId(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleInvite(); }}
-            placeholder="输入用户 ID"
-            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded outline-none focus:border-wechat-green"
-          />
-          <button onClick={handleInvite} disabled={inviting || !inviteId.trim()}
-            className="px-2 py-1 text-xs rounded bg-wechat-green text-white hover:bg-wechat-green-dark disabled:opacity-50">
-            {inviting ? '...' : '确定'}
-          </button>
+        <div className="border-b border-gray-100 bg-gray-50 max-h-[200px] overflow-y-auto">
+          {friends.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-wechat-text-secondary">暂无好友</div>
+          ) : (
+            friends.map((f) => (
+              <div
+                key={f.userId}
+                onClick={() => handleInvite(f.userId)}
+                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer text-xs"
+              >
+                <div className="w-6 h-6 rounded-full bg-wechat-green/20 text-wechat-green flex items-center justify-center text-xs flex-shrink-0">
+                  {(f.nickname || f.userName).charAt(0).toUpperCase()}
+                </div>
+                <span className="flex-1 truncate">{f.nickname || f.userName}</span>
+                {inviting && <span className="text-wechat-text-secondary">...</span>}
+              </div>
+            ))
+          )}
         </div>
       )}
     </>
