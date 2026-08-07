@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { IMClient } from '@/sdk/client';
 import { ConnectionState, IncomingMessage, StatusUpdate, MsgType } from '@/sdk/types';
-import type { FriendNotify, FriendDeleteNotify } from '@/sdk/types';
+import type { FriendNotify, FriendDeleteNotify, GroupMessage, GroupMemberChangeNotify } from '@/sdk/types';
 import { useChatStore } from '@/stores/useChatStore';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
+import { useGroupStore } from '@/stores/useGroupStore';
 
 // 模块级单例
 let clientInstance: IMClient | null = null;
@@ -90,6 +91,29 @@ export function useIMClient() {
       useFriendStore.getState().onFriendDeleted(notify);
     });
 
+    // 群聊相关事件
+    client.on('groupMessage', (msg: GroupMessage) => {
+      const conv = useConversationStore.getState().conversations[msg.groupId];
+      if (!conv) {
+        useConversationStore.getState().createConversation(msg.groupId,
+          msg.groupId, '', 'group');
+      }
+      useConversationStore.getState().onNewMessage({
+        id: String(msg.id),
+        senderId: msg.senderId,
+        recipientId: msg.groupId,
+        msgType: msg.msgType,
+        content: msg.content,
+        seq: msg.seq,
+        createdAt: msg.createdAt,
+      }, userId);
+    });
+
+    client.on('groupMemberChange', (notify: GroupMemberChangeNotify) => {
+      // 成员变更时刷新群信息
+      useGroupStore.getState().removeMember(notify.groupId, notify.userId);
+    });
+
     // 发起连接
     // Fix: 捕获 connect Promise 的 rejection，避免 onerror 触发 reject 时
     // 产生 Uncaught (in promise) Error: WebSocket error
@@ -158,6 +182,20 @@ export function useIMClient() {
     return clientInstance.deleteFriend(friendId);
   }, []);
 
+  const sendGroupMessage = useCallback((groupId: string, msgType: MsgType, content: string) => {
+    if (!clientInstance) throw new Error('IMClient not connected');
+    return clientInstance.sendGroupMessage(groupId, msgType, content);
+  }, []);
+
+  const pullGroupMessages = useCallback((groupId: string, cursor: number, limit: number, backward: boolean) => {
+    if (!clientInstance) throw new Error('IMClient not connected');
+    return clientInstance.pullGroupMessages(groupId, cursor, limit, backward);
+  }, []);
+
+  const sendGroupAck = useCallback((groupId: string, lastReadSeq: number) => {
+    if (clientInstance) clientInstance.sendGroupAck(groupId, lastReadSeq);
+  }, []);
+
   // 组件卸载时断开
   useEffect(() => {
     return () => {
@@ -181,6 +219,9 @@ export function useIMClient() {
     addFriend,
     acceptFriend,
     deleteFriend,
+    sendGroupMessage,
+    pullGroupMessages,
+    sendGroupAck,
     client: clientInstance,
   };
 }
