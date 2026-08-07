@@ -14,6 +14,8 @@ import { SearchBar } from '@/components/SearchBar';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { AddFriendDialog } from '@/components/AddFriendDialog';
 import { FriendsPanel } from '@/components/FriendsPanel';
+import { GroupPanel } from '@/components/GroupPanel';
+import { useGroupStore } from '@/stores/useGroupStore';
 
 // 稳定的空数组引用，避免 selector 每次返回新引用导致重渲染
 const EMPTY_MESSAGES: ChatMessage[] = [];
@@ -26,9 +28,11 @@ export default function ChatPage() {
     connect,
     disconnect,
     sendMessage,
+    sendGroupMessage,
     retrySend,
     connectionState,
     markSeen,
+    sendGroupAck,
     errorMessage,
     kickedReason,
   } = useIMClient();
@@ -68,8 +72,8 @@ export default function ChatPage() {
   const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // 侧边栏 Tab：'chats' 会话列表 / 'friends' 好友列表
-  const [sidebarTab, setSidebarTab] = useState<'chats' | 'friends'>('chats');
+  // 侧边栏 Tab：'chats' 会话列表 / 'groups' 群列表 / 'friends' 好友列表
+  const [sidebarTab, setSidebarTab] = useState<'chats' | 'groups' | 'friends'>('chats');
   // 添加好友弹窗
   const [showAddFriend, setShowAddFriend] = useState(false);
   // 退出登录确认弹窗
@@ -84,8 +88,16 @@ export default function ChatPage() {
 
   // 点击好友发起会话
   const handleChatWithFriend = useCallback((peerId: string, nickname: string, avatar: string) => {
-    useConversationStore.getState().createConversation(peerId, nickname, avatar);
+    useConversationStore.getState().createConversation(peerId, nickname, avatar, 'c2c');
     useConversationStore.getState().setActivePeer(peerId);
+    setSidebarTab('chats');
+  }, []);
+
+  // 点击群聊 → 进入群聊
+  const handleSelectGroup = useCallback((groupId: string, name: string) => {
+    useConversationStore.getState().createConversation(groupId, name, '', 'group');
+    useConversationStore.getState().setActivePeer(groupId);
+    useChatStore.getState().openConversation(groupId);
     setSidebarTab('chats');
   }, []);
 
@@ -176,13 +188,14 @@ export default function ChatPage() {
 
   // 发送文本
   const handleSendText = useCallback((text: string) => {
-    if (!activePeerId) return;
+    if (!activePeerId || !activeConversation) return;
+    const isGroup = activeConversation.type === 'group';
     useChatStore.getState().sendText(activePeerId, text, (params) => {
-      return sendMessage({ ...params, msgType: params.msgType });
+      if (isGroup) return sendGroupMessage(params.recipientId, params.msgType, params.content);
+      return sendMessage(params);
     });
-    // 清空草稿
     useConversationStore.getState().updateDraft(activePeerId, '');
-  }, [activePeerId, sendMessage]);
+  }, [activePeerId, activeConversation, sendMessage, sendGroupMessage]);
 
   // 发送图片
   const handleSendImage = useCallback((file: File) => {
@@ -258,6 +271,12 @@ export default function ChatPage() {
             聊天
           </button>
           <button
+            onClick={() => setSidebarTab('groups')}
+            className={`flex-1 py-2 text-sm transition-colors ${sidebarTab === 'groups' ? 'text-wechat-green border-b-2 border-wechat-green font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            群聊
+          </button>
+          <button
             onClick={() => setSidebarTab('friends')}
             className={`flex-1 py-2 text-sm transition-colors ${sidebarTab === 'friends' ? 'text-wechat-green border-b-2 border-wechat-green font-medium' : 'text-gray-500 hover:text-gray-700'}`}
           >
@@ -317,6 +336,11 @@ export default function ChatPage() {
               ))
             )}
           </div>
+        ) : sidebarTab === 'groups' ? (
+          <GroupPanel
+            activeGroupId={activeConversation?.type === 'group' ? activePeerId : null}
+            onSelect={handleSelectGroup}
+          />
         ) : (
           <FriendsPanel onChatWithFriend={handleChatWithFriend} />
         )}
