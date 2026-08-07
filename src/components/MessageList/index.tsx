@@ -34,6 +34,8 @@ export function MessageList({
   onLoadMore,
   loadingHistory = false,
   hasMore = false,
+  isGroup,
+  onReadClick,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
