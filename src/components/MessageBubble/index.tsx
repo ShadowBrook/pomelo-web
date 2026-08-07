@@ -58,15 +58,18 @@ export const MessageBubble = React.memo(function MessageBubble({ message, isSelf
         {/* 己方消息状态图标 */}
         {isSelf && (
           <div className="flex justify-end mt-1 gap-1 items-center">
-            <StatusIcon status={message.status} onRetry={() => onRetry?.(message.id)} />
-            {isGroup && message.seq && (
-              <span
-                className="text-xs text-blue-400 cursor-pointer hover:text-blue-600"
-                title="查看已读成员"
-                onClick={(e) => { e.stopPropagation(); onReadClick?.(message.id, message.seq!); }}
-              >
-                ◯
-              </span>
+            {isGroup ? (
+              message.seq && (
+                <span
+                  className="text-xs text-blue-400 cursor-pointer hover:text-blue-600"
+                  title="查看已读成员"
+                  onClick={(e) => { e.stopPropagation(); onReadClick?.(message.id, message.seq!); }}
+                >
+                  ◯
+                </span>
+              )
+            ) : (
+              <StatusIcon status={message.status} onRetry={() => onRetry?.(message.id)} />
             )}
           </div>
         )}
