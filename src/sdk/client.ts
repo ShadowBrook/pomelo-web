@@ -469,6 +469,14 @@ export class IMClient {
     ).then(r => r.groups || []);
   }
 
+  inviteToGroup(groupId: string, userId: string): Promise<GroupOpResp> {
+    return this._sendGroupOp<GroupOpResp>(
+      Cmd.GROUP_INVITE_REQ,
+      Cmd.GROUP_INVITE_RESP,
+      { groupId, userId },
+    );
+  }
+
   getGroupInfo(groupId: string): Promise<GroupInfo> {
     return this._sendGroupOp<{ code: number; group: GroupInfo }>(
       Cmd.GROUP_GET_INFO_REQ,
@@ -986,6 +994,7 @@ export class IMClient {
       }
 
       case Cmd.GROUP_CREATE_RESP:
+      case Cmd.GROUP_INVITE_RESP:
       case Cmd.GROUP_GET_INFO_RESP:
       case Cmd.GROUP_GET_MEMBERS_RESP:
       case Cmd.GROUP_GET_MY_GROUPS_RESP:

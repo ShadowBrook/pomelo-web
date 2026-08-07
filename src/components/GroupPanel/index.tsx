@@ -54,7 +54,7 @@ export function GroupPanel({ activeGroupId, onSelect }: Props) {
 
       {/* 创建群弹窗 */}
       {showCreate && (
-        <div className="absolute inset-0 bg-black/30 z-30 flex items-center justify-center"
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
              onClick={() => setShowCreate(false)}>
           <div className="bg-white rounded-lg shadow-xl w-[280px] p-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-sm font-medium mb-3">创建群聊</h3>
@@ -103,22 +103,63 @@ function GroupItem({ group, isActive, onClick }: {
   isActive: boolean;
   onClick: () => void;
 }) {
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteId, setInviteId] = useState('');
+  const [inviting, setInviting] = useState(false);
+
+  const handleInvite = async () => {
+    if (!inviteId.trim()) return;
+    const client = getIMClient();
+    if (!client) return;
+    setInviting(true);
+    try {
+      await client.inviteToGroup(group.groupId, inviteId.trim());
+      setInviteId('');
+      setShowInvite(false);
+    } catch { /* ignore */ }
+    setInviting(false);
+  };
+
   return (
-    <div
-      onClick={onClick}
-      className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors border-b border-gray-100 ${
-        isActive ? 'bg-wechat-green/10' : 'hover:bg-gray-50'
-      }`}
-    >
-      <div className="w-10 h-10 rounded-md bg-wechat-green text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
-        {group.name.charAt(0).toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-wechat-text truncate">{group.name}</span>
+    <>
+      <div
+        onClick={onClick}
+        className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors border-b border-gray-100 ${
+          isActive ? 'bg-wechat-green/10' : 'hover:bg-gray-50'
+        }`}
+      >
+        <div className="w-10 h-10 rounded-md bg-wechat-green text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
+          {group.name.charAt(0).toUpperCase()}
         </div>
-        <span className="text-xs text-wechat-text-secondary">{group.memberCount} 人</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-wechat-text truncate">{group.name}</span>
+          </div>
+          <span className="text-xs text-wechat-text-secondary">{group.memberCount} 人</span>
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowInvite(!showInvite); }}
+          className="text-xs text-wechat-green hover:bg-wechat-green/10 px-2 py-1 rounded flex-shrink-0"
+        >
+          邀请
+        </button>
       </div>
-    </div>
+      {showInvite && (
+        <div className="px-3 py-2 border-b border-gray-100 bg-gray-50 flex gap-2">
+          <input
+            autoFocus
+            value={inviteId}
+            onChange={e => setInviteId(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleInvite(); }}
+            placeholder="输入用户 ID"
+            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded outline-none focus:border-wechat-green"
+          />
+          <button onClick={handleInvite} disabled={inviting || !inviteId.trim()}
+            className="px-2 py-1 text-xs rounded bg-wechat-green text-white hover:bg-wechat-green-dark disabled:opacity-50">
+            {inviting ? '...' : '确定'}
+          </button>
+        </div>
+      )}
+    </>
   );
 }
