@@ -13,6 +13,14 @@ import {
   FriendNotify,
   FriendDeleteNotify,
   PullHistoryResp,
+  GroupMessage,
+  GroupInfo,
+  GroupMsgRecord,
+  GroupMember,
+  GroupOpResp,
+  PullGroupMsgResp,
+  CreateGroupResp,
+  GroupMemberChangeNotify,
 } from './types';
 
 interface IMClientOptions {
@@ -378,6 +386,106 @@ export class IMClient {
   }
 
   // ================================================================
+  // Group Operations
+  // ================================================================
+
+  private _sendGroupOp<T>(reqCmd: Cmd, respCmd: Cmd, body: Record<string, unknown>, timeoutMs = 5000): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      if (this.ws?.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket 未连接'));
+        return;
+      }
+      const messageId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const timeoutId = setTimeout(() => {
+        this.pendingFriendOps.delete(messageId);
+        reject(new Error('操作超时'));
+      }, timeoutMs);
+      this.pendingFriendOps.set(messageId, { resolve, reject, timeoutId, expectedCmd: respCmd });
+      const buf = encode(reqCmd, messageId, body, this.userId);
+      this.ws!.send(buf);
+    });
+  }
+
+  sendGroupMessage(groupId: string, msgType: MsgType, content: string): string {
+    if (!this.connected) throw new Error('Not connected');
+    const msgId = generateId();
+    const msg: OutgoingMessage = {
+      id: msgId,
+      recipientId: groupId,
+      msgType,
+      content,
+      status: 'pending',
+      createdAt: Date.now(),
+      retryCount: 0,
+    };
+    this.pendingQueue.set(msgId, msg);
+    const body = {
+      groupId,
+      message: { msgType, content },
+    };
+    const buf = encode(Cmd.C2G_REQ, msgId, body, this.userId, {
+      userName: this.userName,
+      nickname: this.nickname,
+    });
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(buf);
+      msg.status = 'sending';
+      this._emit('statusChange', { id: msg.id, status: msg.status });
+    }
+    return msgId;
+  }
+
+  pullGroupMessages(groupId: string, cursor: number, limit = 50, backward = false): Promise<PullGroupMsgResp> {
+    return this._sendGroupOp<PullGroupMsgResp>(
+      Cmd.GROUP_PULL_MSG_REQ,
+      Cmd.GROUP_PULL_MSG_RESP,
+      { groupId, cursor, limit, isBackward: backward },
+      10000,
+    );
+  }
+
+  sendGroupAck(groupId: string, lastReadSeq: number): void {
+    if (!this.connected) return;
+    const body = { groupId, lastReadSeq };
+    const buf = encode(Cmd.GROUP_ACK_REQ, 'gack-' + Date.now(), body, this.userId);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(buf);
+    }
+  }
+
+  createGroup(name: string, avatar?: string): Promise<CreateGroupResp> {
+    return this._sendGroupOp<CreateGroupResp>(
+      Cmd.GROUP_CREATE_REQ,
+      Cmd.GROUP_CREATE_RESP,
+      { name, avatar: avatar || '' },
+    );
+  }
+
+  getMyGroups(): Promise<GroupInfo[]> {
+    return this._sendGroupOp<{ code: number; groups: GroupInfo[] }>(
+      Cmd.GROUP_GET_MY_GROUPS_REQ,
+      Cmd.GROUP_GET_MY_GROUPS_RESP,
+      {},
+    ).then(r => r.groups || []);
+  }
+
+  getGroupInfo(groupId: string): Promise<GroupInfo> {
+    return this._sendGroupOp<{ code: number; group: GroupInfo }>(
+      Cmd.GROUP_GET_INFO_REQ,
+      Cmd.GROUP_GET_INFO_RESP,
+      { groupId },
+    ).then(r => r.group);
+  }
+
+  getGroupMembers(groupId: string): Promise<GroupMember[]> {
+    return this._sendGroupOp<{ code: number; members: GroupMember[] }>(
+      Cmd.GROUP_GET_MEMBERS_REQ,
+      Cmd.GROUP_GET_MEMBERS_RESP,
+      { groupId },
+    ).then(r => r.members || []);
+  }
+
+  // ================================================================
   // Connection & Heartbeat
   // ================================================================
 
@@ -538,6 +646,26 @@ export class IMClient {
         msg.timer = undefined;
       }
       // Fix 2：不再 delete，保留以接收后续 ACK_NOTIFY（delivered/seen）
+      msg.status = 'sent';
+      if (body?.messageId) {
+        msg.serverMessageId = String(body.messageId);
+      }
+      this._emit('statusChange', {
+        id: msg.id,
+        status: 'sent',
+        seq: body?.seq,
+        serverMessageId: msg.serverMessageId,
+      });
+    }
+  }
+
+  private _onC2GResp(messageId: string, body: any): void {
+    const msg = this.pendingQueue.get(messageId);
+    if (msg) {
+      if (msg.timer) {
+        clearTimeout(msg.timer);
+        msg.timer = undefined;
+      }
       msg.status = 'sent';
       if (body?.messageId) {
         msg.serverMessageId = String(body.messageId);
@@ -824,6 +952,51 @@ export class IMClient {
       case Cmd.FRIEND_DELETE_NOTIFY: {
         const notify = body as FriendDeleteNotify;
         this._emit('friendDeleted', notify);
+        break;
+      }
+
+      case Cmd.C2G_RESP:
+        if (body?.code !== 0) {
+          this._emit('error', new Error(body?.message || '群消息发送失败'));
+          return;
+        }
+        this._onC2GResp(messageId, body);
+        break;
+
+      case Cmd.C2G_NOTIFY: {
+        const msg: GroupMessage = {
+          id: String(body.id || messageId),
+          senderId: body.senderId || '',
+          groupId: body.groupId || '',
+          senderUserName: body.senderUserName,
+          senderNickname: body.senderNickname,
+          msgType: body.message?.msgType ?? body.msgType ?? MsgType.TEXT,
+          content: body.message?.content ?? body.content ?? '',
+          seq: body.seq || 0,
+          createdAt: body.createdAt || Date.now(),
+        };
+        this._emit('groupMessage', msg);
+        break;
+      }
+
+      case Cmd.GROUP_MEMBER_CHANGE_NOTIFY: {
+        const notify = body as GroupMemberChangeNotify;
+        this._emit('groupMemberChange', notify);
+        break;
+      }
+
+      case Cmd.GROUP_CREATE_RESP:
+      case Cmd.GROUP_GET_INFO_RESP:
+      case Cmd.GROUP_GET_MEMBERS_RESP:
+      case Cmd.GROUP_GET_MY_GROUPS_RESP:
+      case Cmd.GROUP_PULL_MSG_RESP:
+      case Cmd.GROUP_ACK_RESP: {
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          pending.resolve(body);
+        }
         break;
       }
 

@@ -2,8 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { IncomingMessage } from '@/sdk/types';
 
+import { ConversationType } from '@/sdk/types';
+
 export interface Conversation {
   peerId: string;
+  type: ConversationType;
   nickname: string;
   avatar: string;
   lastMessage: string; // 最后一条消息预览（截断50字）
@@ -21,7 +24,7 @@ interface ConversationState {
   clearUnread: (peerId: string) => void;
   updateDraft: (peerId: string, text: string) => void;
   onNewMessage: (msg: IncomingMessage, selfUserId: string) => void;
-  createConversation: (peerId: string, nickname?: string, avatar?: string) => void;
+  createConversation: (peerId: string, nickname?: string, avatar?: string, type?: ConversationType) => void;
   removeConversation: (peerId: string) => void;
   clearAll: () => void;
   getSortedList: () => string[];
@@ -105,7 +108,7 @@ export const useConversationStore = create<ConversationState>()(
     });
   },
 
-  createConversation: (peerId, nickname, avatar) => {
+  createConversation: (peerId, nickname, avatar, type = 'c2c') => {
     set((state) => {
       if (state.conversations[peerId]) return state;
       return {
@@ -113,6 +116,7 @@ export const useConversationStore = create<ConversationState>()(
           ...state.conversations,
           [peerId]: {
             peerId,
+            type,
             nickname: nickname || peerId,
             avatar: avatar || '',
             lastMessage: '',
