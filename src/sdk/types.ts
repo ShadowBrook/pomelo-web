@@ -55,6 +55,8 @@ export enum Cmd {
   GROUP_PULL_MSG_RESP = 0x0095,
   GROUP_ACK_REQ = 0x0096,
   GROUP_ACK_RESP = 0x0097,
+  GROUP_MSG_READ_REQ = 0x0098,
+  GROUP_MSG_READ_RESP = 0x0099,
 
   // 通用错误响应
   CMD_ERROR = 0xFFFF,
@@ -228,6 +230,18 @@ export interface PullGroupMsgResp {
   message: string;
   messages: GroupMsgRecord[];
   hasMore: boolean;
+}
+
+export interface GroupMsgReader {
+  userId: string;
+  nickname: string;
+  avatar: string;
+}
+
+export interface GroupMsgReadStatusResp {
+  code: number;
+  message: string;
+  readers: GroupMsgReader[];
 }
 
 export interface CreateGroupResp {

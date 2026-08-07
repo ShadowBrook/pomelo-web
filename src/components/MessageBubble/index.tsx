@@ -6,6 +6,8 @@ interface Props {
   message: ChatMessage;
   isSelf: boolean;
   onRetry?: (messageId: string) => void;
+  isGroup?: boolean;
+  onReadClick?: (messageId: string, seq: number) => void;
 }
 
 function StatusIcon({ status, onRetry }: { status: MessageStatus; onRetry?: () => void }) {
@@ -26,7 +28,7 @@ function StatusIcon({ status, onRetry }: { status: MessageStatus; onRetry?: () =
   }
 }
 
-export const MessageBubble = React.memo(function MessageBubble({ message, isSelf, onRetry }: Props) {
+export const MessageBubble = React.memo(function MessageBubble({ message, isSelf, onRetry, isGroup, onReadClick }: Props) {
   return (
     <div className={`flex ${isSelf ? 'justify-end' : 'justify-start'} mb-3 px-4`}>
       {/* 对方头像（非己方时显示在左侧） */}
@@ -55,8 +57,17 @@ export const MessageBubble = React.memo(function MessageBubble({ message, isSelf
         )}
         {/* 己方消息状态图标 */}
         {isSelf && (
-          <div className="flex justify-end mt-1">
+          <div className="flex justify-end mt-1 gap-1 items-center">
             <StatusIcon status={message.status} onRetry={() => onRetry?.(message.id)} />
+            {isGroup && message.seq && (
+              <span
+                className="text-xs text-blue-400 cursor-pointer hover:text-blue-600"
+                title="查看已读成员"
+                onClick={(e) => { e.stopPropagation(); onReadClick?.(message.id, message.seq!); }}
+              >
+                ◯
+              </span>
+            )}
           </div>
         )}
       </div>

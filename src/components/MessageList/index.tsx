@@ -6,12 +6,11 @@ interface Props {
   messages: ChatMessage[];
   currentUserId: string;
   onRetry?: (messageId: string) => void;
-  // 滚动到顶部时加载更早的历史消息
   onLoadMore?: () => void;
-  // 是否正在加载历史（用于显示提示 + 阻止重复触发）
   loadingHistory?: boolean;
-  // 是否还有更早的历史可加载
   hasMore?: boolean;
+  isGroup?: boolean;
+  onReadClick?: (messageId: string, seq: number) => void;
 }
 
 function shouldShowTimeDivider(prev: ChatMessage | null, curr: ChatMessage): boolean {
@@ -106,7 +105,7 @@ export function MessageList({
                 </span>
               </div>
             )}
-            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} />
+            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} />
           </div>
         );
       })}
