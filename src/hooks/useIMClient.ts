@@ -163,9 +163,11 @@ export function useIMClient() {
       const groupId = msg.groupId;
       const state = useConversationStore.getState();
       const conv = state.conversations[groupId];
+      // 群名优先用推送携带的 name，其次群列表缓存；都没有才回退 groupId
+      const groupName = msg.name || useGroupStore.getState().groups[groupId]?.name || msg.groupId;
       if (!conv) {
         useConversationStore.getState().createConversation(groupId,
-          msg.groupId, '', 'group');
+          groupName, '', 'group');
       } else {
         // 直接增量更新群会话（不走 onNewMessage 避免 peerId 算成 sender）
         const isActive = state.activePeerId === groupId;
@@ -175,6 +177,8 @@ export function useIMClient() {
             ...s.conversations,
             [groupId]: {
               ...s.conversations[groupId],
+              // 修正历史 bug：之前把 groupId 当昵称创建了会话，这里替换为群名
+              nickname: s.conversations[groupId].nickname === msg.groupId ? groupName : s.conversations[groupId].nickname,
               lastMessage,
               lastMessageTime: msg.createdAt || Date.now(),
               lastMessageId: String(msg.id),

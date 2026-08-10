@@ -192,6 +192,7 @@ export interface GroupMessage {
   id: string;
   senderId: string;
   groupId: string;
+  name?: string;
   senderUserName?: string;
   senderNickname?: string;
   msgType: number;
