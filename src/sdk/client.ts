@@ -983,6 +983,7 @@ export class IMClient {
           id: String(body.id || messageId),
           senderId: body.senderId || '',
           groupId: body.groupId || '',
+          name: body.name,
           senderUserName: body.senderUserName,
           senderNickname: body.senderNickname,
           msgType: body.message?.msgType ?? body.msgType ?? MsgType.TEXT,
