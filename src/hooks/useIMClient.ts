@@ -21,6 +21,65 @@ export function getIMClient(): IMClient | null {
   return clientInstance;
 }
 
+/**
+ * 群聊离线增量同步：用已读水位拉取 seq > lastReadSeq 的新消息。
+ * 在重连/首次上线后对每个已加入的群调用（C2C 离线由 client 内部 _pullOfflineMessages 处理）。
+ * 不推进已读水位——已读回执由群 ACK 在用户查看消息后更新。
+ */
+export function syncGroupMessages(groupId: string): void {
+  const client = getIMClient();
+  if (!client) return;
+  const lastReadSeq = useGroupStore.getState().getLastReadSeq(groupId);
+  // 无水位（从未同步过）时拉最近历史，否则拉 seq > lastReadSeq 的增量
+  const backward = lastReadSeq <= 0;
+  const cursor = backward ? 0 : lastReadSeq;
+  client.pullGroupMessages(groupId, cursor, 50, backward)
+    .then((res) => {
+      if (!res || !res.messages || res.messages.length === 0) return;
+      const state = useChatStore.getState();
+      const existing = state.messages[groupId] || [];
+      const existingIds = new Set(existing.map((m) => m.id));
+      const fresh = res.messages.filter((m) => !existingIds.has(String(m.id)));
+      if (fresh.length === 0) return;
+      const newMsgs = fresh.map((m) => ({
+        id: String(m.id),
+        senderId: m.senderId,
+        recipientId: groupId,
+        msgType: m.msgType as any,
+        content: m.content || '',
+        status: 'delivered' as const,
+        timestamp: m.createdAt || Date.now(),
+        seq: m.seq,
+      }));
+      useChatStore.setState({
+        messages: {
+          ...state.messages,
+          [groupId]: [...existing, ...newMsgs].sort((a, b) => a.timestamp - b.timestamp),
+        },
+      });
+      // 更新会话最后一条消息 + 未读数
+      useConversationStore.setState((s) => {
+        const conv = s.conversations[groupId];
+        if (!conv) return s;
+        const isActive = s.activePeerId === groupId;
+        const last = newMsgs[newMsgs.length - 1];
+        return {
+          conversations: {
+            ...s.conversations,
+            [groupId]: {
+              ...conv,
+              lastMessage: (last?.content || '').slice(0, 50),
+              lastMessageTime: last?.timestamp || Date.now(),
+              lastMessageId: last?.id || '',
+              unreadCount: isActive ? 0 : conv.unreadCount + newMsgs.length,
+            },
+          },
+        };
+      });
+    })
+    .catch((err) => console.error(`群聊离线同步失败 groupId=${groupId}:`, err));
+}
+
 export function useIMClient() {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -56,6 +115,14 @@ export function useIMClient() {
 
     client.on('connectionChange', (state: ConnectionState) => {
       setConnectionState(state);
+      if (state === 'connected') {
+        // C2C 离线消息由 client 内部 _pullOfflineMessages 处理；
+        // 群聊离线增量：重连/首次上线后遍历所有已加入的群同步
+        const groups = useGroupStore.getState().groups;
+        for (const gid of Object.keys(groups)) {
+          syncGroupMessages(gid);
+        }
+      }
     });
 
     client.on('kicked', (reason: string) => {

@@ -95,11 +95,12 @@ export interface OutgoingMessage {
   serverMessageId?: string;
 }
 
-// 接收消息（归一化）
+// 接收消息（归一化）。C2C 消息用 recipientId，群消息用 groupId
 export interface IncomingMessage {
   id: string;
   senderId: string;
-  recipientId: string;
+  recipientId?: string;
+  groupId?: string;
   senderUserName?: string;
   senderNickname?: string;
   msgType: MsgType;
@@ -178,18 +179,6 @@ export interface GroupInfo {
   updatedAt: number;
 }
 
-export interface GroupMsgRecord {
-  id: string;
-  senderId: string;
-  groupId: string;
-  msgType: number;
-  content: string;
-  seq: number;
-  createdAt: number;
-  senderName?: string;
-  senderNickname?: string;
-}
-
 export interface GroupMember {
   userId: string;
   userName: string;
@@ -223,13 +212,6 @@ export interface GroupMemberChangeNotify {
 export interface GroupOpResp {
   code: number;
   message: string;
-}
-
-export interface PullGroupMsgResp {
-  code: number;
-  message: string;
-  messages: GroupMsgRecord[];
-  hasMore: boolean;
 }
 
 export interface GroupMsgReader {

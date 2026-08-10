@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getIMClient } from '@/hooks/useIMClient';
+import { getIMClient, syncGroupMessages } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useFriendStore, type Friend } from '@/stores/useFriendStore';
 import type { GroupInfo } from '@/sdk/types';
@@ -20,7 +20,14 @@ export function GroupPanel({ activeGroupId, onSelect }: Props) {
   const loadGroups = () => {
     const client = getIMClient();
     if (!client) return;
-    client.getMyGroups().then((list) => setGroups(list)).catch(() => {});
+    client.getMyGroups()
+      .then((list) => {
+        setGroups(list);
+        // 群列表加载完成后对每个群做离线增量同步（首次登录时序：连接已建但群列表未加载，
+        // connectionChange 同步会空跑，这里兜底）
+        list.forEach((g) => syncGroupMessages(g.groupId));
+      })
+      .catch(() => {});
   };
 
   useEffect(() => { loadGroups(); }, [setGroups]);
