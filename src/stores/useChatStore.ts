@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { IncomingMessage, StatusUpdate, MsgType, MessageStatus } from '@/sdk/types';
 import { generateId } from '@/sdk/protocol';
 import { getIMClient } from '@/hooks/useIMClient';
+import { useGroupStore } from '@/stores/useGroupStore';
 
 export interface ChatMessage {
   id: string;
@@ -34,9 +35,23 @@ interface ChatState {
     sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
   ) => void;
   /** 打开会话时调用：有缓存则直接显示，同时拉取增量；无缓存则全量拉取 */
-  openConversation: (peerId: string) => Promise<void>;
+  openConversation: (peerId: string, type?: 'c2c' | 'group') => Promise<void>;
   /** 滚动到顶加载更早历史 */
-  loadMoreHistory: (peerId: string) => Promise<void>;
+  loadMoreHistory: (peerId: string, type?: 'c2c' | 'group') => Promise<void>;
+}
+
+/** 归一化拉取回来的消息为 ChatMessage（群聊无 recipientId 字段，fallback 到 peerId） */
+function toChatMessage(m: IncomingMessage, peerId: string): ChatMessage {
+  return {
+    id: String(m.id),
+    senderId: m.senderId,
+    recipientId: m.recipientId ?? peerId,
+    msgType: m.msgType,
+    content: m.content || '',
+    status: 'seen' as MessageStatus,
+    timestamp: m.createdAt || Date.now(),
+    seq: m.seq,
+  };
 }
 
 export const useChatStore = create<ChatState>()(
@@ -145,7 +160,7 @@ export const useChatStore = create<ChatState>()(
 
       clearAll: () => set({ messages: {}, hasMoreHistory: {}, loadingHistory: false }),
 
-      loadMoreHistory: async (peerId) => {
+      loadMoreHistory: async (peerId, type = 'c2c') => {
         const state = get();
         if (state.loadingHistory) return;
         if (state.hasMoreHistory[peerId] === false) return;
@@ -154,6 +169,34 @@ export const useChatStore = create<ChatState>()(
         if (!client) return;
 
         const msgs = state.messages[peerId] || [];
+
+        // 群聊：用最早消息的 seq 作游标拉更早一页（backward=true）
+        if (type === 'group') {
+          const oldestSeq = msgs.length > 0 ? (msgs[0].seq ?? 0) : 0;
+          if (oldestSeq === 0) return;
+          set({ loadingHistory: true });
+          try {
+            const res = await client.pullGroupMessages(peerId, oldestSeq, 50, true);
+            const historyMsgs: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
+            set((s) => {
+              const existing = s.messages[peerId] || [];
+              const existingIds = new Set(existing.map(m => m.id));
+              // backward=true 返回 seq 降序，反转为正序后前置
+              const newMsgs = historyMsgs.filter(m => !existingIds.has(m.id)).reverse();
+              const merged = [...newMsgs, ...existing].sort((a, b) => a.timestamp - b.timestamp);
+              return {
+                messages: { ...s.messages, [peerId]: merged },
+                loadingHistory: false,
+                hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
+              };
+            });
+          } catch (e) {
+            set({ loadingHistory: false });
+            console.error('加载群聊历史失败:', e);
+          }
+          return;
+        }
+
         // 用已拥有最早消息的 createdAt 作时间游标，拉取更早一页（历史接口按 created_at 倒序回退）
         const oldestTime = msgs.length > 0 ? msgs[0].timestamp ?? 0 : 0;
         if (oldestTime === 0) return;
@@ -185,12 +228,55 @@ export const useChatStore = create<ChatState>()(
       },
 
       /** 打开会话：有缓存直接显示 + 后台拉增量 */
-      openConversation: async (peerId) => {
+      openConversation: async (peerId, type = 'c2c') => {
         const state = get();
         const cached = state.messages[peerId] || [];
 
         const client = getIMClient();
         if (!client) return;
+
+        // 群聊：消息在 im_message_group 表，历史/增量都走 pullGroupMessages
+        if (type === 'group') {
+          if (cached.length === 0) {
+            // 首次打开：拉最近一页历史垫底
+            set({ loadingHistory: true });
+            try {
+              const res = await client.pullGroupMessages(peerId, 0, 50, true);
+              const msgs: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
+              // backward=true 返回 seq 降序，需反转为正序
+              set((s) => ({
+                messages: { ...s.messages, [peerId]: msgs.slice().reverse() },
+                loadingHistory: false,
+                hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
+              }));
+            } catch (e) {
+              set({ loadingHistory: false });
+              console.error('加载群聊历史失败:', e);
+            }
+            return;
+          }
+          // 有缓存：用已读水位拉增量（seq > lastReadSeq）；无水位则拉最近历史。
+          // 拉取不推进水位——已读水位由群 ACK 在用户查看消息后更新。
+          const lastReadSeq = useGroupStore.getState().getLastReadSeq(peerId);
+          const backward = lastReadSeq <= 0;
+          const cursor = backward ? 0 : lastReadSeq;
+          try {
+            const res = await client.pullGroupMessages(peerId, cursor, 50, backward);
+            const fresh: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
+            set((s) => {
+              const existing = s.messages[peerId] || [];
+              const existingIds = new Set(existing.map(m => m.id));
+              const added = fresh.filter(m => !existingIds.has(m.id));
+              if (added.length === 0) return s;
+              return {
+                messages: { ...s.messages, [peerId]: [...existing, ...added].sort((a, b) => a.timestamp - b.timestamp) },
+              };
+            });
+          } catch (e) {
+            console.error('拉取群聊增量失败:', e);
+          }
+          return;
+        }
 
         // 首次打开该会话：拉取最近 50 条
         if (cached.length === 0) {

@@ -15,10 +15,8 @@ import {
   PullHistoryResp,
   GroupMessage,
   GroupInfo,
-  GroupMsgRecord,
   GroupMember,
   GroupOpResp,
-  PullGroupMsgResp,
   CreateGroupResp,
   GroupMsgReadStatusResp,
   GroupMemberChangeNotify,
@@ -361,7 +359,7 @@ export class IMClient {
    * - 无 peerId → 拉取离线未送达消息（seq > 收件人同步水位）
    *
    * @param beforeTime 时间游标：传入已拥有最旧消息的 createdAt，拉取更早一页；
-   *                   0 / 不传 = 拉取最新一页。走 wire 的 lastMsgId 字段。
+   *                   0 / 不传 = 拉取最新一页。
    */
   pullHistory(peerId: string, beforeTime?: number, limit = 50): Promise<PullHistoryResp> {
     return new Promise<PullHistoryResp>((resolve, reject) => {
@@ -372,7 +370,7 @@ export class IMClient {
       const body: Record<string, unknown> = {
         userId: this.userId,
         peerId,
-        lastMsgId: beforeTime || 0,
+        seq: beforeTime || 0,
         limit,
       };
       const messageId = `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -436,8 +434,8 @@ export class IMClient {
     return msgId;
   }
 
-  pullGroupMessages(groupId: string, cursor: number, limit = 50, backward = false): Promise<PullGroupMsgResp> {
-    return this._sendGroupOp<PullGroupMsgResp>(
+  pullGroupMessages(groupId: string, cursor: number, limit = 50, backward = false): Promise<PullHistoryResp> {
+    return this._sendGroupOp<PullHistoryResp>(
       Cmd.GROUP_PULL_MSG_REQ,
       Cmd.GROUP_PULL_MSG_RESP,
       { groupId, cursor, limit, isBackward: backward },
@@ -794,15 +792,15 @@ export class IMClient {
 
   private _pullOfflineMessages(): void {
     if (!this.connected) return;
-    // lastMsgId = 本账号同步水位（lastSeq）。后端 pullPending(recipient_id, seq > 水位) 增量拉取
+    // seq = 本账号同步水位（lastSeq）。后端 pullPending(recipient_id, seq > 水位) 增量拉取
     const body = {
       userId: this.userId,
-      lastMsgId: this.lastSeq,
+      seq: this.lastSeq,
       limit: 50,
     };
     const buf = encode(Cmd.PULL_REQ, 'pull-' + Date.now(), body, this.userId);
     this.ws!.send(buf);
-    console.log(`[IMClient] Pull 离线消息 lastMsgId=${this.lastSeq}`);
+    console.log(`[IMClient] Pull 离线消息 seq=${this.lastSeq}`);
   }
 
   private _onPullResp(body: any): void {

@@ -105,7 +105,7 @@ export default function ChatPage() {
   const handleSelectGroup = useCallback((groupId: string, name: string) => {
     useConversationStore.getState().createConversation(groupId, name, '', 'group');
     useConversationStore.getState().setActivePeer(groupId);
-    useChatStore.getState().openConversation(groupId);
+    useChatStore.getState().openConversation(groupId, 'group');
     setSidebarTab('chats');
   }, []);
 
@@ -204,7 +204,8 @@ export default function ChatPage() {
   const handleSelectConversation = useCallback((peerId: string) => {
     setActivePeer(peerId);
     // 加载/刷新消息（内部自动处理缓存与增量逻辑；已读回执由上面的 useEffect 自动发送）
-    useChatStore.getState().openConversation(peerId);
+    const type = useConversationStore.getState().conversations[peerId]?.type ?? 'c2c';
+    useChatStore.getState().openConversation(peerId, type);
   }, [setActivePeer]);
 
   // 删除本地会话
@@ -216,7 +217,8 @@ export default function ChatPage() {
   // 滚动到顶部时加载更早的历史
   const handleLoadMoreHistory = useCallback(() => {
     if (!activePeerId) return;
-    useChatStore.getState().loadMoreHistory(activePeerId);
+    const type = useConversationStore.getState().conversations[activePeerId]?.type ?? 'c2c';
+    useChatStore.getState().loadMoreHistory(activePeerId, type);
   }, [activePeerId]);
 
   // 发送文本
