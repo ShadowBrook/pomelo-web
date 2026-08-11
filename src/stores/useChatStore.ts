@@ -113,7 +113,7 @@ export const useChatStore = create<ChatState>()(
 
       onIncomingMessage: (msg: IncomingMessage) => {
         const chatMsg: ChatMessage = {
-          id: msg.id, senderId: msg.senderId, recipientId: msg.recipientId,
+          id: msg.id, senderId: msg.senderId, recipientId: msg.recipientId ?? '',
           msgType: msg.msgType, content: msg.content, status: 'delivered',
           timestamp: msg.createdAt || Date.now(), seq: msg.seq,
         };
@@ -205,7 +205,7 @@ export const useChatStore = create<ChatState>()(
         try {
           const res = await client.pullHistory(peerId, oldestTime);
           const historyMsgs: ChatMessage[] = (res.messages || []).map(m => ({
-            id: String(m.id), senderId: m.senderId, recipientId: m.recipientId,
+            id: String(m.id), senderId: m.senderId, recipientId: m.recipientId ?? '',
             msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
             timestamp: m.createdAt || Date.now(), seq: m.seq,
           }));
@@ -284,7 +284,7 @@ export const useChatStore = create<ChatState>()(
           try {
             const res = await client.pullHistory(peerId, 0);
             const msgs: ChatMessage[] = (res.messages || []).map(m => ({
-              id: String(m.id), senderId: m.senderId, recipientId: m.recipientId,
+              id: String(m.id), senderId: m.senderId, recipientId: m.recipientId ?? '',
               msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
               timestamp: m.createdAt || Date.now(), seq: m.seq,
             }));

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getIMClient, syncGroupMessages } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
-import { useFriendStore, type Friend } from '@/stores/useFriendStore';
+import { useFriendStore } from '@/stores/useFriendStore';
 import type { GroupInfo } from '@/sdk/types';
 
 interface Props {
