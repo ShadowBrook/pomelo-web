@@ -55,13 +55,13 @@ export async function register(userName: string, nickname: string, password: str
   });
 }
 
-// 用户登录
+// 用户登录（platform 写入 token，供 gateway setCodec 多端预留）
 export async function login(userName: string, password: string) {
   return request<{ userId: string; userName: string; nickname: string; avatar: string }>(
     '/user/login',
     {
       method: 'POST',
-      body: JSON.stringify({ userName, password }),
+      body: JSON.stringify({ userName, password, platform: 'web' }),
     },
   );
 }

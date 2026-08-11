@@ -175,8 +175,8 @@ export default function ChatPage() {
     }
   }, [activePeerId, activeConversation, activeMessages, markSeen, user]);
 
-  // 点击群消息已读圈 → 查询已读用户列表
-  const handleReadClick = useCallback(async (messageId: string, seq: number) => {
+  // 点击群消息已读圈 → 查询已读用户列表（按 seq 查询）
+  const handleReadClick = useCallback(async (_messageId: string, seq: number) => {
     if (!activePeerId) return;
     setReadStatus({ readers: [], loading: true });
     try {

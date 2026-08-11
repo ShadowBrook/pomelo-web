@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useFriendStore, type Friend } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
-import { useConversationStore } from '@/stores/useConversationStore';
 
 interface Props {
   open: boolean;

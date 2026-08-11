@@ -71,7 +71,7 @@ export const useConversationStore = create<ConversationState>()(
 
   onNewMessage: (msg, selfUserId) => {
     // 确定 peerId
-    const peerId = msg.senderId === selfUserId ? msg.recipientId : msg.senderId;
+    const peerId = msg.senderId === selfUserId ? (msg.recipientId ?? '') : msg.senderId;
     const lastMessage = msg.content.length > 50 ? msg.content.slice(0, 50) + '...' : msg.content;
     const lastMessageTime = msg.createdAt || Date.now();
 
@@ -91,6 +91,7 @@ export const useConversationStore = create<ConversationState>()(
           }
         : {
             peerId,
+            type: 'c2c' as const,
             nickname: msg.senderNickname || msg.senderUserName || peerId,
             avatar: '',
             lastMessage,
