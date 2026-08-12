@@ -13,7 +13,7 @@ export interface Friend {
 }
 
 export interface PendingRequest {
-  userId: string;   // 申请发起方（NanoID）
+  userId: string;   // 申请发起方（Snowflake 字符串）
   userName: string;
   nickname: string;
   avatar: string;
