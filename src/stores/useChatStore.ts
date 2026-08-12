@@ -9,6 +9,8 @@ export interface ChatMessage {
   id: string;
   senderId: string;
   recipientId: string;
+  senderUserName?: string;
+  senderNickname?: string;
   msgType: MsgType;
   content: string;
   status: MessageStatus;
@@ -46,6 +48,8 @@ function toChatMessage(m: IncomingMessage, peerId: string): ChatMessage {
     id: String(m.id),
     senderId: m.senderId,
     recipientId: m.recipientId ?? peerId,
+    senderUserName: m.senderUserName,
+    senderNickname: m.senderNickname,
     msgType: m.msgType,
     content: m.content || '',
     status: 'seen' as MessageStatus,
@@ -114,6 +118,7 @@ export const useChatStore = create<ChatState>()(
       onIncomingMessage: (msg: IncomingMessage) => {
         const chatMsg: ChatMessage = {
           id: msg.id, senderId: msg.senderId, recipientId: msg.recipientId ?? '',
+          senderUserName: msg.senderUserName, senderNickname: msg.senderNickname,
           msgType: msg.msgType, content: msg.content, status: 'delivered',
           timestamp: msg.createdAt || Date.now(), seq: msg.seq,
         };
@@ -206,6 +211,7 @@ export const useChatStore = create<ChatState>()(
           const res = await client.pullHistory(peerId, oldestTime);
           const historyMsgs: ChatMessage[] = (res.messages || []).map(m => ({
             id: String(m.id), senderId: m.senderId, recipientId: m.recipientId ?? '',
+            senderUserName: m.senderUserName, senderNickname: m.senderNickname,
             msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
             timestamp: m.createdAt || Date.now(), seq: m.seq,
           }));
@@ -285,6 +291,7 @@ export const useChatStore = create<ChatState>()(
             const res = await client.pullHistory(peerId, 0);
             const msgs: ChatMessage[] = (res.messages || []).map(m => ({
               id: String(m.id), senderId: m.senderId, recipientId: m.recipientId ?? '',
+              senderUserName: m.senderUserName, senderNickname: m.senderNickname,
               msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
               timestamp: m.createdAt || Date.now(), seq: m.seq,
             }));

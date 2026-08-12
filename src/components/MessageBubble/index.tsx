@@ -34,7 +34,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message, isSelf
       {/* 对方头像（非己方时显示在左侧） */}
       {!isSelf && (
         <div className="w-9 h-9 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center text-white text-xs mr-2">
-          {message.senderId.charAt(0).toUpperCase()}
+          {(message.senderNickname || message.senderUserName || message.senderId).charAt(0).toUpperCase()}
         </div>
       )}
 

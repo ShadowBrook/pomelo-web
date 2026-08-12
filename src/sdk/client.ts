@@ -831,6 +831,8 @@ export class IMClient {
       id: String(record.id || ''),
       senderId: record.senderId || '',
       recipientId: record.recipientId || '',
+      senderUserName: record.senderUserName,
+      senderNickname: record.senderNickname,
       msgType: record.msgType ?? MsgType.TEXT,
       content: record.content ?? '',
       seq: record.seq || 0,
