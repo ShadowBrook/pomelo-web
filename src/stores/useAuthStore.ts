@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import * as api from '@/utils/api';
 
 interface UserInfo {
-  userId: string;   // NanoID, 系统生成的外部唯一标识
+  userId: string;   // Snowflake 全局唯一 ID（字符串形式）
   userName: string; // 用户名, 登录凭证
   nickname: string;
   avatar: string;
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
       register: async (userName: string, nickname: string, password: string, avatar?: string) => {
         const res = await api.register(userName, nickname, password, avatar);
         if (res.code === 0 || res.code === 201) {
-          // 注册成功，后端返回 NanoID userId
+          // 注册成功，后端返回 Snowflake userId（字符串）
           set({
             user: {
               userId: res.userId!,
