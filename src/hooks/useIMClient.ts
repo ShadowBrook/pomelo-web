@@ -211,8 +211,14 @@ export function useIMClient() {
     });
 
     client.on('groupMemberChange', (notify: GroupMemberChangeNotify) => {
-      // 成员变更时刷新群信息
-      useGroupStore.getState().removeMember(notify.groupId, notify.userId);
+      // LEFT/KICKED 移除成员；INVITED/JOINED 等刷新群成员列表
+      if (notify.type === 'LEFT' || notify.type === 'KICKED') {
+        useGroupStore.getState().removeMember(notify.groupId, notify.userId);
+      } else {
+        client.getGroupMembers(notify.groupId)
+          .then((members) => useGroupStore.getState().setMembers(notify.groupId, members))
+          .catch((err) => console.error('刷新群成员失败:', err));
+      }
     });
 
     // 发起连接
