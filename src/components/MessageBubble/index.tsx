@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChatMessage } from '@/stores/useChatStore';
-import { MessageStatus } from '@/sdk/types';
+import { MessageStatus, MsgType } from '@/sdk/types';
+import { parseMediaContent, getMediaUrl, formatBytes } from '@/sdk/media';
 
 interface Props {
   message: ChatMessage;
@@ -22,9 +23,82 @@ function StatusIcon({ status, onRetry }: { status: MessageStatus; onRetry?: () =
     case 'seen':
       return <span className="text-xs text-blue-500" title="已读">◯</span>;
     case 'failed':
-      return <span className="text-xs text-red-500 cursor-pointer" onClick={onRetry} title="发送失败">❌</span>;
+      // 媒体消息不提供重试（本地未保留原文件），点击无效果
+      return (
+        <span className="text-xs text-red-500" title={onRetry ? '发送失败' : '发送失败，请重新选择文件'}>
+          ❌
+        </span>
+      );
     default:
       return null;
+  }
+}
+
+function Body({ message }: { message: ChatMessage }) {
+  const url = getMediaUrl(message);
+
+  switch (message.msgType) {
+    case MsgType.TEXT:
+      return <p className="whitespace-pre-wrap">{message.content}</p>;
+
+    case MsgType.IMAGE:
+      return url
+        ? (
+          <img
+            src={url}
+            alt="图片"
+            className="max-w-full rounded cursor-pointer object-contain"
+            style={{ maxHeight: 200 }}
+            onClick={() => window.open(url, '_blank')}
+          />
+        )
+        : <span className="text-xs text-gray-400">[图片]</span>;
+
+    case MsgType.EMOJI:
+      return url
+        ? <img src={url} alt="表情" className="w-16 h-16 object-contain" />
+        : <span className="text-2xl">[表情]</span>;
+
+    case MsgType.VOICE: {
+      const duration = parseMediaContent(message.content)?.duration;
+      return (
+        <div className="flex items-center gap-2 min-w-[120px]">
+          <audio controls src={url || undefined} className="max-w-[200px]" />
+          {duration ? (
+            <span className="text-xs text-gray-500">{Math.round(duration / 1000)}″</span>
+          ) : null}
+        </div>
+      );
+    }
+
+    case MsgType.VIDEO:
+      return url
+        ? <video controls src={url} className="max-w-[260px] max-h-[260px] rounded" />
+        : <span className="text-xs text-gray-400">[视频]</span>;
+
+    case MsgType.FILE: {
+      const c = parseMediaContent(message.content);
+      const name = c?.fileName || '文件';
+      const size = c?.size ? formatBytes(c.size) : '';
+      return (
+        <a
+          href={url || undefined}
+          download={name}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 p-2 bg-white/50 rounded hover:bg-white/80 max-w-[220px]"
+        >
+          <span className="text-lg flex-shrink-0">📎</span>
+          <span className="text-xs flex flex-col min-w-0">
+            <span className="text-wechat-text truncate">{name}</span>
+            {size && <span className="text-gray-400">{size}</span>}
+          </span>
+        </a>
+      );
+    }
+
+    default:
+      return <p className="whitespace-pre-wrap">{message.content}</p>;
   }
 }
 
@@ -44,17 +118,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message, isSelf
           ? 'bg-wechat-bubble-self text-wechat-text rounded-tr-sm bubble-self'
           : 'bg-wechat-bubble-other text-wechat-text border border-gray-200 rounded-tl-sm bubble-other'
       }`}>
-        {message.msgType === 1 && <p className="whitespace-pre-wrap">{message.content}</p>}
-        {message.msgType === 2 && (
-          <img src={message.content} alt="图片" className="max-w-full rounded cursor-pointer" style={{ maxHeight: 200 }} />
-        )}
-        {message.msgType === 4 && <p className="text-3xl">{message.content}</p>}
-        {message.msgType === 3 && (
-          <div className="flex items-center gap-2 p-2 bg-white/50 rounded">
-            <span className="text-lg">📎</span>
-            <span className="text-xs">{(() => { try { return JSON.parse(message.content).name } catch { return '文件' } })()}</span>
-          </div>
-        )}
+        <Body message={message} />
         {/* 己方消息状态图标 */}
         {isSelf && (
           <div className="flex justify-end mt-1 gap-1 items-center">
@@ -69,7 +133,10 @@ export const MessageBubble = React.memo(function MessageBubble({ message, isSelf
                 </span>
               )
             ) : (
-              <StatusIcon status={message.status} onRetry={() => onRetry?.(message.id)} />
+              <StatusIcon
+                status={message.status}
+                onRetry={message.msgType === MsgType.TEXT ? () => onRetry?.(message.id) : undefined}
+              />
             )}
           </div>
         )}

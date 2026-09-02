@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { IncomingMessage } from '@/sdk/types';
+import { mediaPreview } from '@/sdk/media';
 
 import { ConversationType } from '@/sdk/types';
 
@@ -72,7 +73,8 @@ export const useConversationStore = create<ConversationState>()(
   onNewMessage: (msg, selfUserId) => {
     // 确定 peerId
     const peerId = msg.senderId === selfUserId ? (msg.recipientId ?? '') : msg.senderId;
-    const lastMessage = msg.content.length > 50 ? msg.content.slice(0, 50) + '...' : msg.content;
+    const preview = mediaPreview(msg.msgType, msg.content);
+    const lastMessage = preview.length > 50 ? preview.slice(0, 50) + '...' : preview;
     const lastMessageTime = msg.createdAt || Date.now();
 
     set((state) => {

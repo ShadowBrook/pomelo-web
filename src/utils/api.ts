@@ -15,11 +15,22 @@ async function request<T = any>(path: string, options?: RequestInit): Promise<Ap
     ...options,
   });
 
-  // 401 Unauthorized → token 失效，触发登出（延迟导入避免循环依赖）
+  // 401 → 默认按 token 失效处理（触发登出）。登录/注册的 401 是凭证错误，单独处理。
   if (res.status === 401) {
+    let msg = '登录已过期，请重新登录';
+    try {
+      const body = await res.json();
+      if (body.message) msg = body.message;
+    } catch {
+      // 响应体非 JSON，保留默认文案
+    }
+    // 登录/注册 401 = 用户名不存在/密码错误，不是 token 过期，不清 token、不提示过期
+    if (path.startsWith('/user/login') || path.startsWith('/user/register')) {
+      throw new Error(msg);
+    }
     const { useAuthStore } = await import('@/stores/useAuthStore');
     useAuthStore.getState().logout();
-    throw new Error('登录已过期，请重新登录');
+    throw new Error(msg);
   }
 
   // 处理 409（用户已存在 / 已发送过好友申请）作为带 code 的特殊响应

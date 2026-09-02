@@ -85,14 +85,30 @@ describe('protocol encode/decode', () => {
     expect(result.varHeaders['userId']).toBe('alice');
   });
 
-  it('ACK body 含 messageIds 数组', () => {
-    const ackBody = { messageIds: [1001, 1002, 1003], ackType: 0 };
-    const buf = encode(Cmd.ACK_REQ, 'ack-123', ackBody, userId);
+  it('CMD_UPLOAD_REQ body 完整字段验证', () => {
+    const uploadBody = { mediaType: 2, fileName: 'a.jpg', size: 102400, contentType: 'image/jpeg' };
+    const messageId = 'upload-1721382600';
+    const buf = encode(Cmd.CMD_UPLOAD_REQ, messageId, uploadBody, userId);
     const result = decode(buf);
 
-    expect(result.cmd).toBe(Cmd.ACK_REQ);
-    expect(result.body.messageIds).toEqual([1001, 1002, 1003]);
-    expect(result.body.ackType).toBe(0);
+    expect(result.cmd).toBe(0x00A0);
+    expect(result.messageId).toBe(messageId);
+    expect(result.body).toEqual(uploadBody);
+  });
+
+  it('CMD_UPLOAD_RESP body 含 objectKey 与 presignedUrl', () => {
+    const respBody = {
+      code: 0,
+      message: 'success',
+      objectKey: 'image/alice/20260827/8841234567890123456.jpg',
+      presignedUrl: 'http://localhost:9002/pomelo-media/image/alice/20260827/8841234567890123456.jpg?X-Amz-Signature=abc',
+      expireAt: 1721382900000,
+    };
+    const buf = encode(Cmd.CMD_UPLOAD_RESP, 'upload-r-1', respBody, userId);
+    const result = decode(buf);
+    expect(result.cmd).toBe(0x00A1);
+    expect(result.body.objectKey).toBe(respBody.objectKey);
+    expect(result.body.presignedUrl).toContain('X-Amz-Signature');
   });
 });
 

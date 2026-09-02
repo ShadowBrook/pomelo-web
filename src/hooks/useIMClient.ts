@@ -7,6 +7,7 @@ import { useConversationStore } from '@/stores/useConversationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { mediaPreview } from '@/sdk/media';
 
 // 模块级单例
 let clientInstance: IMClient | null = null;
@@ -68,7 +69,7 @@ export function syncGroupMessages(groupId: string): void {
             ...s.conversations,
             [groupId]: {
               ...conv,
-              lastMessage: (last?.content || '').slice(0, 50),
+              lastMessage: mediaPreview(last?.msgType, last?.content || ''),
               lastMessageTime: last?.timestamp || Date.now(),
               lastMessageId: last?.id || '',
               unreadCount: isActive ? 0 : conv.unreadCount + newMsgs.length,
@@ -171,7 +172,7 @@ export function useIMClient() {
       } else {
         // 直接增量更新群会话（不走 onNewMessage 避免 peerId 算成 sender）
         const isActive = state.activePeerId === groupId;
-        const lastMessage = (msg.content || '').slice(0, 50);
+        const lastMessage = mediaPreview(msg.msgType, msg.content || '');
         useConversationStore.setState((s) => ({
           conversations: {
             ...s.conversations,

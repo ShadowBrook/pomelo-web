@@ -4,6 +4,7 @@ import { IncomingMessage, StatusUpdate, MsgType, MessageStatus } from '@/sdk/typ
 import { generateId } from '@/sdk/protocol';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { buildMediaContent, isMediaType, parseMediaContent } from '@/sdk/media';
 
 export interface ChatMessage {
   id: string;
@@ -16,6 +17,8 @@ export interface ChatMessage {
   status: MessageStatus;
   timestamp: number;
   seq?: number;
+  /** 发送方本地媒体预览（object URL），不持久化 */
+  localUrl?: string;
 }
 
 interface ChatState {
@@ -25,8 +28,11 @@ interface ChatState {
 
   addMessage: (msg: ChatMessage) => void;
   sendText: (peerId: string, text: string, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
-  sendImage: (peerId: string, file: File, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
-  sendFile: (peerId: string, file: File, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
+  sendMedia: (
+    peerId: string,
+    params: { msgType: MsgType; file: File; duration?: number },
+    sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
+  ) => void;
   onIncomingMessage: (msg: IncomingMessage) => void;
   onStatusChange: (update: StatusUpdate) => void;
   searchMessages: (keyword: string, peerId?: string) => ChatMessage[];
@@ -90,29 +96,48 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
-      sendImage: (peerId, file, sendFn) => {
-        const createFailedMsg = (): ChatMessage => ({
-          id: generateId(), senderId: '__self__', recipientId: peerId,
-          msgType: MsgType.IMAGE, content: '', status: 'failed', timestamp: Date.now(),
-        });
-        const reader = new FileReader();
-        reader.onerror = () => set((s) => ({ messages: { ...s.messages, [peerId]: [...(s.messages[peerId] || []), createFailedMsg()] } }));
-        reader.onload = () => {
-          try {
-            const base64 = reader.result as string;
-            const msgId = sendFn({ recipientId: peerId, msgType: MsgType.IMAGE, content: base64 });
-            const msg: ChatMessage = { id: msgId, senderId: '__self__', recipientId: peerId, msgType: MsgType.IMAGE, content: base64, status: 'sending', timestamp: Date.now() };
-            set((s) => ({ messages: { ...s.messages, [peerId]: [...(s.messages[peerId] || []), msg] } }));
-          } catch { set((s) => ({ messages: { ...s.messages, [peerId]: [...(s.messages[peerId] || []), createFailedMsg()] } })); }
-        };
-        reader.readAsDataURL(file);
-      },
+      sendMedia: (peerId, params, sendFn) => {
+        const { msgType, file, duration } = params;
+        const client = getIMClient();
 
-      sendFile: (peerId, file, sendFn) => {
-        const fileInfo = JSON.stringify({ name: file.name, size: file.size, type: file.type });
-        const msgId = sendFn({ recipientId: peerId, msgType: MsgType.FILE, content: fileInfo });
-        const msg: ChatMessage = { id: msgId, senderId: '__self__', recipientId: peerId, msgType: MsgType.FILE, content: fileInfo, status: 'sending', timestamp: Date.now() };
-        set((s) => ({ messages: { ...s.messages, [peerId]: [...(s.messages[peerId] || []), msg] } }));
+        // 本地预览 object URL；上传/发送失败也保留，让用户看到所选内容
+        const localUrl = URL.createObjectURL(file);
+        const appendMsg = (extra: Partial<ChatMessage> & { id: string; status: MessageStatus }) =>
+          set((s) => ({
+            messages: {
+              ...s.messages,
+              [peerId]: [...(s.messages[peerId] || []), {
+                senderId: '__self__' as const,
+                recipientId: peerId,
+                msgType,
+                content: '',
+                localUrl,
+                timestamp: Date.now(),
+                ...extra,
+              }],
+            },
+          }));
+
+        const markFailed = () => appendMsg({ id: generateId(), status: 'failed' });
+
+        if (!client) {
+          markFailed();
+          return;
+        }
+
+        client.requestUpload(msgType, file.name, file.size, file.type || undefined)
+          .then(async (resp) => {
+            await client.putFileToPresignedUrl(resp.presignedUrl, file);
+            const content = buildMediaContent({
+              key: resp.objectKey, fileName: file.name, size: file.size, duration,
+            });
+            const msgId = sendFn({ recipientId: peerId, msgType, content });
+            appendMsg({ id: msgId, status: 'sending', content });
+          })
+          .catch((e) => {
+            console.error('媒体消息发送失败:', e);
+            markFailed();
+          });
       },
 
       onIncomingMessage: (msg: IncomingMessage) => {
@@ -160,10 +185,18 @@ export const useChatStore = create<ChatState>()(
       },
 
       clearMessages: (peerId) => {
+        const msgs = get().messages[peerId] || [];
+        msgs.forEach(m => { if (m.localUrl) URL.revokeObjectURL(m.localUrl); });
         set((s) => { const m = { ...s.messages }; delete m[peerId]; return { messages: m }; });
       },
 
-      clearAll: () => set({ messages: {}, hasMoreHistory: {}, loadingHistory: false }),
+      clearAll: () => {
+        const { messages } = get();
+        for (const msgs of Object.values(messages)) {
+          msgs.forEach(m => { if (m.localUrl) URL.revokeObjectURL(m.localUrl); });
+        }
+        set({ messages: {}, hasMoreHistory: {}, loadingHistory: false });
+      },
 
       loadMoreHistory: async (peerId, type = 'c2c') => {
         const state = get();
@@ -307,8 +340,39 @@ export const useChatStore = create<ChatState>()(
           return;
         }
 
-        // 有缓存：直接返回。新消息已由实时推送(C2C_NOTIFY) + 重连离线同步(pullPending)
-        // 投递到 store；历史接口按 created_at 只回退不前进，无法增量拉"更新于某点"的消息。
+        // 有缓存：若存在缺 url 的媒体消息（发送方自己发的，localUrl 未持久化），
+        // 后台拉最新一页刷新 presigned url；其余情况直接返回。
+        // 新消息已由实时推送(C2C_NOTIFY) + 重连离线同步(pullPending) 投递到 store。
+        const needUrlRefresh = cached.some(
+          (m) => isMediaType(m.msgType) && !parseMediaContent(m.content)?.url,
+        );
+        if (!needUrlRefresh) return;
+        try {
+          const res = await client.pullHistory(peerId, 0);
+          const fresh = (res.messages || []).map((m) => ({
+            id: String(m.id), senderId: m.senderId, recipientId: m.recipientId ?? '',
+            senderUserName: m.senderUserName, senderNickname: m.senderNickname,
+            msgType: m.msgType as MsgType, content: m.content, status: 'seen' as MessageStatus,
+            timestamp: m.createdAt || Date.now(), seq: m.seq,
+          }));
+          set((s) => {
+            const existing = s.messages[peerId] || [];
+            const merged = [...existing];
+            for (const fm of fresh) {
+              const idx = merged.findIndex((m) => m.id === fm.id);
+              if (idx >= 0) {
+                // 仅刷新 content（含签名 url），保留本地发送状态
+                merged[idx] = { ...merged[idx], content: fm.content };
+              } else {
+                merged.push(fm);
+              }
+            }
+            merged.sort((a, b) => a.timestamp - b.timestamp);
+            return { messages: { ...s.messages, [peerId]: merged } };
+          });
+        } catch (e) {
+          console.error('刷新媒体签名失败:', e);
+        }
       },
 
       retryMessage: (messageId, sendFn) => {
@@ -319,6 +383,8 @@ export const useChatStore = create<ChatState>()(
             const idx = msgs.findIndex((m) => m.id === messageId);
             if (idx !== -1) {
               const oldMsg = msgs[idx];
+              // 媒体上传失败（无 content）时无法原地重试，跳过
+              if (isMediaType(oldMsg.msgType) && !oldMsg.content) return state;
               try {
                 const newMsgId = sendFn({ recipientId: oldMsg.recipientId, msgType: oldMsg.msgType, content: oldMsg.content });
                 const updated = [...msgs];
@@ -335,7 +401,13 @@ export const useChatStore = create<ChatState>()(
     {
       name: 'pomelo-chat',
       partialize: (state) => ({
-        messages: state.messages,
+        // localUrl 是会话内存活的 object URL，刷新后失效，不持久化
+        messages: Object.fromEntries(
+          Object.entries(state.messages).map(([pid, msgs]) => [
+            pid,
+            msgs.map(({ localUrl, ...rest }) => rest),
+          ]),
+        ),
         hasMoreHistory: state.hasMoreHistory,
       }),
     }

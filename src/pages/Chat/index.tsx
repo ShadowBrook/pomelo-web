@@ -17,6 +17,8 @@ import { FriendsPanel } from '@/components/FriendsPanel';
 import { GroupPanel } from '@/components/GroupPanel';
 import { CreateGroupDialog } from '@/components/CreateGroupDialog';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { MsgType } from '@/sdk/types';
+import { mediaPreview } from '@/sdk/media';
 
 // 稳定的空数组引用，避免 selector 每次返回新引用导致重渲染
 const EMPTY_MESSAGES: ChatMessage[] = [];
@@ -232,21 +234,41 @@ export default function ChatPage() {
     useConversationStore.getState().updateDraft(activePeerId, '');
   }, [activePeerId, activeConversation, sendMessage, sendGroupMessage]);
 
+  // 统一媒体发送回调：按会话类型走 C2C 或群聊
+  const sendMediaFn = useCallback((params: { recipientId: string; msgType: MsgType; content: string }) => {
+    const isGroup = activeConversation?.type === 'group';
+    return isGroup ? sendGroupMessage(params.recipientId, params.msgType, params.content) : sendMessage(params);
+  }, [activeConversation, sendGroupMessage, sendMessage]);
+
   // 发送图片
   const handleSendImage = useCallback((file: File) => {
     if (!activePeerId) return;
-    useChatStore.getState().sendImage(activePeerId, file, (params) => {
-      return sendMessage({ ...params, msgType: params.msgType });
-    });
-  }, [activePeerId, sendMessage]);
+    useChatStore.getState().sendMedia(activePeerId, { msgType: MsgType.IMAGE, file }, sendMediaFn);
+  }, [activePeerId, sendMediaFn]);
 
   // 发送文件
   const handleSendFile = useCallback((file: File) => {
     if (!activePeerId) return;
-    useChatStore.getState().sendFile(activePeerId, file, (params) => {
-      return sendMessage({ ...params, msgType: params.msgType });
-    });
-  }, [activePeerId, sendMessage]);
+    useChatStore.getState().sendMedia(activePeerId, { msgType: MsgType.FILE, file }, sendMediaFn);
+  }, [activePeerId, sendMediaFn]);
+
+  // 发送语音（MediaRecorder 产物）
+  const handleSendVoice = useCallback((file: File, duration?: number) => {
+    if (!activePeerId) return;
+    useChatStore.getState().sendMedia(activePeerId, { msgType: MsgType.VOICE, file, duration }, sendMediaFn);
+  }, [activePeerId, sendMediaFn]);
+
+  // 发送视频
+  const handleSendVideo = useCallback((file: File) => {
+    if (!activePeerId) return;
+    useChatStore.getState().sendMedia(activePeerId, { msgType: MsgType.VIDEO, file }, sendMediaFn);
+  }, [activePeerId, sendMediaFn]);
+
+  // 发送自定义表情（图片按 EMOJI 类型发）
+  const handleSendEmoji = useCallback((file: File) => {
+    if (!activePeerId) return;
+    useChatStore.getState().sendMedia(activePeerId, { msgType: MsgType.EMOJI, file }, sendMediaFn);
+  }, [activePeerId, sendMediaFn]);
 
   // 草稿同步
   const handleDraftChange = useCallback((text: string) => {
@@ -333,7 +355,7 @@ export default function ChatPage() {
                       className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                       onClick={() => setShowSearchResults(false)}
                     >
-                      <p className="text-sm text-wechat-text truncate">{msg.content}</p>
+                      <p className="text-sm text-wechat-text truncate">{mediaPreview(msg.msgType, msg.content)}</p>
                       <p className="text-xs text-wechat-text-secondary">
                         {new Date(msg.timestamp).toLocaleString()}
                       </p>
@@ -449,6 +471,9 @@ export default function ChatPage() {
               onSendText={handleSendText}
               onSendImage={handleSendImage}
               onSendFile={handleSendFile}
+              onSendVoice={handleSendVoice}
+              onSendVideo={handleSendVideo}
+              onSendEmoji={handleSendEmoji}
               onDraftChange={handleDraftChange}
               disabled={connectionState !== 'connected'}
             />

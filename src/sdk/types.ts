@@ -58,16 +58,22 @@ export enum Cmd {
   GROUP_MSG_READ_REQ = 0x0098,
   GROUP_MSG_READ_RESP = 0x0099,
 
+  // 媒体上传 0x00A0-0x00A1
+  CMD_UPLOAD_REQ = 0x00A0,
+  CMD_UPLOAD_RESP = 0x00A1,
+
   // 通用错误响应
   CMD_ERROR = 0xFFFF,
 }
 
-// 消息类型
+// 消息类型（对齐后端 common.proto MsgType）
 export enum MsgType {
   TEXT = 1,
   IMAGE = 2,
-  FILE = 3,
-  EMOJI = 4,
+  VOICE = 3,
+  VIDEO = 4,
+  FILE = 5,
+  EMOJI = 6,
 }
 
 // ACK 类型
@@ -245,4 +251,36 @@ export interface PullHistoryResp {
   message: string;
   messages: IncomingMessage[];
   hasMore: boolean;
+}
+
+// 媒体上传请求（CMD_UPLOAD_REQ body）
+export interface UploadReq {
+  mediaType: number; // MsgType: 2=image 3=voice 4=video 5=file 6=emoji
+  fileName: string;
+  size: number;
+  contentType?: string;
+}
+
+// 媒体上传响应（CMD_UPLOAD_RESP body）
+export interface UploadResp {
+  code: number;
+  message: string;
+  objectKey: string;
+  presignedUrl: string; // presigned PUT URL
+  expireAt: number;
+}
+
+// 媒体消息 content 的字符串化 JSON 结构。
+// 落库只存 key + 元数据；url/thumbUrl 由服务端读侧注入（presigned GET）。
+export interface MediaContent {
+  key: string;
+  thumb?: string;
+  width?: number;
+  height?: number;
+  duration?: number; // 语音/视频时长 ms
+  size?: number;
+  fileName?: string;
+  format?: string;
+  url?: string; // 服务端注入的 presigned GET URL
+  thumbUrl?: string; // 服务端注入的缩略图 URL
 }
