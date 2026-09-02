@@ -11,10 +11,11 @@ const EMOJI_LIST = [
 
 interface Props {
   onSelect: (emoji: string) => void;
+  onCustomEmoji?: () => void;
   onClose: () => void;
 }
 
-export function EmojiPicker({ onSelect, onClose }: Props) {
+export function EmojiPicker({ onSelect, onCustomEmoji, onClose }: Props) {
   return (
     <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-[280px] z-50">
       <div className="flex justify-between items-center mb-2">
@@ -32,6 +33,14 @@ export function EmojiPicker({ onSelect, onClose }: Props) {
           </button>
         ))}
       </div>
+      {onCustomEmoji && (
+        <button
+          onClick={onCustomEmoji}
+          className="w-full mt-2 py-1.5 text-xs text-wechat-green border border-wechat-green/30 rounded hover:bg-wechat-green/10 transition-colors"
+        >
+          自定义表情（发送图片表情）
+        </button>
+      )}
     </div>
   );
 }

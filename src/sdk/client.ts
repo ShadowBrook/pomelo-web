@@ -20,6 +20,7 @@ import {
   CreateGroupResp,
   GroupMsgReadStatusResp,
   GroupMemberChangeNotify,
+  UploadResp,
 } from './types';
 
 interface IMClientOptions {
@@ -75,6 +76,17 @@ export class IMClient {
     string,
     {
       resolve: (value: PullHistoryResp) => void;
+      reject: (reason: any) => void;
+      timeoutId: ReturnType<typeof setTimeout>;
+    }
+  > = new Map();
+
+  // 媒体上传预签名待处理 Map：messageId -> { resolve, reject, timeoutId }
+  // 复用 CMD_UPLOAD_REQ/RESP，通过 messageId 关联请求和响应，10 秒超时
+  private pendingUploads: Map<
+    string,
+    {
+      resolve: (value: UploadResp) => void;
       reject: (reason: any) => void;
       timeoutId: ReturnType<typeof setTimeout>;
     }
@@ -216,6 +228,13 @@ export class IMClient {
       pending.reject(new Error('连接已断开'));
     }
     this.pendingHistoryPulls.clear();
+
+    // 清理待处理的上传预签名
+    for (const [, pending] of this.pendingUploads) {
+      clearTimeout(pending.timeoutId);
+      pending.reject(new Error('连接已断开'));
+    }
+    this.pendingUploads.clear();
 
     if (this.ws) {
       this.ws.close();
@@ -382,6 +401,52 @@ export class IMClient {
       const buf = encode(Cmd.PULL_REQ, messageId, body, this.userId);
       this.ws.send(buf);
     });
+  }
+
+  // ================================================================
+  // Media Upload
+  // ================================================================
+
+  /**
+   * 申请上传预签名（CMD_UPLOAD_REQ/RESP）。
+   * 通过 messageId 关联请求和响应，10 秒超时。
+   * 成功后拿 objectKey + presigned PUT URL，客户端直传 MinIO。
+   */
+  requestUpload(mediaType: number, fileName: string, size: number, contentType?: string): Promise<UploadResp> {
+    return new Promise<UploadResp>((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket 未连接'));
+        return;
+      }
+      const messageId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const timeoutId = setTimeout(() => {
+        this.pendingUploads.delete(messageId);
+        reject(new Error('获取上传预签名超时'));
+      }, 10000);
+      this.pendingUploads.set(messageId, { resolve, reject, timeoutId });
+      const body: Record<string, unknown> = { mediaType, fileName, size };
+      if (contentType) {
+        body.contentType = contentType;
+      }
+      const buf = encode(Cmd.CMD_UPLOAD_REQ, messageId, body, this.userId);
+      this.ws.send(buf);
+    });
+  }
+
+  /**
+   * 文件字节直传 presigned PUT URL。
+   * Content-Type 必须与预签名时的 content-type 完全一致（SigV4 签名包含该 header），
+   * 否则 MinIO 返回 SignatureDoesNotMatch。
+   */
+  async putFileToPresignedUrl(presignedUrl: string, file: File): Promise<void> {
+    const resp = await fetch(presignedUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    });
+    if (!resp.ok) {
+      throw new Error(`上传文件失败: HTTP ${resp.status}`);
+    }
   }
 
   // ================================================================
@@ -924,6 +989,21 @@ export class IMClient {
       case Cmd.ACK_RESP:
         // ACK 已确认，无需处理
         break;
+
+      case Cmd.CMD_UPLOAD_RESP: {
+        const pending = this.pendingUploads.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingUploads.delete(messageId);
+          const resp = body as UploadResp;
+          if (resp.code === 0) {
+            pending.resolve(resp);
+          } else {
+            pending.reject(new Error(resp.message || '上传预签名失败'));
+          }
+        }
+        break;
+      }
 
       // 好友操作响应
       case Cmd.FRIEND_SEARCH_RESP: {

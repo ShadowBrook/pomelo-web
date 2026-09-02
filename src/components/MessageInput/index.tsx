@@ -8,16 +8,61 @@ interface Props {
   onSendText: (text: string) => void;
   onSendImage: (file: File) => void;
   onSendFile: (file: File) => void;
+  onSendVoice: (file: File, duration?: number) => void;
+  onSendVideo: (file: File) => void;
+  onSendEmoji: (file: File) => void;
   onDraftChange: (text: string) => void;
   disabled?: boolean;
 }
 
-export function MessageInput({ peerId, draft, onSendText, onSendImage, onSendFile, onDraftChange, disabled }: Props) {
+/** MediaRecorder MIME → 扩展名（Chrome 默认 webm，Safari 为 mp4/m4a） */
+function voiceExt(mime: string): string {
+  const base = (mime || '').split(';')[0].toLowerCase();
+  if (base.includes('mp4')) return 'm4a';
+  if (base.includes('ogg')) return 'ogg';
+  return 'webm';
+}
+
+export function MessageInput({
+  peerId,
+  draft,
+  onSendText,
+  onSendImage,
+  onSendFile,
+  onSendVoice,
+  onSendVideo,
+  onSendEmoji,
+  onDraftChange,
+  disabled,
+}: Props) {
   const [text, setText] = useState(draft || '');
   const [showEmoji, setShowEmoji] = useState(false);
+  const [recording, setRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const emojiInputRef = useRef<HTMLInputElement>(null);
+
+  // 录音状态
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordStartRef = useRef<number>(0);
+  // 卸载/切换会话时丢弃录音，避免把语音发到错误的会话
+  const discardVoiceRef = useRef(false);
+
+  // 切换会话/卸载时停止录音，避免残留录音流
+  useEffect(() => {
+    return () => {
+      discardVoiceRef.current = true;
+      if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+        recorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    };
+  }, [peerId]);
 
   useEffect(() => {
     setText(draft || '');
@@ -61,18 +106,91 @@ export function MessageInput({ peerId, draft, onSendText, onSendImage, onSendFil
     }
   };
 
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onSendVideo(file);
+      e.target.value = '';
+    }
+  };
+
+  const handleEmojiSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onSendEmoji(file);
+      e.target.value = '';
+    }
+  };
+
+  const stopRecording = () => {
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      recorderRef.current.stop();
+    }
+  };
+
+  const toggleRecord = async () => {
+    if (recording) {
+      stopRecording();
+      return;
+    }
+    if (disabled) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      const mime = recorder.mimeType || 'audio/webm';
+      chunksRef.current = [];
+      recordStartRef.current = Date.now();
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const discard = discardVoiceRef.current;
+        const duration = Date.now() - recordStartRef.current;
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+        setRecording(false);
+        discardVoiceRef.current = false;
+        if (discard) return;
+        const blob = new Blob(chunksRef.current, { type: mime });
+        if (blob.size > 0) {
+          const file = new File([blob], `voice-${Date.now()}.${voiceExt(mime)}`, { type: mime });
+          onSendVoice(file, duration);
+        }
+      };
+      recorder.start();
+      recorderRef.current = recorder;
+      setRecording(true);
+    } catch (e) {
+      console.error('录音失败:', e);
+      alert('无法访问麦克风，请检查权限');
+    }
+  };
+
   return (
     <div className="bg-white border-t border-gray-200 p-3">
       {/* 工具栏 */}
       <div className="flex gap-3 mb-2 text-xl">
-        <button onClick={() => imageInputRef.current?.click()} className="hover:opacity-70 transition-opacity" title="发送图片">
+        <button onClick={() => imageInputRef.current?.click()} disabled={disabled} className="hover:opacity-70 transition-opacity disabled:opacity-40" title="发送图片">
           🖼️
         </button>
-        <button onClick={() => fileInputRef.current?.click()} className="hover:opacity-70 transition-opacity" title="发送文件">
+        <button onClick={() => fileInputRef.current?.click()} disabled={disabled} className="hover:opacity-70 transition-opacity disabled:opacity-40" title="发送文件">
           📎
         </button>
+        {/* 录音中保持可点击，用于停止并发送（即使期间断线） */}
+        <button
+          onClick={toggleRecord}
+          disabled={disabled && !recording}
+          className={`hover:opacity-70 transition-opacity disabled:opacity-40 ${recording ? 'text-red-500 animate-pulse' : ''}`}
+          title={recording ? '停止录音' : '语音'}
+        >
+          {recording ? '●' : '🎤'}
+        </button>
+        <button onClick={() => videoInputRef.current?.click()} disabled={disabled} className="hover:opacity-70 transition-opacity disabled:opacity-40" title="发送视频">
+          🎬
+        </button>
         <div className="relative">
-          <button onClick={() => setShowEmoji(!showEmoji)} className="hover:opacity-70 transition-opacity" title="表情">
+          <button onClick={() => setShowEmoji(!showEmoji)} disabled={disabled} className="hover:opacity-70 transition-opacity disabled:opacity-40" title="表情">
             😊
           </button>
           {showEmoji && (
@@ -83,12 +201,24 @@ export function MessageInput({ peerId, draft, onSendText, onSendImage, onSendFil
                   setShowEmoji(false);
                   textareaRef.current?.focus();
                 }}
+                onCustomEmoji={() => {
+                  emojiInputRef.current?.click();
+                  setShowEmoji(false);
+                }}
                 onClose={() => setShowEmoji(false)}
               />
             </Suspense>
           )}
         </div>
       </div>
+
+      {/* 录音提示条 */}
+      {recording && (
+        <div className="mb-2 text-xs text-red-500 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          录音中，点击 🎤 停止并发送
+        </div>
+      )}
 
       {/* 输入区域 */}
       <div className="flex gap-2 items-end">
@@ -114,6 +244,8 @@ export function MessageInput({ peerId, draft, onSendText, onSendImage, onSendFil
       {/* 隐藏的文件 input */}
       <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+      <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoSelect} />
+      <input ref={emojiInputRef} type="file" accept="image/*" className="hidden" onChange={handleEmojiSelect} />
     </div>
   );
 }
