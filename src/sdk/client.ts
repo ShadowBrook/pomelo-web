@@ -1,9 +1,9 @@
 import { encode, decode, generateId } from './protocol';
+import { enc, plain, text, im } from './pbcodec';
 import {
   Cmd,
   MsgType,
   AckType,
-  ErrorBody,
   ConnectionState,
   OutgoingMessage,
   IncomingMessage,
@@ -22,6 +22,19 @@ import {
   GroupMemberChangeNotify,
   UploadResp,
 } from './types';
+
+// MessageContent.content 是 protobuf bytes 字段，发送时必须传 utf8 编码的字节（不能直接传字符串，字符串会被当 base64）
+const utf8 = (s: string): Uint8Array => new TextEncoder().encode(s);
+
+// GroupMemberChangeNotify.type 在 proto 中是枚举数字，映射回枚举名字符串
+const GROUP_MEMBER_CHANGE_NAMES = [
+  'INVITED',
+  'JOINED',
+  'LEFT',
+  'KICKED',
+  'ADMIN_SET',
+  'OWNER_TRANSFERRED',
+] as const;
 
 interface IMClientOptions {
   url: string;
@@ -307,11 +320,12 @@ export class IMClient {
   /**
    * 发送好友操作请求并等待响应
    * 不进入发送队列、不重试（好友操作无 ACK 机制），使用 messageId 关联请求和响应，5 秒超时
+   * body 为 pbcodec 编码好的 protobuf 字节。
    */
   private _sendFriendOp<T>(
     reqCmd: Cmd,
     respCmd: Cmd,
-    body: Record<string, unknown>,
+    body: Uint8Array,
     idPrefix: string,
     timeoutMs = 5000,
   ): Promise<T> {
@@ -336,7 +350,7 @@ export class IMClient {
     return this._sendFriendOp<SearchUserResp>(
       Cmd.FRIEND_SEARCH_REQ,
       Cmd.FRIEND_SEARCH_RESP,
-      { keyword },
+      enc(im.relation.SearchUserReq, { keyword }),
       'search',
     );
   }
@@ -346,7 +360,7 @@ export class IMClient {
     return this._sendFriendOp<FriendOpResp>(
       Cmd.FRIEND_ADD_REQ,
       Cmd.FRIEND_ADD_RESP,
-      { userId: this.userId, friendId },
+      enc(im.relation.FriendAddReq, { userId: this.userId, friendId }),
       'add',
     );
   }
@@ -356,7 +370,7 @@ export class IMClient {
     return this._sendFriendOp<FriendOpResp>(
       Cmd.FRIEND_ACCEPT_REQ,
       Cmd.FRIEND_ACCEPT_RESP,
-      { userId: this.userId, friendId },
+      enc(im.relation.FriendAcceptReq, { userId: this.userId, friendId }),
       'accept',
     );
   }
@@ -366,14 +380,14 @@ export class IMClient {
     return this._sendFriendOp<FriendOpResp>(
       Cmd.FRIEND_DELETE_REQ,
       Cmd.FRIEND_DELETE_RESP,
-      { userId: this.userId, friendId },
+      enc(im.relation.FriendDeleteReq, { userId: this.userId, friendId }),
       'delete',
     );
   }
 
   /**
    * 拉取会话历史消息（通过 PULL_REQ/PULL_RESP，与离线拉取共用协议）。
-   * 后端根据请求体中是否有 peerId 区分：
+   * 后端根据 varHeader 中是否有 peerId 区分：
    * - 有 peerId → 按 conversationId 拉取历史（created_at 倒序，只回退不前进）
    * - 无 peerId → 拉取离线未送达消息（seq > 收件人同步水位）
    *
@@ -386,19 +400,15 @@ export class IMClient {
         reject(new Error('WebSocket 未连接'));
         return;
       }
-      const body: Record<string, unknown> = {
-        userId: this.userId,
-        peerId,
-        seq: beforeTime || 0,
-        limit,
-      };
+      // PullReq proto 无 peerId/userId 字段；peerId 只能放 varHeader（encode 会自动带上 userId）
+      const bodyBytes = enc(im.pull.PullReq, { seq: beforeTime || 0, limit });
       const messageId = `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const timeoutId = setTimeout(() => {
         this.pendingHistoryPulls.delete(messageId);
         reject(new Error('拉取历史消息超时'));
       }, 10000);
       this.pendingHistoryPulls.set(messageId, { resolve, reject, timeoutId });
-      const buf = encode(Cmd.PULL_REQ, messageId, body, this.userId);
+      const buf = encode(Cmd.PULL_REQ, messageId, bodyBytes, this.userId, { peerId });
       this.ws.send(buf);
     });
   }
@@ -424,11 +434,11 @@ export class IMClient {
         reject(new Error('获取上传预签名超时'));
       }, 10000);
       this.pendingUploads.set(messageId, { resolve, reject, timeoutId });
-      const body: Record<string, unknown> = { mediaType, fileName, size };
+      const fields: Record<string, unknown> = { mediaType, fileName, size };
       if (contentType) {
-        body.contentType = contentType;
+        fields.contentType = contentType;
       }
-      const buf = encode(Cmd.CMD_UPLOAD_REQ, messageId, body, this.userId);
+      const buf = encode(Cmd.CMD_UPLOAD_REQ, messageId, enc(im.upload.UploadReq, fields), this.userId);
       this.ws.send(buf);
     });
   }
@@ -453,7 +463,8 @@ export class IMClient {
   // Group Operations
   // ================================================================
 
-  private _sendGroupOp<T>(reqCmd: Cmd, respCmd: Cmd, body: Record<string, unknown>, timeoutMs = 5000): Promise<T> {
+  /** body 为 pbcodec 编码好的 protobuf 字节。 */
+  private _sendGroupOp<T>(reqCmd: Cmd, respCmd: Cmd, body: Uint8Array, timeoutMs = 5000): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       if (this.ws?.readyState !== WebSocket.OPEN) {
         reject(new Error('WebSocket 未连接'));
@@ -483,11 +494,12 @@ export class IMClient {
       retryCount: 0,
     };
     this.pendingQueue.set(msgId, msg);
-    const body = {
+    const bodyBytes = enc(im.group.C2GReq, {
       groupId,
-      message: { msgType, content },
-    };
-    const buf = encode(Cmd.C2G_REQ, msgId, body, this.userId, {
+      messageId: msgId,
+      message: { msgType, content: utf8(content) },
+    });
+    const buf = encode(Cmd.C2G_REQ, msgId, bodyBytes, this.userId, {
       userName: this.userName,
       nickname: this.nickname,
     });
@@ -503,7 +515,7 @@ export class IMClient {
     return this._sendGroupOp<PullHistoryResp>(
       Cmd.GROUP_PULL_MSG_REQ,
       Cmd.GROUP_PULL_MSG_RESP,
-      { groupId, cursor, limit, isBackward: backward },
+      enc(im.pull.PullGroupMsgReq, { groupId, cursor, limit, isBackward: backward }),
       10000,
     );
   }
@@ -512,14 +524,14 @@ export class IMClient {
     return this._sendGroupOp<GroupMsgReadStatusResp>(
       Cmd.GROUP_MSG_READ_REQ,
       Cmd.GROUP_MSG_READ_RESP,
-      { groupId, seq },
+      enc(im.group.GetGroupMsgReadStatusReq, { groupId, seq }),
     );
   }
 
   sendGroupAck(groupId: string, lastReadSeq: number): void {
     if (!this.connected) return;
-    const body = { groupId, lastReadSeq };
-    const buf = encode(Cmd.GROUP_ACK_REQ, 'gack-' + Date.now(), body, this.userId);
+    const bodyBytes = enc(im.group.GroupAckReq, { groupId, lastReadSeq });
+    const buf = encode(Cmd.GROUP_ACK_REQ, 'gack-' + Date.now(), bodyBytes, this.userId);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(buf);
     }
@@ -529,7 +541,7 @@ export class IMClient {
     return this._sendGroupOp<CreateGroupResp>(
       Cmd.GROUP_CREATE_REQ,
       Cmd.GROUP_CREATE_RESP,
-      { name, avatar: avatar || '' },
+      enc(im.group.CreateGroupReq, { name, avatar: avatar || '' }),
     );
   }
 
@@ -537,7 +549,7 @@ export class IMClient {
     return this._sendGroupOp<{ code: number; groups: GroupInfo[] }>(
       Cmd.GROUP_GET_MY_GROUPS_REQ,
       Cmd.GROUP_GET_MY_GROUPS_RESP,
-      {},
+      enc(im.group.GetMyGroupsReq, {}),
     ).then(r => r.groups || []);
   }
 
@@ -545,7 +557,7 @@ export class IMClient {
     return this._sendGroupOp<GroupOpResp>(
       Cmd.GROUP_INVITE_REQ,
       Cmd.GROUP_INVITE_RESP,
-      { groupId, userId },
+      enc(im.group.InviteToGroupReq, { groupId, userId }),
     );
   }
 
@@ -553,7 +565,7 @@ export class IMClient {
     return this._sendGroupOp<{ code: number; group: GroupInfo }>(
       Cmd.GROUP_GET_INFO_REQ,
       Cmd.GROUP_GET_INFO_RESP,
-      { groupId },
+      enc(im.group.GetGroupInfoReq, { groupId }),
     ).then(r => r.group);
   }
 
@@ -561,7 +573,7 @@ export class IMClient {
     return this._sendGroupOp<{ code: number; members: GroupMember[] }>(
       Cmd.GROUP_GET_MEMBERS_REQ,
       Cmd.GROUP_GET_MEMBERS_RESP,
-      { groupId },
+      enc(im.group.GetGroupMembersReq, { groupId }),
     ).then(r => r.members || []);
   }
 
@@ -570,15 +582,13 @@ export class IMClient {
   // ================================================================
 
   private _authenticate(): void {
-    const body = {
+    const bodyBytes = enc(im.auth.AuthReq, {
       token: this.token,
-      userId: this.userId,
-      userName: this.userName,
       deviceId: 'web',
       platform: 'web',
       appVersion: '1.0.0',
-    };
-    const buf = encode(Cmd.AUTH_REQ, 'auth-' + Date.now(), body, this.userId);
+    });
+    const buf = encode(Cmd.AUTH_REQ, 'auth-' + Date.now(), bodyBytes, this.userId);
     this.ws!.send(buf);
   }
 
@@ -587,7 +597,7 @@ export class IMClient {
     this.pongMissCount = 0;
     this.heartbeatTimer = setInterval(() => {
       if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const buf = encode(Cmd.PING, 'ping-' + Date.now(), { clientTime: Date.now() }, this.userId);
+        const buf = encode(Cmd.PING, 'ping-' + Date.now(), enc(im.heartbeat.Ping, { clientTime: Date.now() }), this.userId);
         this.ws.send(buf);
 
         // PONG 超时检测：10s 内未收到 PONG 则计数
@@ -671,14 +681,15 @@ export class IMClient {
 
     msg.status = 'sending';
 
-    const body = {
+    const bodyBytes = enc(im.chat.C2CReq, {
       senderId: this.userId,
       recipientId: msg.recipientId,
-      message: { msgType: msg.msgType, content: msg.content },
-    };
+      messageId: msg.id,
+      message: { msgType: msg.msgType, content: utf8(msg.content) },
+    });
 
     // 将 userName / nickname 放入 varHeaders，供后端填充 C2CNotify 的 senderNickname
-    const buf = encode(Cmd.C2C_REQ, msg.id, body, this.userId, {
+    const buf = encode(Cmd.C2C_REQ, msg.id, bodyBytes, this.userId, {
       userName: this.userName,
       nickname: this.nickname,
     });
@@ -730,10 +741,12 @@ export class IMClient {
       if (body?.messageId) {
         msg.serverMessageId = String(body.messageId);
       }
+      // C2CResp.seq 经 longs:'String' 解码为字符串，转回数字
+      const seq = body?.seq != null ? Number(body.seq) : undefined;
       this._emit('statusChange', {
         id: msg.id,
         status: 'sent',
-        seq: body?.seq,
+        seq,
         serverMessageId: msg.serverMessageId,
       });
     }
@@ -750,10 +763,11 @@ export class IMClient {
       if (body?.messageId) {
         msg.serverMessageId = String(body.messageId);
       }
+      const seq = body?.seq != null ? Number(body.seq) : undefined;
       this._emit('statusChange', {
         id: msg.id,
         status: 'sent',
-        seq: body?.seq,
+        seq,
         serverMessageId: msg.serverMessageId,
       });
     }
@@ -798,19 +812,7 @@ export class IMClient {
   // ACK Automaton
   // ================================================================
 
-  private _onMessageReceived(body: any): void {
-    const msg: IncomingMessage = {
-      id: String(body.id || ''),
-      senderId: body.senderId || '',
-      recipientId: body.recipientId || '',
-      senderUserName: body.senderUserName,
-      senderNickname: body.senderNickname,
-      msgType: body.message?.msgType ?? body.msgType ?? MsgType.TEXT,
-      content: body.message?.content ?? body.content ?? '',
-      seq: body.seq || 0,
-      createdAt: body.createdAt || Date.now(),
-    };
-
+  private _onMessageReceived(msg: IncomingMessage): void {
     // Fix 7：去重，避免重复消息触发多次 message 事件导致未读数重复计数
     if (this.receivedMessageIds.has(msg.id)) return;
     this.receivedMessageIds.add(msg.id);
@@ -838,11 +840,8 @@ export class IMClient {
 
   private _sendAck(messageIds: string[], ackType: AckType): void {
     // 保持 messageIds 为字符串，避免 JavaScript Number 精度丢失（snowflake ID > 2^53）
-    const body: Record<string, unknown> = {
-      messageIds,
-      ackType,
-    };
-    const buf = encode(Cmd.ACK_REQ, 'ack-' + Date.now(), body, this.userId);
+    const bodyBytes = enc(im.ack.AckReq, { messageIds, ackType });
+    const buf = encode(Cmd.ACK_REQ, 'ack-' + Date.now(), bodyBytes, this.userId);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(buf);
       console.log(
@@ -858,27 +857,26 @@ export class IMClient {
   private _pullOfflineMessages(): void {
     if (!this.connected) return;
     // seq = 本账号同步水位（lastSeq）。后端 pullPending(recipient_id, seq > 水位) 增量拉取
-    const body = {
-      userId: this.userId,
-      seq: this.lastSeq,
-      limit: 50,
-    };
-    const buf = encode(Cmd.PULL_REQ, 'pull-' + Date.now(), body, this.userId);
+    // userId 由 encode 自动写入 varHeader
+    const bodyBytes = enc(im.pull.PullReq, { seq: this.lastSeq, limit: 50 });
+    const buf = encode(Cmd.PULL_REQ, 'pull-' + Date.now(), bodyBytes, this.userId);
     this.ws!.send(buf);
     console.log(`[IMClient] Pull 离线消息 seq=${this.lastSeq}`);
   }
 
+  // body 为解码后的 PullResp（messages 是 MessageContent[]）
   private _onPullResp(body: any): void {
     console.log(`[IMClient] Pull 响应: hasMore=${body?.hasMore}, code=${body?.code}`);
-    // Fix 1：处理 PULL_RESP body 中的消息列表，否则离线消息被丢弃
     const messages: any[] = body?.messages ?? body?.list ?? [];
     for (const record of messages) {
+      // 先归一化为 IncomingMessage（id/senderId/recipientId/seq 取自 MessageContent.ext）
+      const msg = this._messageContentToIncoming(record);
       // 即使消息被 _onMessageReceived 去重也要推进 lastSeq，避免死循环
-      if (record.seq && record.seq > this.lastSeq) {
-        this.lastSeq = record.seq;
+      if (msg.seq && msg.seq > this.lastSeq) {
+        this.lastSeq = msg.seq;
       }
       // 复用 _onMessageReceived 的归一化与去重逻辑派发到 UI
-      this._onMessageReceived(record);
+      this._onMessageReceived(msg);
     }
     // 继续拉取（lastSeq 已更新，不会死循环）
     if (body?.hasMore) {
@@ -888,32 +886,136 @@ export class IMClient {
 
   /**
    * 将 PULL_RESP body 中的消息数组归一化为 IncomingMessage[]。
-   * 与 _onMessageReceived 的解析逻辑一致，但不触发事件、不更新 lastSeq、不去重。
+   * 与 _messageContentToIncoming 的解析逻辑一致，但不触发事件、不更新 lastSeq、不去重。
    */
   private _normalizePullMessages(body: any): IncomingMessage[] {
     const rawMessages: any[] = body?.messages ?? body?.list ?? [];
-    return rawMessages.map((record: any) => ({
-      id: String(record.id || ''),
-      senderId: record.senderId || '',
-      recipientId: record.recipientId || '',
-      senderUserName: record.senderUserName,
-      senderNickname: record.senderNickname,
-      msgType: record.msgType ?? MsgType.TEXT,
-      content: record.content ?? '',
-      seq: record.seq || 0,
-      createdAt: record.createdAt || Date.now(),
-    }));
+    return rawMessages.map((record: any) => this._messageContentToIncoming(record));
+  }
+
+  // ================================================================
+  // Proto → types.ts 归一化辅助
+  // ================================================================
+
+  /**
+   * 把解码后的 MessageContent（plain）归一化为 IncomingMessage。
+   * C2C 拉取（history/offline）记录把 id/senderId/recipientId/seq/senderUserName/senderNickname
+   * 放进 message.ext（字符串）；C2C_NOTIFY 则由 C2CNotify 外层字段（meta）提供这些值，
+   * ext 只保留显示名。
+   */
+  private _messageContentToIncoming(
+    mc: any,
+    meta?: { id?: string | number; senderId?: string | number; recipientId?: string | number; seq?: string | number },
+  ): IncomingMessage {
+    mc = mc || {};
+    const ext: Record<string, string> = mc.ext || {};
+    const createdAt = (mc.timestamp != null ? Number(mc.timestamp) : 0) || Date.now();
+    return {
+      id: String(meta?.id != null ? meta.id : (ext.id || '')),
+      senderId: String(meta?.senderId != null ? meta.senderId : (ext.senderId || '')),
+      recipientId:
+        meta?.recipientId != null
+          ? String(meta.recipientId)
+          : ext.recipientId
+            ? String(ext.recipientId)
+            : undefined,
+      senderUserName: ext.senderUserName,
+      senderNickname: ext.senderNickname,
+      msgType: mc.msgType != null && Number(mc.msgType) !== 0 ? (Number(mc.msgType) as MsgType) : MsgType.TEXT,
+      content: mc.content ? text(mc.content) : '',
+      seq: Number(meta?.seq != null ? meta.seq : (ext.seq || 0)) || 0,
+      createdAt,
+    };
+  }
+
+  /** C2GNotify → GroupMessage（display 名取自 message.ext，id 优先取外层 messageId） */
+  private _c2gNotifyToGroupMessage(g: any, fallbackMessageId: string): GroupMessage {
+    g = g || {};
+    const mc = g.message || {};
+    const ext: Record<string, string> = mc.ext || {};
+    const rawId = g.messageId;
+    const id = rawId != null && String(rawId) !== '0' ? String(rawId) : fallbackMessageId;
+    return {
+      id: String(id || ''),
+      senderId: String(g.senderId ?? ext.senderId ?? ''),
+      groupId: String(g.groupId ?? ext.groupId ?? ''),
+      name: g.name ?? ext.name,
+      senderUserName: ext.senderUserName,
+      senderNickname: ext.senderNickname,
+      msgType: mc.msgType != null && Number(mc.msgType) !== 0 ? (Number(mc.msgType) as number) : MsgType.TEXT,
+      content: mc.content ? text(mc.content) : '',
+      seq: g.seq != null ? Number(g.seq) : 0,
+      createdAt: (mc.timestamp != null ? Number(mc.timestamp) : 0) || Date.now(),
+    };
+  }
+
+  /** GROUP_PULL_MSG_RESP 的记录：groupId 取自 ext.groupId，无 recipientId */
+  private _groupPullMessage(mc: any): IncomingMessage {
+    const m = this._messageContentToIncoming(mc);
+    delete (m as Partial<IncomingMessage>).recipientId;
+    const ext = mc?.ext || {};
+    m.groupId = ext.groupId != null ? String(ext.groupId) : '';
+    return m;
+  }
+
+  private _groupInfo(g: any): GroupInfo {
+    g = g || {};
+    const createdAt = g.createdAt != null ? Number(g.createdAt) : 0;
+    return {
+      groupId: g.groupId != null ? String(g.groupId) : '',
+      name: g.name || '',
+      avatar: g.avatar || '',
+      description: g.description || '',
+      ownerId: g.ownerId != null ? String(g.ownerId) : '',
+      memberCount: g.memberCount ?? 0,
+      maxMembers: g.maxMembers ?? 0,
+      createdAt,
+      // proto 的 GroupInfo 无 updatedAt 字段，回退为 createdAt，避免 spread 时拿到 undefined
+      updatedAt: createdAt,
+    };
+  }
+
+  private _groupMember(m: any): GroupMember {
+    m = m || {};
+    return {
+      userId: String(m.userId ?? ''),
+      userName: m.userName || '',
+      nickname: m.nickname || '',
+      avatar: m.avatar || '',
+      role: m.role ?? 0,
+      joinedAt: m.joinedAt != null ? Number(m.joinedAt) : 0,
+    };
+  }
+
+  private _friendNotify(n: any): FriendNotify {
+    n = n || {};
+    return {
+      userId: String(n.userId ?? ''),
+      userName: n.userName || '',
+      nickname: n.nickname || '',
+      avatar: n.avatar || '',
+    };
+  }
+
+  /** 按 frame messageId 解析 pendingFriendOps */
+  private _resolveFriendOp(messageId: string, value: any): void {
+    const pending = this.pendingFriendOps.get(messageId);
+    if (pending) {
+      clearTimeout(pending.timeoutId);
+      this.pendingFriendOps.delete(messageId);
+      pending.resolve(value);
+    }
   }
 
   // ================================================================
   // Message Dispatch
   // ================================================================
 
-  private _dispatchMessage(cmd: number, messageId: string, body: any): void {
+  private _dispatchMessage(cmd: number, messageId: string, body: Uint8Array | null): void {
     // 通用错误响应（CMD_ERROR）
     if (cmd === Cmd.CMD_ERROR) {
-      const err = body as ErrorBody;
-      const errorMessage = err?.message || JSON.stringify(body);
+      const err = plain(im.common.ErrorBody, body);
+      const errorMessage = err?.message || '请求失败';
       const pending = this.pendingFriendOps.get(messageId);
       if (pending) {
         clearTimeout(pending.timeoutId);
@@ -926,9 +1028,10 @@ export class IMClient {
     }
 
     switch (cmd) {
-      case Cmd.AUTH_RESP:
-        if (body?.code !== 0) {
-          const reason = body?.message || '认证失败，请重新登录';
+      case Cmd.AUTH_RESP: {
+        const resp = plain(im.auth.AuthResp, body);
+        if (resp?.code !== 0) {
+          const reason = resp?.message || '认证失败，请重新登录';
           this._emit('authExpired', reason);
           // 认证失败后断开连接，停止后续重连（token 已失效，重连无意义）
           this.intentionallyDisconnected = true;
@@ -937,18 +1040,30 @@ export class IMClient {
         }
         console.log('[IMClient] 认证成功');
         break;
+      }
 
-      case Cmd.C2C_RESP:
-        if (body?.code !== 0) {
-          this._emit('error', new Error(body?.message || '发送失败'));
+      case Cmd.C2C_RESP: {
+        const resp = plain(im.chat.C2CResp, body);
+        if (resp?.code !== 0) {
+          this._emit('error', new Error(resp?.message || '发送失败'));
           return;
         }
-        this._onC2CResp(messageId, body);
+        this._onC2CResp(messageId, resp);
         break;
+      }
 
-      case Cmd.C2C_NOTIFY:
-        this._onMessageReceived(body ?? { id: messageId });
+      case Cmd.C2C_NOTIFY: {
+        const n = plain(im.chat.C2CNotify, body);
+        const rawId = n?.messageId;
+        const msg = this._messageContentToIncoming(n?.message, {
+          id: rawId != null && String(rawId) !== '0' ? String(rawId) : messageId,
+          senderId: n?.senderId,
+          recipientId: n?.recipientId,
+          seq: n?.seq,
+        });
+        this._onMessageReceived(msg);
         break;
+      }
 
       case Cmd.PONG:
         if (this.pongTimer) {
@@ -959,32 +1074,35 @@ export class IMClient {
         break;
 
       case Cmd.ACK_NOTIFY:
-        this._onAckNotify(body);
+        this._onAckNotify(plain(im.ack.AckNotify, body));
         break;
 
       case Cmd.PULL_RESP: {
+        const pull = plain(im.pull.PullResp, body);
         // 优先检查是否为 pending history pull（Promise 模式）
         const pendingPull = this.pendingHistoryPulls.get(messageId);
         if (pendingPull) {
           clearTimeout(pendingPull.timeoutId);
           this.pendingHistoryPulls.delete(messageId);
           const resp: PullHistoryResp = {
-            code: body?.code ?? 0,
-            message: body?.message ?? '',
-            messages: this._normalizePullMessages(body),
-            hasMore: body?.hasMore ?? false,
+            code: pull?.code ?? 0,
+            message: pull?.message ?? '',
+            messages: this._normalizePullMessages(pull),
+            hasMore: pull?.hasMore ?? false,
           };
           pendingPull.resolve(resp);
           return;
         }
         // 否则处理为离线消息拉取（事件模式）
-        this._onPullResp(body ?? {});
+        this._onPullResp(pull ?? {});
         break;
       }
 
-      case Cmd.CTRL_NOTIFY:
-        this._emit('kicked', body?.reason ?? '被踢下线');
+      case Cmd.CTRL_NOTIFY: {
+        const ctrl = plain(im.ctrl.CtrlNotify, body);
+        this._emit('kicked', ctrl?.reason ?? '被踢下线');
         break;
+      }
 
       case Cmd.ACK_RESP:
         // ACK 已确认，无需处理
@@ -995,11 +1113,18 @@ export class IMClient {
         if (pending) {
           clearTimeout(pending.timeoutId);
           this.pendingUploads.delete(messageId);
-          const resp = body as UploadResp;
-          if (resp.code === 0) {
-            pending.resolve(resp);
+          const u = plain(im.upload.UploadResp, body);
+          if (u?.code === 0) {
+            pending.resolve({
+              code: u.code,
+              message: u.message || '',
+              objectKey: u.objectKey || '',
+              presignedUrl: u.presignedUrl || '',
+              // expireAt int64 → 字符串，转回数字
+              expireAt: (u.expireAt != null ? Number(u.expireAt) : 0) || 0,
+            });
           } else {
-            pending.reject(new Error(resp.message || '上传预签名失败'));
+            pending.reject(new Error(u?.message || '上传预签名失败'));
           }
         }
         break;
@@ -1007,7 +1132,17 @@ export class IMClient {
 
       // 好友操作响应
       case Cmd.FRIEND_SEARCH_RESP: {
-        const resp = body as SearchUserResp;
+        const u = plain(im.relation.SearchUserResp, body);
+        const resp: SearchUserResp = {
+          code: u?.code ?? 0,
+          message: u?.message ?? '',
+          users: (u?.users || []).map((x: any) => ({
+            userId: String(x.userId ?? ''),
+            userName: x.userName || '',
+            nickname: x.nickname || '',
+            avatar: x.avatar || '',
+          })),
+        };
         // 关联到 pendingFriendOps（通过 messageId）
         const pending = this.pendingFriendOps.get(messageId);
         if (pending) {
@@ -1023,7 +1158,14 @@ export class IMClient {
       case Cmd.FRIEND_ADD_RESP:
       case Cmd.FRIEND_ACCEPT_RESP:
       case Cmd.FRIEND_DELETE_RESP: {
-        const resp = body as FriendOpResp;
+        const cls =
+          cmd === Cmd.FRIEND_ADD_RESP
+            ? im.relation.FriendAddResp
+            : cmd === Cmd.FRIEND_ACCEPT_RESP
+              ? im.relation.FriendAcceptResp
+              : im.relation.FriendDeleteResp;
+        const raw = plain(cls, body);
+        const resp: FriendOpResp = { code: raw?.code ?? 0, message: raw?.message ?? '' };
         const pending = this.pendingFriendOps.get(messageId);
         if (pending) {
           clearTimeout(pending.timeoutId);
@@ -1037,66 +1179,125 @@ export class IMClient {
         break;
       }
       case Cmd.FRIEND_ADD_NOTIFY: {
-        const notify = body as FriendNotify;
-        this._emit('friendRequest', notify);
+        this._emit('friendRequest', this._friendNotify(plain(im.relation.FriendAddNotify, body)));
         break;
       }
       case Cmd.FRIEND_ACCEPT_NOTIFY: {
-        const notify = body as FriendNotify;
-        this._emit('friendAccepted', notify);
+        this._emit('friendAccepted', this._friendNotify(plain(im.relation.FriendAcceptNotify, body)));
         break;
       }
       case Cmd.FRIEND_DELETE_NOTIFY: {
-        const notify = body as FriendDeleteNotify;
+        const n = plain(im.relation.FriendDeleteNotify, body);
+        const notify: FriendDeleteNotify = { userId: n?.userId != null ? String(n.userId) : '' };
         this._emit('friendDeleted', notify);
         break;
       }
 
-      case Cmd.C2G_RESP:
-        if (body?.code !== 0) {
-          this._emit('error', new Error(body?.message || '群消息发送失败'));
+      case Cmd.C2G_RESP: {
+        const resp = plain(im.group.C2GResp, body);
+        if (resp?.code !== 0) {
+          this._emit('error', new Error(resp?.message || '群消息发送失败'));
           return;
         }
-        this._onC2GResp(messageId, body);
+        this._onC2GResp(messageId, resp);
         break;
+      }
 
       case Cmd.C2G_NOTIFY: {
-        const msg: GroupMessage = {
-          id: String(body.id || messageId),
-          senderId: body.senderId || '',
-          groupId: body.groupId || '',
-          name: body.name,
-          senderUserName: body.senderUserName,
-          senderNickname: body.senderNickname,
-          msgType: body.message?.msgType ?? body.msgType ?? MsgType.TEXT,
-          content: body.message?.content ?? body.content ?? '',
-          seq: body.seq || 0,
-          createdAt: body.createdAt || Date.now(),
-        };
+        const g = plain(im.group.C2GNotify, body);
+        const msg = this._c2gNotifyToGroupMessage(g, messageId);
         this._emit('groupMessage', msg);
         break;
       }
 
       case Cmd.GROUP_MEMBER_CHANGE_NOTIFY: {
-        const notify = body as GroupMemberChangeNotify;
+        const n = plain(im.group.GroupMemberChangeNotify, body);
+        // proto 枚举数字 → 枚举名字符串（hook 按 'LEFT'/'KICKED' 字符串判断）
+        const typeName =
+          typeof n?.type === 'number' && n.type >= 0 && n.type < GROUP_MEMBER_CHANGE_NAMES.length
+            ? GROUP_MEMBER_CHANGE_NAMES[n.type]
+            : n?.type != null
+              ? String(n.type)
+              : '';
+        const notify: GroupMemberChangeNotify = {
+          groupId: n?.groupId != null ? String(n.groupId) : '',
+          type: typeName,
+          userId: n?.userId != null ? String(n.userId) : '',
+          operatorId: n?.operatorId != null ? String(n.operatorId) : undefined,
+          userName: n?.userName,
+          nickname: n?.nickname,
+        };
         this._emit('groupMemberChange', notify);
         break;
       }
 
-      case Cmd.GROUP_CREATE_RESP:
-      case Cmd.GROUP_INVITE_RESP:
-      case Cmd.GROUP_GET_INFO_RESP:
-      case Cmd.GROUP_GET_MEMBERS_RESP:
-      case Cmd.GROUP_GET_MY_GROUPS_RESP:
-      case Cmd.GROUP_PULL_MSG_RESP:
-      case Cmd.GROUP_ACK_RESP:
+      case Cmd.GROUP_CREATE_RESP: {
+        const r = plain(im.group.CreateGroupResp, body);
+        this._resolveFriendOp(messageId, {
+          code: r?.code ?? 0,
+          message: r?.message ?? '',
+          group: this._groupInfo(r?.group),
+        });
+        break;
+      }
+      case Cmd.GROUP_INVITE_RESP: {
+        const r = plain(im.group.InviteToGroupResp, body);
+        this._resolveFriendOp(messageId, { code: r?.code ?? 0, message: r?.message ?? '' });
+        break;
+      }
+      case Cmd.GROUP_GET_INFO_RESP: {
+        const r = plain(im.group.GetGroupInfoResp, body);
+        this._resolveFriendOp(messageId, {
+          code: r?.code ?? 0,
+          message: r?.message ?? '',
+          group: this._groupInfo(r?.group),
+        });
+        break;
+      }
+      case Cmd.GROUP_GET_MEMBERS_RESP: {
+        const r = plain(im.group.GetGroupMembersResp, body);
+        this._resolveFriendOp(messageId, {
+          code: r?.code ?? 0,
+          message: r?.message ?? '',
+          members: (r?.members || []).map((m: any) => this._groupMember(m)),
+        });
+        break;
+      }
+      case Cmd.GROUP_GET_MY_GROUPS_RESP: {
+        const r = plain(im.group.GetMyGroupsResp, body);
+        this._resolveFriendOp(messageId, {
+          code: r?.code ?? 0,
+          message: r?.message ?? '',
+          groups: (r?.groups || []).map((g: any) => this._groupInfo(g)),
+        });
+        break;
+      }
+      case Cmd.GROUP_PULL_MSG_RESP: {
+        const r = plain(im.pull.PullResp, body);
+        this._resolveFriendOp(messageId, {
+          code: r?.code ?? 0,
+          message: r?.message ?? '',
+          messages: (r?.messages || []).map((m: any) => this._groupPullMessage(m)),
+          hasMore: r?.hasMore ?? false,
+        });
+        break;
+      }
+      case Cmd.GROUP_ACK_RESP: {
+        const r = plain(im.group.GroupAckResp, body);
+        this._resolveFriendOp(messageId, { code: r?.code ?? 0, message: r?.message ?? '' });
+        break;
+      }
       case Cmd.GROUP_MSG_READ_RESP: {
-        const pending = this.pendingFriendOps.get(messageId);
-        if (pending) {
-          clearTimeout(pending.timeoutId);
-          this.pendingFriendOps.delete(messageId);
-          pending.resolve(body);
-        }
+        const r = plain(im.group.GetGroupMsgReadStatusResp, body);
+        this._resolveFriendOp(messageId, {
+          code: r?.code ?? 0,
+          message: r?.message ?? '',
+          readers: (r?.readers || []).map((x: any) => ({
+            userId: String(x.userId ?? ''),
+            nickname: x.nickname || '',
+            avatar: x.avatar || '',
+          })),
+        });
         break;
       }
 

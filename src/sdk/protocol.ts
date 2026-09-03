@@ -1,4 +1,4 @@
-import { MAGIC, VERSION, CODEC_JSON } from './types';
+import { MAGIC, VERSION, CODEC_PROTOBUF } from './types';
 
 // 模块级单例，避免重复创建
 const encoder = new TextEncoder();
@@ -19,12 +19,12 @@ const decoder = new TextDecoder();
 export function encode(
   cmd: number,
   messageId: string,
-  body: object | null,
+  body: Uint8Array | null,
   userId: string,
   extraHeaders?: Record<string, string>,
 ): ArrayBuffer {
   const msgIdBytes = encoder.encode(messageId);
-  const bodyBytes = body ? encoder.encode(JSON.stringify(body)) : new Uint8Array(0);
+  const bodyBytes = body ?? new Uint8Array(0);
 
   // varHeaders: 始终包含 userId，可选附加 userName / nickname 等
   const hdrEntries: [string, Uint8Array, string, Uint8Array][] = [];
@@ -66,7 +66,7 @@ export function encode(
   // version
   view.setUint8(p, VERSION); p += 1;
   // codecId
-  view.setUint8(p, CODEC_JSON); p += 1;
+  view.setUint8(p, CODEC_PROTOBUF); p += 1;
   // cmd
   view.setInt32(p, cmd, false); p += 4;
 
@@ -101,7 +101,7 @@ export function encode(
 export function decode(buffer: ArrayBuffer): {
   cmd: number;
   messageId: string;
-  body: any;
+  body: Uint8Array | null;
   varHeaders: Record<string, string>;
 } {
   const view = new DataView(buffer);
@@ -139,16 +139,11 @@ export function decode(buffer: ArrayBuffer): {
     varHeaders[key] = val;
   }
 
-  // body
+  // body：Protobuf 编码的原始字节
   const bodyLen = view.getInt32(p, false); p += 4;
-  let body: any = null;
+  let body: Uint8Array | null = null;
   if (bodyLen > 0) {
-    const raw = decoder.decode(new Uint8Array(buffer, p, bodyLen));
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      body = raw;
-    }
+    body = new Uint8Array(buffer, p, bodyLen).slice();
   }
 
   return { cmd, messageId, body, varHeaders };

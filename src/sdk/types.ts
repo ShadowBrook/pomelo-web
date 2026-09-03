@@ -1,7 +1,8 @@
 // 协议常量
 export const MAGIC = 0x504D454C; // "PMEL"
 export const VERSION = 1;
-export const CODEC_JSON = 1;
+/** 线协议 codecId：统一为 0（Protobuf）。JSON codec（1）已弃用。 */
+export const CODEC_PROTOBUF = 0;
 
 // Cmd 命令字枚举（对齐 im-sdk.js L67-74）
 export enum Cmd {
