@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useConversationStore } from '@/stores/useConversationStore';
+import { useFriendStore } from '@/stores/useFriendStore';
 
 interface Props {
   peerId: string;
@@ -10,11 +11,13 @@ interface Props {
 
 export const ConversationItem = React.memo(function ConversationItem({ peerId, isActive, onClick, onDelete }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const friends = useFriendStore((s) => s.friends);
   // 各自从 store 订阅自己的数据，避免接收整个 conversation 对象作为 props
   const conversation = useConversationStore((s) => s.conversations[peerId]);
   if (!conversation) return null;
 
   const { nickname, avatar, lastMessage, lastMessageTime, unreadCount } = conversation;
+  const isStranger = conversation.type === 'c2c' && !friends.some((f) => f.userId === peerId);
 
   const formatTime = (ts: number) => {
     if (!ts) return '';
@@ -50,11 +53,21 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
       }`}
     >
       {/* 头像 */}
-      <div className="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center text-white text-sm font-bold overflow-hidden">
-        {avatar ? (
-          <img src={avatar} alt={nickname} className="w-full h-full object-cover" />
-        ) : (
-          nickname.charAt(0).toUpperCase()
+      <div className="relative flex-shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-gray-300 flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+          {avatar ? (
+            <img src={avatar} alt={nickname} className="w-full h-full object-cover" />
+          ) : (
+            nickname.charAt(0).toUpperCase()
+          )}
+        </div>
+        {isStranger && (
+          <span className="absolute -top-1 -left-1 w-4 h-4 rounded-sm bg-warn text-white text-[9px] leading-4 text-center font-bold">陌</span>
+        )}
+        {unreadCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] leading-[18px] text-center group-hover:hidden">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
       </div>
 
@@ -67,14 +80,7 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
         <p className="text-xs text-text-sub truncate mt-0.5">{lastMessage || '暂无消息'}</p>
       </div>
 
-      {/* 未读红点 或 悬停时显示的删除按钮 */}
-      {unreadCount > 0 ? (
-        <div className="ml-2 flex-shrink-0 min-w-[18px] h-[18px] rounded-full bg-red-500 flex items-center justify-center group-hover:hidden">
-          <span className="text-white text-[10px] px-1">{unreadCount > 99 ? '99+' : unreadCount}</span>
-        </div>
-      ) : null}
-
-      {/* 删除按钮 — hover 时显示 */}
+      {/* 悬停时显示的删除按钮 */}
       <button
         onClick={handleDeleteClick}
         className={`ml-2 flex-shrink-0 w-5 h-5 rounded-full bg-gray-400 hover:bg-red-500 text-white text-xs flex items-center justify-center transition-all ${

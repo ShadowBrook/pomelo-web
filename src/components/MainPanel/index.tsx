@@ -3,6 +3,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useChatStore } from '@/stores/useChatStore';
+import { useFriendStore } from '@/stores/useFriendStore';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { useWindowStore, chatWindowId } from '@/stores/useWindowStore';
 import { useConnStore } from '@/stores/useConnStore';
 import { getProfile } from '@/utils/api';
@@ -13,11 +15,41 @@ import { GroupPanel } from '@/components/GroupPanel';
 import { AddFriendDialog } from '@/components/AddFriendDialog';
 import { CreateGroupDialog } from '@/components/CreateGroupDialog';
 
+function IconChat({ active: _active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  );
+}
+
+function IconBell({ active: _active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+function IconUsers({ active: _active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 export function MainPanel() {
   const user = useAuthStore((s) => s.user);
   const connState = useConnStore((s) => s.state);
   const activePeerId = useConversationStore((s) => s.activePeerId);
   const openChat = useWindowStore((s) => s.openChat);
+  const { totalUnread } = useUnreadCount();
+  const pendingCount = useFriendStore((s) => s.pendingRequests.length);
 
   const sortedPeerIds = useConversationStore(
     useShallow((s) =>
@@ -85,11 +117,6 @@ export function MainPanel() {
     [openChat],
   );
 
-  const tabClass = (tab: string) =>
-    `flex-1 py-2 text-sm transition-colors ${
-      sidebarTab === tab ? 'text-primary border-b-2 border-primary font-medium' : 'text-text-sub hover:text-text-main'
-    }`;
-
   return (
     <div className="flex flex-col h-full bg-sidebar">
       {/* 个人卡（参考产品：面板顶部） */}
@@ -109,28 +136,42 @@ export function MainPanel() {
         </div>
       </div>
 
-      {/* Tab 切换 */}
+      {/* Tab 切换（图标式） */}
       <div className="flex border-b border-line bg-panel">
-        <button onClick={() => setSidebarTab('chats')} className={tabClass('chats')}>聊天</button>
-        <button onClick={() => setSidebarTab('groups')} className={tabClass('groups')}>群聊</button>
-        <button onClick={() => setSidebarTab('friends')} className={tabClass('friends')}>好友</button>
+        <button onClick={() => setSidebarTab('chats')} className={`relative flex-1 py-2.5 flex items-center justify-center transition-colors ${sidebarTab === 'chats' ? 'text-primary' : 'text-text-sub hover:text-text-main'}`} title="聊天">
+          <IconChat active={sidebarTab === 'chats'} />
+        </button>
+        <button onClick={() => setSidebarTab('groups')} className={`flex-1 py-2.5 flex items-center justify-center transition-colors ${sidebarTab === 'groups' ? 'text-primary' : 'text-text-sub hover:text-text-main'}`} title="群聊">
+          <IconUsers active={sidebarTab === 'groups'} />
+        </button>
+        <button onClick={() => setSidebarTab('friends')} className={`relative flex-1 py-2.5 flex items-center justify-center transition-colors ${sidebarTab === 'friends' ? 'text-primary' : 'text-text-sub hover:text-text-main'}`} title="好友">
+          <IconBell active={sidebarTab === 'friends'} />
+          {pendingCount > 0 && (
+            <span className="absolute top-1.5 right-1/2 translate-x-4 min-w-[16px] h-4 px-1 rounded-full bg-danger text-white text-[10px] leading-4 text-center">
+              {pendingCount > 99 ? '99+' : pendingCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* chats tab：搜索 + 添加好友 + 会话列表 */}
+      {/* 统计行 + 添加好友 */}
+      {sidebarTab === 'chats' && (
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-line">
+          <span className="text-xs text-text-sub">交谈 {sortedPeerIds.length} / 未读 {totalUnread}</span>
+          <button
+            onClick={() => setShowAddFriend(true)}
+            className="w-6 h-6 flex items-center justify-center rounded bg-primary text-white text-sm hover:bg-primary-dark transition-colors"
+            title="添加好友"
+          >
+            +
+          </button>
+        </div>
+      )}
+
+      {/* chats tab：搜索 + 会话列表 */}
       {sidebarTab === 'chats' && (
         <>
-          <div className="flex items-center gap-2 px-2 py-2">
-            <div className="flex-1">
-              <SearchBar onSearch={handleSearch} />
-            </div>
-            <button
-              onClick={() => setShowAddFriend(true)}
-              className="w-8 h-8 flex items-center justify-center rounded bg-primary text-white text-lg hover:bg-primary-dark transition-colors flex-shrink-0"
-              title="添加好友"
-            >
-              +
-            </button>
-          </div>
+          <SearchBar onSearch={handleSearch} />
           <div className="flex-1 overflow-y-auto">
             {sortedPeerIds.length === 0 ? (
               <div className="text-center text-text-sub text-sm mt-10 px-4">暂无会话，点击 + 添加好友</div>
