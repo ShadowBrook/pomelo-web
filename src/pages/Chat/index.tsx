@@ -73,7 +73,7 @@ export default function ChatPage() {
   return (
     <div className="h-screen w-screen overflow-hidden relative bg-bg-page">
       {/* 背景装饰层（预留业务嵌入） */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#DBE7FB] via-bg-page to-[#E8EEFB]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-bg-deco-from via-bg-page to-bg-deco-to" />
 
       <TopNavBar />
 
