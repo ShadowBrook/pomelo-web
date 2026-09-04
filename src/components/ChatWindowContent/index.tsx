@@ -4,6 +4,9 @@ import { useConnStore } from '@/stores/useConnStore';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
+import { ChatDetailPanel } from '@/components/ChatDetailPanel';
+
+const QUICK_REPLIES = ['正在处理紧急事情', '有事先离开一会儿'];
 
 interface ReadStatus {
   readers: Array<{ userId: string; nickname: string; avatar: string }>;
@@ -34,33 +37,45 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
   }
 
   return (
-    <>
-      <ConnectionBanner
-        state={connState}
-        onReconnect={() => useConnStore.getState().requestReconnect()}
-      />
-      <MessageList
-        messages={s.messages}
-        currentUserId={s.currentUserId}
-        onRetry={s.retrySend}
-        loadingHistory={s.loadingHistory}
-        hasMore={s.hasMore}
-        onLoadMore={s.loadMoreHistory}
-        isGroup={s.isGroup}
-        onReadClick={handleReadClick}
-      />
-      <MessageInput
-        peerId={peerId}
-        draft={s.draft}
-        onSendText={s.sendText}
-        onSendImage={s.sendImage}
-        onSendFile={s.sendFile}
-        onSendVoice={s.sendVoice}
-        onSendVideo={s.sendVideo}
-        onSendEmoji={s.sendEmoji}
-        onDraftChange={s.onDraftChange}
-        disabled={connState !== 'connected'}
-      />
+    <div className="flex-1 flex min-h-0">
+      {/* 左：聊天区 */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <ConnectionBanner
+          state={connState}
+          onReconnect={() => useConnStore.getState().requestReconnect()}
+        />
+        <MessageList
+          messages={s.messages}
+          currentUserId={s.currentUserId}
+          onRetry={s.retrySend}
+          loadingHistory={s.loadingHistory}
+          hasMore={s.hasMore}
+          onLoadMore={s.loadMoreHistory}
+          isGroup={s.isGroup}
+          onReadClick={handleReadClick}
+        />
+        <MessageInput
+          peerId={peerId}
+          draft={s.draft}
+          onSendText={s.sendText}
+          onSendImage={s.sendImage}
+          onSendFile={s.sendFile}
+          onSendVoice={s.sendVoice}
+          onSendVideo={s.sendVideo}
+          onSendEmoji={s.sendEmoji}
+          onDraftChange={s.onDraftChange}
+          disabled={connState !== 'connected'}
+          statusNode={
+            <span className={`flex items-center gap-1 ${connState === 'connected' ? 'text-ok' : 'text-danger'}`}>
+              ● {connState === 'connected' ? '通信正常' : connState === 'connecting' ? '连接中' : '通信中断'}
+            </span>
+          }
+          quickReplies={QUICK_REPLIES}
+        />
+      </div>
+
+      {/* 右：详情栏 */}
+      <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} />
 
       {/* 群消息已读成员弹窗 */}
       {readStatus && (
@@ -86,6 +101,6 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
