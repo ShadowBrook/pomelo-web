@@ -16,9 +16,15 @@ interface Props {
   extraHeaderButtons?: ReactNode;
   /** 追加到标题栏的类（如 h-12） */
   barClassName?: string;
+  /** 对接吸附：聊天窗吸附在主面板右缘时，左侧取直角 */
+  snapLeft?: boolean;
+  /** 对接吸附：主面板右侧有吸附的聊天窗时，右侧取直角 */
+  snapRight?: boolean;
+  /** 隐藏 ⛶/✕ 控件（主面板用，参考图无窗口控件） */
+  hideControls?: boolean;
 }
 
-export function DraggableWindow({ win, width, height, title, children, headerContent, extraHeaderButtons, barClassName }: Props) {
+export function DraggableWindow({ win, width, height, title, children, headerContent, extraHeaderButtons, barClassName, snapLeft, snapRight, hideControls }: Props) {
   const focus = useWindowStore((s) => s.focus);
   const move = useWindowStore((s) => s.move);
   const close = useWindowStore((s) => s.close);
@@ -31,7 +37,7 @@ export function DraggableWindow({ win, width, height, title, children, headerCon
 
   return createPortal(
     <div
-      className={`fixed flex flex-col bg-panel border border-line shadow-2xl overflow-hidden ${win.fullscreen ? 'inset-0' : 'rounded-lg'}`}
+      className={`fixed flex flex-col bg-panel border border-line shadow-2xl overflow-hidden ${win.fullscreen ? 'inset-0' : `rounded-lg ${snapLeft ? 'rounded-l-none' : ''} ${snapRight ? 'rounded-r-none' : ''}`}`}
       style={style}
       onPointerDown={() => focus(win.id)}
     >
@@ -42,23 +48,25 @@ export function DraggableWindow({ win, width, height, title, children, headerCon
         onDoubleClick={() => toggleFullscreen(win.id)}
       >
         {headerContent ?? <div className="text-sm font-medium text-white truncate">{title}</div>}
-        <div className={`flex items-center gap-1 ${headerContent ? 'pr-2' : ''}`}>
-          {extraHeaderButtons}
-          <button
-            onClick={() => toggleFullscreen(win.id)}
-            title={win.fullscreen ? '还原' : '全屏'}
-            className="w-6 h-6 rounded text-white/90 hover:bg-white/20 text-xs"
-          >
-            {win.fullscreen ? '❐' : '⛶'}
-          </button>
-          <button
-            onClick={() => close(win.id)}
-            title="关闭"
-            className="w-6 h-6 rounded text-white/90 hover:bg-danger text-xs"
-          >
-            ✕
-          </button>
-        </div>
+        {!hideControls && (
+          <div className={`flex items-center gap-1 ${headerContent ? 'pr-2' : ''}`}>
+            {extraHeaderButtons}
+            <button
+              onClick={() => toggleFullscreen(win.id)}
+              title={win.fullscreen ? '还原' : '全屏'}
+              className="w-6 h-6 rounded text-white/90 hover:bg-white/20 text-xs"
+            >
+              {win.fullscreen ? '❐' : '⛶'}
+            </button>
+            <button
+              onClick={() => close(win.id)}
+              title="关闭"
+              className="w-6 h-6 rounded text-white/90 hover:bg-danger text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
     </div>,

@@ -1,9 +1,9 @@
-import { useWindowStore } from '@/stores/useWindowStore';
+import { useWindowStore, MAIN_WINDOW_ID } from '@/stores/useWindowStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 
 export function TopNavBar() {
   const { totalUnread } = useUnreadCount();
-  const openMain = useWindowStore((s) => s.openMain);
+  const hasMain = useWindowStore((s) => s.windows.some((w) => w.kind === 'main'));
 
   return (
     <div className="h-12 bg-topbar flex items-center justify-between px-4 relative z-[1]">
@@ -12,9 +12,9 @@ export function TopNavBar() {
         Pomelo Chat
       </div>
       <button
-        onClick={openMain}
+        onClick={() => (hasMain ? useWindowStore.getState().close(MAIN_WINDOW_ID) : useWindowStore.getState().openMain())}
         className="relative w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-base"
-        title="消息"
+        title={hasMain ? '收起消息面板' : '打开消息面板'}
       >
         💬
         {totalUnread > 0 && (
