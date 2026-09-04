@@ -7,6 +7,7 @@ import { useConversationStore } from '@/stores/useConversationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { useConnStore } from '@/stores/useConnStore';
 import { mediaPreview } from '@/sdk/media';
 
 // 模块级单例
@@ -117,6 +118,7 @@ export function useIMClient() {
     });
 
     client.on('connectionChange', (state: ConnectionState) => {
+      useConnStore.getState().set(state);   // ← 新增：共享给窗口组件
       setConnectionState(state);
       if (state === 'connected') {
         // C2C 离线消息由 client 内部 _pullOfflineMessages 处理；
