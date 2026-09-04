@@ -24,9 +24,13 @@ export default function ChatPage() {
     }
   }, [user, token, connect]);
 
-  // 进入工作台自动打开主面板窗
+  // 进入工作台：主面板 + 最近一个会话的聊天窗自动吸附展示（无需手动点开会话）
   useEffect(() => {
     useWindowStore.getState().openMain();
+    const sorted = useConversationStore.getState().getSortedList();
+    if (sorted.length > 0) {
+      useWindowStore.getState().openChat(sorted[0]);
+    }
   }, []);
 
   // 未读计数更新 title
