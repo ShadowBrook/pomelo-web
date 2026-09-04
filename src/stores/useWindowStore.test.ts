@@ -81,3 +81,50 @@ describe('useWindowStore', () => {
     expect(useWindowStore.getState().topZ).toBe(1);
   });
 });
+
+describe('对接模式（snapped）', () => {
+  beforeEach(reset);
+
+  const openDocked = () => {
+    useWindowStore.getState().openMain();
+    useWindowStore.getState().openChat('a');
+    return {
+      main: useWindowStore.getState().windows.find((w) => w.id === MAIN_WINDOW_ID)!,
+      chat: useWindowStore.getState().windows.find((w) => w.peerId === 'a')!,
+    };
+  };
+
+  it('主面板开着时 openChat 吸附其右缘并标记 snapped', () => {
+    const { main, chat } = openDocked();
+    expect(chat.snapped).toBe(true);
+    expect(chat.pos).toEqual({ x: main.pos.x + 300, y: main.pos.y });
+  });
+
+  it('主面板未开时 openChat 走级联且不吸附', () => {
+    useWindowStore.getState().openChat('a');
+    const chat = useWindowStore.getState().windows.find((w) => w.peerId === 'a')!;
+    expect(chat.snapped).toBeFalsy();
+    expect(chat.pos.x).toBe(200);
+  });
+
+  it('拖动聊天窗解除自身吸附', () => {
+    const { chat } = openDocked();
+    useWindowStore.getState().move(chat.id, { x: 500, y: 300 });
+    expect(useWindowStore.getState().windows.find((w) => w.peerId === 'a')!.snapped).toBe(false);
+  });
+
+  it('拖动主面板解除全部聊天窗吸附', () => {
+    openDocked();
+    useWindowStore.getState().openChat('b');
+    useWindowStore.getState().move(MAIN_WINDOW_ID, { x: 50, y: 60 });
+    const chats = useWindowStore.getState().windows.filter((w) => w.kind === 'chat');
+    expect(chats.map((w) => w.snapped)).toEqual([false, false]);
+  });
+
+  it('关闭主面板解除全部聊天窗吸附', () => {
+    openDocked();
+    useWindowStore.getState().close(MAIN_WINDOW_ID);
+    const chats = useWindowStore.getState().windows.filter((w) => w.kind === 'chat');
+    expect(chats.map((w) => w.snapped)).toEqual([false]);
+  });
+});
