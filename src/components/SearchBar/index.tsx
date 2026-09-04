@@ -33,7 +33,7 @@ export function SearchBar({ placeholder = '搜索', onSearch }: Props) {
           value={value}
           onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full bg-white/80 border border-gray-200 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-wechat-green placeholder-gray-400"
+          className="w-full bg-white/80 border border-gray-200 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-primary placeholder-gray-400"
         />
       </div>
     </div>

@@ -106,7 +106,7 @@ function Body({ message }: { message: ChatMessage }) {
         >
           <span className="text-lg flex-shrink-0">📎</span>
           <span className="text-xs flex flex-col min-w-0">
-            <span className="text-wechat-text truncate">{name}</span>
+            <span className="text-text-main truncate">{name}</span>
             {size && <span className="text-gray-400">{size}</span>}
           </span>
         </a>
@@ -131,8 +131,8 @@ export const MessageBubble = React.memo(function MessageBubble({ message, isSelf
       {/* 气泡 */}
       <div className={`max-w-[60%] px-3 py-2 rounded-lg text-sm break-words relative ${
         isSelf
-          ? 'bg-wechat-bubble-self text-wechat-text rounded-tr-sm bubble-self'
-          : 'bg-wechat-bubble-other text-wechat-text border border-gray-200 rounded-tl-sm bubble-other'
+          ? 'bg-bubble-self text-text-main rounded-tr-sm bubble-self'
+          : 'bg-bubble-other text-text-main border border-gray-200 rounded-tl-sm bubble-other'
       }`}>
         <Body message={message} />
         {/* 己方消息状态图标 */}
@@ -160,7 +160,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message, isSelf
 
       {/* 己方头像 */}
       {isSelf && (
-        <div className="w-9 h-9 rounded-full bg-wechat-green flex-shrink-0 flex items-center justify-center text-white text-xs ml-2">
+        <div className="w-9 h-9 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-white text-xs ml-2">
           我
         </div>
       )}

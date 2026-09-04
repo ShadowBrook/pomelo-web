@@ -76,14 +76,14 @@ export function CreateGroupDialog({ open, onClose, onGroupCreated, preSelectedFr
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
             placeholder="群聊名称（选填，默认取好友昵称拼接）"
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded outline-none focus:border-wechat-green"
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded outline-none focus:border-primary"
           />
         </div>
 
         {/* 好友列表 */}
         <div className="flex-1 overflow-y-auto px-2">
           {friends.length === 0 ? (
-            <div className="text-center text-wechat-text-secondary text-xs py-6">暂无好友</div>
+            <div className="text-center text-text-sub text-xs py-6">暂无好友</div>
           ) : (
             friends.map((f) => (
               <FriendCheckItem
@@ -98,13 +98,13 @@ export function CreateGroupDialog({ open, onClose, onGroupCreated, preSelectedFr
 
         {/* 底部操作 */}
         <div className="px-4 py-3 border-t border-gray-200 flex justify-between items-center">
-          <span className="text-xs text-wechat-text-secondary">
+          <span className="text-xs text-text-sub">
             已选 {selected.size} 人
           </span>
           <button
             onClick={handleCreate}
             disabled={creating || selected.size === 0}
-            className="px-4 py-1.5 text-sm rounded bg-wechat-green text-white hover:bg-wechat-green-dark disabled:opacity-50 transition-colors"
+            className="px-4 py-1.5 text-sm rounded bg-primary text-white hover:bg-primary-dark disabled:opacity-50 transition-colors"
           >
             {creating ? '创建中...' : '创建群聊'}
           </button>
@@ -123,18 +123,18 @@ function FriendCheckItem({ friend, checked, onToggle }: {
     <div
       onClick={onToggle}
       className={`flex items-center gap-3 px-3 py-2.5 rounded cursor-pointer transition-colors ${
-        checked ? 'bg-wechat-green/10' : 'hover:bg-gray-50'
+        checked ? 'bg-primary/10' : 'hover:bg-gray-50'
       }`}
     >
       <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-        checked ? 'bg-wechat-green border-wechat-green' : 'border-gray-300'
+        checked ? 'bg-primary border-primary' : 'border-gray-300'
       }`}>
         {checked && <span className="text-white text-xs">✓</span>}
       </div>
-      <div className="w-8 h-8 rounded-full bg-wechat-green/20 text-wechat-green flex items-center justify-center text-xs flex-shrink-0">
+      <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs flex-shrink-0">
         {(friend.nickname || friend.userName).charAt(0).toUpperCase()}
       </div>
-      <span className="text-sm text-wechat-text truncate flex-1">
+      <span className="text-sm text-text-main truncate flex-1">
         {friend.nickname || friend.userName}
       </span>
     </div>

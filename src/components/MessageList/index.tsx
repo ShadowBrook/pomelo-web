@@ -78,7 +78,7 @@ export function MessageList({
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-wechat-text-secondary text-sm">
+      <div className="flex-1 flex items-center justify-center text-text-sub text-sm">
         {loadingHistory ? '加载历史消息...' : '暂无消息记录'}
       </div>
     );
@@ -89,7 +89,7 @@ export function MessageList({
       {/* 顶部加载提示 */}
       {loadingHistory && (
         <div className="text-center py-2">
-          <span className="text-xs text-wechat-text-secondary">加载历史消息...</span>
+          <span className="text-xs text-text-sub">加载历史消息...</span>
         </div>
       )}
       {messages.map((msg, idx) => {
@@ -102,7 +102,7 @@ export function MessageList({
           <div key={msg.id}>
             {showTime && (
               <div className="text-center my-3">
-                <span className="text-xs text-wechat-text-secondary bg-gray-200/60 px-2 py-0.5 rounded">
+                <span className="text-xs text-text-sub bg-gray-200/60 px-2 py-0.5 rounded">
                   {formatDividerTime(msg.timestamp)}
                 </span>
               </div>

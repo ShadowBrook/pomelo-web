@@ -54,7 +54,7 @@ export function GroupPanel({ activeGroupId, onSelect }: Props) {
       <div className="p-2 border-b border-gray-200">
         <button
           onClick={() => setShowCreate(true)}
-          className="w-full py-1.5 text-sm rounded bg-wechat-green text-white hover:bg-wechat-green-dark transition-colors"
+          className="w-full py-1.5 text-sm rounded bg-primary text-white hover:bg-primary-dark transition-colors"
         >
           + 创建群聊
         </button>
@@ -72,13 +72,13 @@ export function GroupPanel({ activeGroupId, onSelect }: Props) {
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
               placeholder="输入群名称"
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded outline-none focus:border-wechat-green"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded outline-none focus:border-primary"
             />
             <div className="flex gap-2 mt-3 justify-end">
               <button onClick={() => setShowCreate(false)}
                 className="px-3 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200">取消</button>
               <button onClick={handleCreate} disabled={creating || !newName.trim()}
-                className="px-3 py-1 text-xs rounded bg-wechat-green text-white hover:bg-wechat-green-dark disabled:opacity-50">
+                className="px-3 py-1 text-xs rounded bg-primary text-white hover:bg-primary-dark disabled:opacity-50">
                 {creating ? '创建中...' : '创建'}
               </button>
             </div>
@@ -88,7 +88,7 @@ export function GroupPanel({ activeGroupId, onSelect }: Props) {
 
       <div className="flex-1 overflow-y-auto">
       {groupList.length === 0 ? (
-        <div className="text-center text-wechat-text-secondary text-sm mt-10 px-4">
+        <div className="text-center text-text-sub text-sm mt-10 px-4">
           暂无群聊，点击上方按钮创建
         </div>
       ) : (
@@ -131,21 +131,21 @@ function GroupItem({ group, isActive, onClick }: {
       <div
         onClick={onClick}
         className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors border-b border-gray-100 ${
-          isActive ? 'bg-wechat-green/10' : 'hover:bg-gray-50'
+          isActive ? 'bg-primary/10' : 'hover:bg-gray-50'
         }`}
       >
-        <div className="w-10 h-10 rounded-md bg-wechat-green text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
+        <div className="w-10 h-10 rounded-md bg-primary text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
           {group.name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-wechat-text truncate">{group.name}</span>
+            <span className="text-sm text-text-main truncate">{group.name}</span>
           </div>
-          <span className="text-xs text-wechat-text-secondary">{group.memberCount} 人</span>
+          <span className="text-xs text-text-sub">{group.memberCount} 人</span>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); setShowInvite(!showInvite); }}
-          className="text-xs text-wechat-green hover:bg-wechat-green/10 px-2 py-1 rounded flex-shrink-0"
+          className="text-xs text-primary hover:bg-primary/10 px-2 py-1 rounded flex-shrink-0"
         >
           邀请
         </button>
@@ -153,7 +153,7 @@ function GroupItem({ group, isActive, onClick }: {
       {showInvite && (
         <div className="border-b border-gray-100 bg-gray-50 max-h-[200px] overflow-y-auto">
           {friends.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-wechat-text-secondary">暂无好友</div>
+            <div className="px-3 py-2 text-xs text-text-sub">暂无好友</div>
           ) : (
             friends.map((f) => (
               <div
@@ -161,11 +161,11 @@ function GroupItem({ group, isActive, onClick }: {
                 onClick={() => handleInvite(f.userId)}
                 className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer text-xs"
               >
-                <div className="w-6 h-6 rounded-full bg-wechat-green/20 text-wechat-green flex items-center justify-center text-xs flex-shrink-0">
+                <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs flex-shrink-0">
                   {(f.nickname || f.userName).charAt(0).toUpperCase()}
                 </div>
                 <span className="flex-1 truncate">{f.nickname || f.userName}</span>
-                {inviting && <span className="text-wechat-text-secondary">...</span>}
+                {inviting && <span className="text-text-sub">...</span>}
               </div>
             ))
           )}

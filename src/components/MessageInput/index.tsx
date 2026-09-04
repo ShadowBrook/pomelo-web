@@ -230,12 +230,12 @@ export function MessageInput({
           placeholder="输入消息..."
           disabled={disabled}
           rows={3}
-          className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-wechat-green disabled:bg-gray-100"
+          className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary disabled:bg-gray-100"
         />
         <button
           onClick={handleSend}
           disabled={disabled || !text.trim()}
-          className="px-5 py-2 bg-wechat-green text-white rounded-lg text-sm font-medium hover:bg-wechat-green-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+          className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
         >
           发送
         </button>

@@ -36,7 +36,7 @@ export function EmojiPicker({ onSelect, onCustomEmoji, onClose }: Props) {
       {onCustomEmoji && (
         <button
           onClick={onCustomEmoji}
-          className="w-full mt-2 py-1.5 text-xs text-wechat-green border border-wechat-green/30 rounded hover:bg-wechat-green/10 transition-colors"
+          className="w-full mt-2 py-1.5 text-xs text-primary border border-primary/30 rounded hover:bg-primary/10 transition-colors"
         >
           自定义表情（发送图片表情）
         </button>

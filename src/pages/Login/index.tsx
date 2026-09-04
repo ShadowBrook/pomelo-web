@@ -58,12 +58,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="bg-wechat-bg min-h-screen flex items-center justify-center px-4">
+    <div className="bg-bg-page min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-wechat-green">Pomelo Chat</h1>
-          <p className="text-wechat-text-secondary mt-2 text-sm">即时通讯，触手可及</p>
+          <h1 className="text-3xl font-bold text-primary">Pomelo Chat</h1>
+          <p className="text-text-sub mt-2 text-sm">即时通讯，触手可及</p>
         </div>
 
         {/* Card */}
@@ -75,7 +75,7 @@ export default function LoginPage() {
               onClick={() => switchTab('login')}
               className={`flex-1 pb-3 text-center font-medium transition-colors ${
                 activeTab === 'login'
-                  ? 'border-b-2 border-wechat-green text-wechat-green'
+                  ? 'border-b-2 border-primary text-primary'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -86,7 +86,7 @@ export default function LoginPage() {
               onClick={() => switchTab('register')}
               className={`flex-1 pb-3 text-center font-medium transition-colors ${
                 activeTab === 'register'
-                  ? 'border-b-2 border-wechat-green text-wechat-green'
+                  ? 'border-b-2 border-primary text-primary'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -104,7 +104,7 @@ export default function LoginPage() {
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   placeholder="请输入用户名"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-wechat-green transition-colors"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
               <div>
@@ -114,14 +114,14 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="请输入密码"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-wechat-green transition-colors"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-wechat-green hover:bg-wechat-green-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary hover:bg-primary-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '登录中...' : '登录'}
               </button>
@@ -138,7 +138,7 @@ export default function LoginPage() {
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   placeholder="请输入用户名"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-wechat-green transition-colors"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
               <div>
@@ -148,7 +148,7 @@ export default function LoginPage() {
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="请输入昵称"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-wechat-green transition-colors"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
               <div>
@@ -158,7 +158,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="请输入密码"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-wechat-green transition-colors"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
               <div>
@@ -170,14 +170,14 @@ export default function LoginPage() {
                   value={avatar}
                   onChange={(e) => setAvatar(e.target.value)}
                   placeholder="请输入头像链接地址"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-wechat-green transition-colors"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-wechat-green hover:bg-wechat-green-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary hover:bg-primary-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '注册中...' : '注册'}
               </button>

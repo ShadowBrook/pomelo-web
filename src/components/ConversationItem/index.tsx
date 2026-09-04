@@ -46,7 +46,7 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
     <div
       onClick={onClick}
       className={`group flex items-center px-3 py-3 cursor-pointer hover:bg-gray-200/50 transition-colors relative ${
-        isActive ? 'bg-wechat-green/10 border-l-2 border-wechat-green' : ''
+        isActive ? 'bg-primary/10 border-l-2 border-primary' : ''
       }`}
     >
       {/* 头像 */}
@@ -61,10 +61,10 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
       {/* 内容 */}
       <div className="ml-3 flex-1 min-w-0">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-wechat-text truncate">{nickname}</span>
-          <span className="text-xs text-wechat-text-secondary flex-shrink-0 ml-2">{formatTime(lastMessageTime)}</span>
+          <span className="text-sm font-medium text-text-main truncate">{nickname}</span>
+          <span className="text-xs text-text-sub flex-shrink-0 ml-2">{formatTime(lastMessageTime)}</span>
         </div>
-        <p className="text-xs text-wechat-text-secondary truncate mt-0.5">{lastMessage || '暂无消息'}</p>
+        <p className="text-xs text-text-sub truncate mt-0.5">{lastMessage || '暂无消息'}</p>
       </div>
 
       {/* 未读红点 或 悬停时显示的删除按钮 */}
@@ -91,7 +91,7 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
           className="absolute right-2 top-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg border border-gray-200 px-3 py-2 z-10 flex items-center gap-2"
           onClick={(e) => e.stopPropagation()}
         >
-          <span className="text-xs text-wechat-text whitespace-nowrap">删除该会话？</span>
+          <span className="text-xs text-text-main whitespace-nowrap">删除该会话？</span>
           <button
             onClick={handleConfirmDelete}
             className="text-xs text-red-500 hover:text-red-600 font-medium px-1"
@@ -100,7 +100,7 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
           </button>
           <button
             onClick={handleCancelDelete}
-            className="text-xs text-wechat-text-secondary hover:text-wechat-text px-1"
+            className="text-xs text-text-sub hover:text-text-main px-1"
           >
             取消
           </button>

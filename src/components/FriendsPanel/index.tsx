@@ -38,12 +38,12 @@ export function FriendsPanel({ onChatWithFriend }: Props) {
                 {req.avatar ? <img src={req.avatar} alt="" className="w-full h-full object-cover rounded-full" /> : req.nickname.charAt(0).toUpperCase()}
               </div>
               <div className="ml-2 flex-1 min-w-0">
-                <p className="text-sm font-medium text-wechat-text truncate">{req.nickname}</p>
+                <p className="text-sm font-medium text-text-main truncate">{req.nickname}</p>
                 <p className="text-xs text-gray-400">申请加你为好友</p>
               </div>
               <button
                 onClick={() => handleAccept(req.userId)}
-                className="px-3 py-1 text-xs bg-wechat-green text-white rounded hover:bg-wechat-green-dark"
+                className="px-3 py-1 text-xs bg-primary text-white rounded hover:bg-primary-dark"
               >
                 接受
               </button>
@@ -72,7 +72,7 @@ export function FriendsPanel({ onChatWithFriend }: Props) {
               )}
             </div>
             <div className="ml-2 flex-1 min-w-0">
-              <p className="text-sm font-medium text-wechat-text truncate">{friend.nickname}</p>
+              <p className="text-sm font-medium text-text-main truncate">{friend.nickname}</p>
               <p className="text-xs text-gray-400">{friend.online ? '在线' : '离线'}</p>
             </div>
           </div>
