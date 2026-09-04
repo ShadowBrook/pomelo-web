@@ -10,9 +10,15 @@ interface Props {
   height: number;
   title: ReactNode;
   children: ReactNode;
+  /** 提供时替换默认标题文本（标题栏去默认内边距，内容自管布局） */
+  headerContent?: ReactNode;
+  /** 渲染在 ⛶/✕ 之前的额外标题栏按钮 */
+  extraHeaderButtons?: ReactNode;
+  /** 追加到标题栏的类（如 h-12） */
+  barClassName?: string;
 }
 
-export function DraggableWindow({ win, width, height, title, children }: Props) {
+export function DraggableWindow({ win, width, height, title, children, headerContent, extraHeaderButtons, barClassName }: Props) {
   const focus = useWindowStore((s) => s.focus);
   const move = useWindowStore((s) => s.move);
   const close = useWindowStore((s) => s.close);
@@ -31,12 +37,13 @@ export function DraggableWindow({ win, width, height, title, children }: Props) 
     >
       {/* 标题栏（深蓝渐变） */}
       <div
-        className="h-10 flex items-center justify-between px-3 flex-shrink-0 select-none bg-gradient-to-b from-titlebar-from to-titlebar-to"
+        className={`h-10 flex items-center justify-between flex-shrink-0 select-none bg-gradient-to-b from-titlebar-from to-titlebar-to ${barClassName ?? ''} ${headerContent ? '' : 'px-3'}`}
         onPointerDown={onPointerDown}
         onDoubleClick={() => toggleFullscreen(win.id)}
       >
-        <div className="text-sm font-medium text-white truncate">{title}</div>
-        <div className="flex items-center gap-1">
+        {headerContent ?? <div className="text-sm font-medium text-white truncate px-3">{title}</div>}
+        <div className="flex items-center gap-1 pr-2">
+          {extraHeaderButtons}
           <button
             onClick={() => toggleFullscreen(win.id)}
             title={win.fullscreen ? '还原' : '全屏'}
