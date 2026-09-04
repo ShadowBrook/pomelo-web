@@ -1,7 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChatMessage } from '@/stores/useChatStore';
 import { MessageStatus, MsgType } from '@/sdk/types';
 import { parseMediaContent, getMediaUrl, formatBytes } from '@/sdk/media';
+
+/** 图片点开展开全屏预览，再次点击关闭 */
+function ImageMessage({ url }: { url: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <img
+        src={url}
+        alt="图片"
+        className="max-w-full rounded cursor-pointer object-contain"
+        style={{ maxHeight: 200 }}
+        onClick={() => setOpen((o) => !o)}
+      />
+      {open && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center cursor-zoom-out"
+          onClick={() => setOpen(false)}
+        >
+          <img src={url} alt="图片预览" className="max-w-[92vw] max-h-[90vh] object-contain rounded shadow-2xl" />
+        </div>
+      )}
+    </>
+  );
+}
 
 interface Props {
   message: ChatMessage;
@@ -43,15 +67,7 @@ function Body({ message }: { message: ChatMessage }) {
 
     case MsgType.IMAGE:
       return url
-        ? (
-          <img
-            src={url}
-            alt="图片"
-            className="max-w-full rounded cursor-pointer object-contain"
-            style={{ maxHeight: 200 }}
-            onClick={() => window.open(url, '_blank')}
-          />
-        )
+        ? <ImageMessage url={url} />
         : <span className="text-xs text-gray-400">[图片]</span>;
 
     case MsgType.EMOJI:
