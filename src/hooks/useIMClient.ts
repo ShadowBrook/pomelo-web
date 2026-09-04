@@ -260,13 +260,6 @@ export function useIMClient() {
     }
   }, []);
 
-  // 重试发送失败的消息：从 chat store 查找原始内容并重新发送
-  const retrySend = useCallback((messageId: string) => {
-    useChatStore.getState().retryMessage(messageId, (params) => {
-      return sendMessage(params);
-    });
-  }, [sendMessage]);
-
   // 好友操作：转发到 SDK 单例（供组件直接调用；Store 通过 getIMClient 调用）
   const searchUsers = useCallback((keyword: string) => {
     if (!clientInstance) {
@@ -328,7 +321,6 @@ export function useIMClient() {
     disconnect,
     sendMessage,
     markSeen,
-    retrySend,
     searchUsers,
     addFriend,
     acceptFriend,

@@ -20,7 +20,7 @@ export function useChatSession(peerId: string) {
   // 窄 selector：只订阅本窗口会话的数据
   const conversation = useConversationStore((s) => s.conversations[peerId] ?? null);
   const messages = useChatStore((s) => s.messages[peerId] ?? EMPTY_MESSAGES);
-  const loadingHistory = useChatStore((s) => s.loadingHistory);
+  const loadingHistory = useChatStore((s) => s.loadingHistory[peerId] ?? false);
   const hasMore = useChatStore((s) => s.hasMoreHistory[peerId] !== false);
 
   const isGroup = conversation?.type === 'group';
@@ -31,6 +31,12 @@ export function useChatSession(peerId: string) {
     useChatStore.getState().openConversation(peerId, type);
     useConversationStore.getState().clearUnread(peerId);
   }, [peerId]);
+
+  // 多窗语义：窗口打开 = 会话可见。未读在 activePeerId 不指向本会话时仍会自增，
+  // 这里随消息变化持续清零（clearUnread 在未读为 0 时直接返回，代价为零）
+  useEffect(() => {
+    useConversationStore.getState().clearUnread(peerId);
+  }, [messages, peerId]);
 
   // C2C 已读回执：对收件消息去重后批量 markSeen
   const markedSeenRef = useRef<Set<string>>(new Set());
@@ -85,13 +91,14 @@ export function useChatSession(peerId: string) {
     [peerId, sendFn],
   );
 
-  const retrySend = useCallback((messageId: string) => {
-    useChatStore.getState().retryMessage(messageId, (params) => {
-      const client = getIMClient();
-      if (!client) throw new Error('IMClient not connected');
-      return client.sendMessage(params);
-    });
-  }, []);
+  const retrySend = useCallback(
+    (messageId: string) => {
+      useChatStore.getState().retryMessage(messageId, (params) => {
+        return sendFn(params);
+      });
+    },
+    [sendFn],
+  );
 
   const loadMoreHistory = useCallback(() => {
     const type = useConversationStore.getState().conversations[peerId]?.type ?? 'c2c';

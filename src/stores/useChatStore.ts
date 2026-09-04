@@ -23,7 +23,7 @@ export interface ChatMessage {
 
 interface ChatState {
   messages: Record<string, ChatMessage[]>;
-  loadingHistory: boolean;
+  loadingHistory: Record<string, boolean>;
   hasMoreHistory: Record<string, boolean>;
 
   addMessage: (msg: ChatMessage) => void;
@@ -68,7 +68,7 @@ export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
       messages: {},
-      loadingHistory: false,
+      loadingHistory: {},
       hasMoreHistory: {},
 
       addMessage: (msg: ChatMessage) => {
@@ -195,12 +195,12 @@ export const useChatStore = create<ChatState>()(
         for (const msgs of Object.values(messages)) {
           msgs.forEach(m => { if (m.localUrl) URL.revokeObjectURL(m.localUrl); });
         }
-        set({ messages: {}, hasMoreHistory: {}, loadingHistory: false });
+        set({ messages: {}, hasMoreHistory: {}, loadingHistory: {} });
       },
 
       loadMoreHistory: async (peerId, type = 'c2c') => {
         const state = get();
-        if (state.loadingHistory) return;
+        if (state.loadingHistory[peerId]) return;
         if (state.hasMoreHistory[peerId] === false) return;
 
         const client = getIMClient();
@@ -212,7 +212,7 @@ export const useChatStore = create<ChatState>()(
         if (type === 'group') {
           const oldestSeq = msgs.length > 0 ? (msgs[0].seq ?? 0) : 0;
           if (oldestSeq === 0) return;
-          set({ loadingHistory: true });
+          set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
           try {
             const res = await client.pullGroupMessages(peerId, oldestSeq, 50, true);
             const historyMsgs: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
@@ -224,12 +224,12 @@ export const useChatStore = create<ChatState>()(
               const merged = [...newMsgs, ...existing].sort((a, b) => a.timestamp - b.timestamp);
               return {
                 messages: { ...s.messages, [peerId]: merged },
-                loadingHistory: false,
+                loadingHistory: { ...s.loadingHistory, [peerId]: false },
                 hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
               };
             });
           } catch (e) {
-            set({ loadingHistory: false });
+            set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: false } }));
             console.error('加载群聊历史失败:', e);
           }
           return;
@@ -239,7 +239,7 @@ export const useChatStore = create<ChatState>()(
         const oldestTime = msgs.length > 0 ? msgs[0].timestamp ?? 0 : 0;
         if (oldestTime === 0) return;
 
-        set({ loadingHistory: true });
+        set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
         try {
           const res = await client.pullHistory(peerId, oldestTime);
           const historyMsgs: ChatMessage[] = (res.messages || []).map(m => ({
@@ -256,12 +256,12 @@ export const useChatStore = create<ChatState>()(
             const merged = [...newMsgs, ...existing].sort((a, b) => a.timestamp - b.timestamp);
             return {
               messages: { ...s.messages, [peerId]: merged },
-              loadingHistory: false,
+              loadingHistory: { ...s.loadingHistory, [peerId]: false },
               hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
             };
           });
         } catch (e) {
-          set({ loadingHistory: false });
+          set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: false } }));
           console.error('加载历史消息失败:', e);
         }
       },
@@ -278,18 +278,18 @@ export const useChatStore = create<ChatState>()(
         if (type === 'group') {
           if (cached.length === 0) {
             // 首次打开：拉最近一页历史垫底
-            set({ loadingHistory: true });
+            set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
             try {
               const res = await client.pullGroupMessages(peerId, 0, 50, true);
               const msgs: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
               // backward=true 返回 seq 降序，需反转为正序
               set((s) => ({
                 messages: { ...s.messages, [peerId]: msgs.slice().reverse() },
-                loadingHistory: false,
+                loadingHistory: { ...s.loadingHistory, [peerId]: false },
                 hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
               }));
             } catch (e) {
-              set({ loadingHistory: false });
+              set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: false } }));
               console.error('加载群聊历史失败:', e);
             }
             return;
@@ -319,7 +319,7 @@ export const useChatStore = create<ChatState>()(
 
         // 首次打开该会话：拉取最近 50 条
         if (cached.length === 0) {
-          set({ loadingHistory: true });
+          set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
           try {
             const res = await client.pullHistory(peerId, 0);
             const msgs: ChatMessage[] = (res.messages || []).map(m => ({
@@ -330,11 +330,11 @@ export const useChatStore = create<ChatState>()(
             }));
             set((s) => ({
               messages: { ...s.messages, [peerId]: msgs.sort((a, b) => a.timestamp - b.timestamp) },
-              loadingHistory: false,
+              loadingHistory: { ...s.loadingHistory, [peerId]: false },
               hasMoreHistory: { ...s.hasMoreHistory, [peerId]: res.hasMore },
             }));
           } catch (e) {
-            set({ loadingHistory: false });
+            set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: false } }));
             console.error('加载历史消息失败:', e);
           }
           return;
