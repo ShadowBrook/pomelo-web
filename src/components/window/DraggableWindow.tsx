@@ -45,7 +45,7 @@ export function DraggableWindow({ win, width, height, title, children, headerCon
       <div
         className={`h-10 flex items-center justify-between flex-shrink-0 select-none bg-gradient-to-b from-titlebar-from to-titlebar-to ${barClassName ?? ''} ${headerContent ? '' : 'px-3'}`}
         onPointerDown={onPointerDown}
-        onDoubleClick={() => toggleFullscreen(win.id)}
+        onDoubleClick={hideControls ? undefined : () => toggleFullscreen(win.id)}
       >
         {headerContent ?? <div className="text-sm font-medium text-white truncate">{title}</div>}
         {!hideControls && (

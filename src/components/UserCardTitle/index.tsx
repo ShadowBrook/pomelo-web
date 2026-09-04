@@ -27,7 +27,7 @@ export function UserCardTitle() {
       </button>
       {showProfile &&
         createPortal(
-          <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setShowProfile(false)}>
+          <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setShowProfile(false)} onPointerDown={(e) => e.stopPropagation()}>
             <div
               className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
