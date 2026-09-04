@@ -42,7 +42,7 @@ export function DraggableWindow({ win, width, height, title, children, headerCon
         onDoubleClick={() => toggleFullscreen(win.id)}
       >
         {headerContent ?? <div className="text-sm font-medium text-white truncate">{title}</div>}
-        <div className="flex items-center gap-1 pr-2">
+        <div className={`flex items-center gap-1 ${headerContent ? 'pr-2' : ''}`}>
           {extraHeaderButtons}
           <button
             onClick={() => toggleFullscreen(win.id)}

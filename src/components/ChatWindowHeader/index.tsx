@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useFriendStore } from '@/stores/useFriendStore';
@@ -52,8 +53,8 @@ export function ChatWindowHeader({ peerId }: { peerId: string }) {
         </button>
       </div>
 
-      {/* 简版"我的个人信息"弹窗 */}
-      {showProfile && (
+      {/* 简版"我的个人信息"弹窗（portal 渲染到 body，避免冒泡到窗口拖拽条） */}
+      {showProfile && createPortal((
         <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setShowProfile(false)}>
           <div className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main flex items-center justify-between">
@@ -78,7 +79,7 @@ export function ChatWindowHeader({ peerId }: { peerId: string }) {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }

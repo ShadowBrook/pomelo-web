@@ -15,7 +15,7 @@ import { GroupPanel } from '@/components/GroupPanel';
 import { AddFriendDialog } from '@/components/AddFriendDialog';
 import { CreateGroupDialog } from '@/components/CreateGroupDialog';
 
-function IconChat({ active: _active }: { active: boolean }) {
+function IconChat() {
   return (
     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -23,7 +23,7 @@ function IconChat({ active: _active }: { active: boolean }) {
   );
 }
 
-function IconBell({ active: _active }: { active: boolean }) {
+function IconBell() {
   return (
     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -32,7 +32,7 @@ function IconBell({ active: _active }: { active: boolean }) {
   );
 }
 
-function IconUsers({ active: _active }: { active: boolean }) {
+function IconUsers() {
   return (
     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -139,13 +139,13 @@ export function MainPanel() {
       {/* Tab 切换（图标式） */}
       <div className="flex border-b border-line bg-panel">
         <button onClick={() => setSidebarTab('chats')} className={`relative flex-1 py-2.5 flex items-center justify-center transition-colors ${sidebarTab === 'chats' ? 'text-primary' : 'text-text-sub hover:text-text-main'}`} title="聊天">
-          <IconChat active={sidebarTab === 'chats'} />
+          <IconChat />
         </button>
         <button onClick={() => setSidebarTab('groups')} className={`flex-1 py-2.5 flex items-center justify-center transition-colors ${sidebarTab === 'groups' ? 'text-primary' : 'text-text-sub hover:text-text-main'}`} title="群聊">
-          <IconUsers active={sidebarTab === 'groups'} />
+          <IconUsers />
         </button>
         <button onClick={() => setSidebarTab('friends')} className={`relative flex-1 py-2.5 flex items-center justify-center transition-colors ${sidebarTab === 'friends' ? 'text-primary' : 'text-text-sub hover:text-text-main'}`} title="好友">
-          <IconBell active={sidebarTab === 'friends'} />
+          <IconBell />
           {pendingCount > 0 && (
             <span className="absolute top-1.5 right-1/2 translate-x-4 min-w-[16px] h-4 px-1 rounded-full bg-danger text-white text-[10px] leading-4 text-center">
               {pendingCount > 99 ? '99+' : pendingCount}
