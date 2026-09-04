@@ -11,7 +11,7 @@
   --color-bg-deco-to: #E8EEFB;
   --color-sidebar: #F7F8FA;
   --color-panel: #FFFFFF;
-  --color-bubble-self: #2E6BE6;
+  --color-bubble-self: #D9E8FF;
   --color-bubble-other: #F2F3F5;
   --color-text-main: #1F2329;
   --color-text-sub: #8A919F;
@@ -33,7 +33,7 @@ body {
   right: -6px;
   top: 8px;
   border: 6px solid transparent;
-  border-left-color: #2E6BE6;
+  border-left-color: #D9E8FF;
   border-right: none;
 }
 
