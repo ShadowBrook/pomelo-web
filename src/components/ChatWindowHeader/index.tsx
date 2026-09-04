@@ -55,7 +55,7 @@ export function ChatWindowHeader({ peerId }: { peerId: string }) {
 
       {/* 简版"我的个人信息"弹窗（portal 渲染到 body，避免冒泡到窗口拖拽条） */}
       {showProfile && createPortal((
-        <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setShowProfile(false)}>
+        <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onPointerDown={(e) => e.stopPropagation()} onClick={() => setShowProfile(false)}>
           <div className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main flex items-center justify-between">
               我的个人信息
