@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { ToastHost } from '@/components/ToastHost';
 
 type Tab = 'login' | 'register';
 
@@ -185,6 +186,8 @@ export default function LoginPage() {
           )}
         </div>
       </div>
+
+      <ToastHost />
     </div>
   );
 }

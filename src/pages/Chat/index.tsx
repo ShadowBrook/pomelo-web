@@ -10,6 +10,7 @@ import { useConnStore } from '@/stores/useConnStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { TopNavBar } from '@/components/TopNavBar';
 import { IMShell } from '@/components/IMShell';
+import { ToastHost } from '@/components/ToastHost';
 
 export default function ChatPage() {
   const user = useAuthStore((s) => s.user);
@@ -96,6 +97,8 @@ export default function ChatPage() {
 
       {/* 浮动窗口层 */}
       <IMShell />
+
+      <ToastHost />
     </div>
   );
 }
