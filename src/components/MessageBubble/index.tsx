@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ChatMessage } from '@/stores/useChatStore';
-import { MessageStatus, MsgType } from '@/sdk/types';
+import { MsgType } from '@/sdk/types';
 import { parseMediaContent, getMediaUrl, formatBytes } from '@/sdk/media';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 /** 图片点开展开全屏预览，再次点击关闭 */
 function ImageMessage({ url }: { url: string }) {
@@ -33,29 +34,6 @@ interface Props {
   onRetry?: (messageId: string) => void;
   isGroup?: boolean;
   onReadClick?: (messageId: string, seq: number) => void;
-}
-
-function StatusIcon({ status, onRetry }: { status: MessageStatus; onRetry?: () => void }) {
-  switch (status) {
-    case 'pending':
-    case 'sending':
-      return <span className="text-xs text-gray-400 animate-pulse">⏳</span>;
-    case 'sent':
-      return <span className="text-xs text-gray-400" title="已发送">✓</span>;
-    case 'delivered':
-      return <span className="text-xs text-gray-400" title="已送达">✓✓</span>;
-    case 'seen':
-      return <span className="text-xs text-blue-500" title="已读">◯</span>;
-    case 'failed':
-      // 媒体消息不提供重试（本地未保留原文件），点击无效果
-      return (
-        <span className="text-xs text-red-500" title={onRetry ? '发送失败' : '发送失败，请重新选择文件'}>
-          ❌
-        </span>
-      );
-    default:
-      return null;
-  }
 }
 
 function Body({ message }: { message: ChatMessage }) {
@@ -119,49 +97,58 @@ function Body({ message }: { message: ChatMessage }) {
 }
 
 export const MessageBubble = React.memo(function MessageBubble({ message, isSelf, onRetry, isGroup, onReadClick }: Props) {
+  const avatar = useAuthStore((s) => s.user?.avatar);
+  const selfChar = useAuthStore((s) => s.user?.nickname?.charAt(0).toUpperCase() || '我');
+
+  const qos = isSelf && !isGroup && (message.status === 'pending' || message.status === 'sending' || message.status === 'failed');
+
   return (
-    <div className={`flex ${isSelf ? 'justify-end' : 'justify-start'} mb-3 px-4`}>
-      {/* 对方头像（非己方时显示在左侧） */}
+    <div className={`flex ${isSelf ? 'justify-end' : 'justify-start'} mb-2 px-4 items-start`}>
+      {/* 外置状态/QoS 槽（自己消息在气泡左侧） */}
+      {isSelf && (
+        <div className="w-6 flex justify-center items-center self-center flex-shrink-0 mr-1">
+          {qos && (message.status === 'pending' || message.status === 'sending') && (
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-text-sub animate-spin" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M12 2a10 10 0 1 1-10 10" strokeLinecap="round" />
+            </svg>
+          )}
+          {qos && message.status === 'failed' && (
+            <span
+              className="w-4 h-4 rounded-full bg-danger text-white text-[10px] leading-4 text-center font-bold cursor-pointer"
+              title={message.msgType === MsgType.TEXT ? '发送失败，点击重试' : '发送失败，请重新选择文件'}
+              onClick={() => message.msgType === MsgType.TEXT && onRetry?.(message.id)}
+            >
+              !
+            </span>
+          )}
+          {isGroup && message.seq && (
+            <span
+              className="text-xs text-accent cursor-pointer hover:opacity-75"
+              title="查看已读成员"
+              onClick={(e) => { e.stopPropagation(); onReadClick?.(message.id, message.seq!); }}
+            >
+              ◯
+            </span>
+          )}
+        </div>
+      )}
+
       {!isSelf && (
-        <div className="w-9 h-9 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center text-white text-xs mr-2">
+        <div className="w-9 h-9 rounded-md bg-primary/15 flex-shrink-0 flex items-center justify-center text-primary text-xs mr-2 overflow-hidden">
           {(message.senderNickname || message.senderUserName || message.senderId).charAt(0).toUpperCase()}
         </div>
       )}
 
       {/* 气泡 */}
-      <div className={`max-w-[60%] px-3 py-2 rounded-lg text-sm break-words relative ${
-        isSelf
-          ? 'bg-bubble-self text-text-main rounded-tr-sm bubble-self'
-          : 'bg-bubble-other text-text-main border border-gray-200 rounded-tl-sm bubble-other'
+      <div className={`max-w-[60%] px-3 py-2 rounded-md text-sm break-words relative ${
+        isSelf ? 'bg-bubble-self text-text-main bubble-self' : 'bg-bubble-other text-text-main border border-line shadow-sm bubble-other'
       }`}>
         <Body message={message} />
-        {/* 己方消息状态图标 */}
-        {isSelf && (
-          <div className="flex justify-end mt-1 gap-1 items-center">
-            {isGroup ? (
-              message.seq && (
-                <span
-                  className="text-xs text-blue-400 cursor-pointer hover:text-blue-600"
-                  title="查看已读成员"
-                  onClick={(e) => { e.stopPropagation(); onReadClick?.(message.id, message.seq!); }}
-                >
-                  ◯
-                </span>
-              )
-            ) : (
-              <StatusIcon
-                status={message.status}
-                onRetry={message.msgType === MsgType.TEXT ? () => onRetry?.(message.id) : undefined}
-              />
-            )}
-          </div>
-        )}
       </div>
 
-      {/* 己方头像 */}
       {isSelf && (
-        <div className="w-9 h-9 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-white text-xs ml-2">
-          我
+        <div className="w-9 h-9 rounded-md bg-primary/15 flex-shrink-0 flex items-center justify-center text-primary text-xs ml-2 overflow-hidden">
+          {avatar ? <img src={avatar} alt="me" className="w-full h-full object-cover" /> : selfChar}
         </div>
       )}
     </div>
