@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ChatMessage } from '@/stores/useChatStore';
 import { MessageBubble } from '@/components/MessageBubble';
+import { formatMsgTime } from '@/utils/imTime';
 
 interface Props {
   messages: ChatMessage[];
@@ -16,15 +17,6 @@ interface Props {
 function shouldShowTimeDivider(prev: ChatMessage | null, curr: ChatMessage): boolean {
   if (!prev) return true;
   return curr.timestamp - prev.timestamp > 5 * 60 * 1000;
-}
-
-function formatDividerTime(ts: number): string {
-  const date = new Date(ts);
-  const now = new Date();
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-  }
-  return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export function MessageList({
@@ -78,14 +70,14 @@ export function MessageList({
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-text-sub text-sm">
+      <div className="flex-1 flex items-center justify-center text-text-sub text-sm bg-chat-bg">
         {loadingHistory ? '加载历史消息...' : '暂无消息记录'}
       </div>
     );
   }
 
   return (
-    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto py-3">
+    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto py-3 bg-chat-bg">
       {/* 顶部加载提示 */}
       {loadingHistory && (
         <div className="text-center py-2">
@@ -100,13 +92,9 @@ export function MessageList({
 
         return (
           <div key={msg.id}>
-            {showTime && (
-              <div className="text-center my-3">
-                <span className="text-xs text-text-sub bg-gray-200/60 px-2 py-0.5 rounded">
-                  {formatDividerTime(msg.timestamp)}
-                </span>
-              </div>
-            )}
+            <div className={`mb-1 ${isSelf ? 'text-right pr-[52px]' : 'text-left pl-[52px]'}`}>
+              {showTime && <span className="text-[11px] text-text-sub">{formatMsgTime(msg.timestamp)}</span>}
+            </div>
             <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} />
           </div>
         );
