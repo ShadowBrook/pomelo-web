@@ -84,8 +84,8 @@ function GroupItem({ group, isActive, onClick }: {
     <>
       <div
         onClick={onClick}
-        className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors border-b border-gray-100 ${
-          isActive ? 'bg-primary/10' : 'hover:bg-gray-50'
+        className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors border-b border-line ${
+          isActive ? 'bg-selected' : 'hover:bg-bg-page'
         }`}
       >
         <GridAvatar name={group.name} members={members} />
@@ -103,7 +103,7 @@ function GroupItem({ group, isActive, onClick }: {
         </button>
       </div>
       {showInvite && (
-        <div className="border-b border-gray-100 bg-gray-50 max-h-[200px] overflow-y-auto">
+        <div className="border-b border-line bg-bg-page max-h-[200px] overflow-y-auto">
           {friends.length === 0 ? (
             <div className="px-3 py-2 text-xs text-text-sub">暂无好友</div>
           ) : (
@@ -111,7 +111,7 @@ function GroupItem({ group, isActive, onClick }: {
               <div
                 key={f.userId}
                 onClick={() => handleInvite(f.userId)}
-                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer text-xs"
+                className="flex items-center gap-2 px-3 py-2 hover:bg-bg-page cursor-pointer text-xs"
               >
                 <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs flex-shrink-0">
                   {(f.nickname || f.userName).charAt(0).toUpperCase()}

@@ -2,8 +2,6 @@ import { create } from 'zustand';
 
 /** 主面板列宽（v9 复合窗左列） */
 export const MAIN_PANEL_WIDTH = 300;
-/** 聊天窗列最小宽度 */
-export const CHAT_PANEL_MIN_WIDTH = 640;
 
 interface WindowState {
   /** 整个 IM 界面是否可见（聊天窗 ✕ = false，只留导航栏+背景） */

@@ -41,40 +41,44 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* 头部行：标题段(蓝) + 页签(右端 260px) + 窗控图标 */}
+      {/* 头部行：标题段(蓝) + 右端两行(上:窗控图标靠右 / 下:页签 260 对齐详情栏) */}
       <div className="h-16 flex items-stretch bg-titlebar-chat flex-shrink-0 select-none">
         <ChatWindowHeader peerId={peerId} />
         <div className="flex-1" />
-        <DetailTabs isGroup={s.isGroup} isFriend={!!friend} tab={tab} onChange={setTab} />
-        <div className="flex items-center gap-1 px-2 flex-shrink-0">
-          <button
-            onClick={() => { setSoundOn((v) => !v); toast(soundOn ? '提示音已关' : '提示音已开'); }}
-            title={soundOn ? '关闭提示音' : '开启提示音'}
-            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M11 5L6 9H2v6h4l5 4V5z" />
-              {soundOn ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /> : <path d="M16 9l6 6M22 9l-6 6" />}
-            </svg>
-          </button>
-          <button
-            onClick={() => useWindowStore.getState().toggleFullscreen()}
-            title={useWindowStore.getState().fullscreen ? '还原' : '全屏'}
-            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={() => useWindowStore.getState().hideIM()}
-            title="关闭"
-            className="w-7 h-7 rounded text-white/85 hover:bg-danger flex items-center justify-center"
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
+        <div className="flex h-full flex-col flex-shrink-0">
+          <div className="h-8 flex items-start justify-end gap-1 px-2 pt-1 flex-shrink-0">
+            <button
+              onClick={() => { setSoundOn((v) => !v); toast(soundOn ? '提示音已关' : '提示音已开'); }}
+              title={soundOn ? '关闭提示音' : '开启提示音'}
+              className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                {soundOn ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /> : <path d="M16 9l6 6M22 9l-6 6" />}
+              </svg>
+            </button>
+            <button
+              onClick={() => useWindowStore.getState().toggleFullscreen()}
+              title={useWindowStore.getState().fullscreen ? '还原' : '全屏'}
+              className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => useWindowStore.getState().hideIM()}
+              title="关闭"
+              className="w-7 h-7 rounded text-white/85 hover:bg-danger flex items-center justify-center"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <DetailTabs isGroup={s.isGroup} isFriend={!!friend} tab={tab} onChange={setTab} />
+          </div>
         </div>
       </div>
 
@@ -104,7 +108,7 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
             quickReplies={['正在处理紧急事情', '有事先离开一会儿']}
           />
         </div>
-        <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} tab={tab} onTabChange={setTab} />
+        <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} tab={tab} />
       </div>
 
       {/* 群消息已读成员弹窗 */}

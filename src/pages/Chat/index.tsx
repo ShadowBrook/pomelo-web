@@ -95,7 +95,7 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* 浮动窗口层 */}
+      {/* IM 复合窗 */}
       <IMShell />
 
       <ToastHost />

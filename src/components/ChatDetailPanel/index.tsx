@@ -12,7 +12,6 @@ interface Props {
   peerId: string;
   isGroup: boolean;
   tab: DetailTab;
-  onTabChange: (t: DetailTab) => void;
 }
 
 /** 时间展示格式：YYYY-MM-DD HH:mm（同 GroupPanel 内 fmtDate 写法） */
