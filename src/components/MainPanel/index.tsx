@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useChatStore } from '@/stores/useChatStore';
 import { useFriendStore } from '@/stores/useFriendStore';
@@ -44,7 +43,6 @@ function IconUsers() {
 }
 
 export function MainPanel() {
-  const user = useAuthStore((s) => s.user);
   const connState = useConnStore((s) => s.state);
   const activePeerId = useConversationStore((s) => s.activePeerId);
   const openChat = useWindowStore((s) => s.openChat);
@@ -62,7 +60,6 @@ export function MainPanel() {
   const [sidebarTab, setSidebarTab] = useState<'chats' | 'groups' | 'friends'>('chats');
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleSelectConversation = useCallback(
     (peerId: string) => {
@@ -124,23 +121,6 @@ export function MainPanel() {
 
   return (
     <div className="flex flex-col h-full bg-sidebar">
-      {/* 个人卡（参考产品：面板顶部） */}
-      <div className="flex items-center gap-2 px-3 py-3 border-b border-line">
-        {user?.avatar ? (
-          <img src={user.avatar} alt="avatar" className="w-10 h-10 rounded-lg object-cover" />
-        ) : (
-          <div className="w-10 h-10 rounded-lg bg-primary text-white flex items-center justify-center text-sm font-medium">
-            {user?.nickname?.charAt(0).toUpperCase() || 'U'}
-          </div>
-        )}
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-medium text-text-main truncate">{user?.nickname || '用户'}</span>
-          <span className="text-xs text-text-sub">
-            {connState === 'connected' ? '● 已连接' : connState === 'connecting' ? '连接中...' : '未连接'}
-          </span>
-        </div>
-      </div>
-
       {/* Tab 切换（图标式） */}
       <div className="flex border-b border-line bg-panel">
         <button onClick={() => setSidebarTab('chats')} className={`relative flex-1 py-2.5 flex items-center justify-center transition-colors ${sidebarTab === 'chats' ? 'text-primary' : 'text-text-sub hover:text-text-main'}`} title="聊天">
@@ -213,44 +193,17 @@ export function MainPanel() {
         </>
       )}
 
-      {/* 底部：连接状态 + 退出 */}
-      <div className="flex items-center justify-between px-3 py-2 border-t border-line bg-panel">
-        <span className={`text-xs flex items-center gap-1 ${connState === 'connected' ? 'text-ok' : 'text-danger'}`}>
-          ● {connState === 'connected' ? '通信正常' : connState === 'connecting' ? '连接中' : '通信中断'}
-        </span>
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="text-xs text-text-sub hover:text-danger px-2 py-1 transition-colors"
-          title="退出登录"
-        >
-          退出
-        </button>
-      </div>
-
-      {/* 退出登录确认弹窗 */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setShowLogoutConfirm(false)}>
-          <div className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-5 text-center">
-              <p className="text-sm text-text-main">确认退出登录吗？</p>
-            </div>
-            <div className="flex border-t border-line">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 py-2.5 text-sm text-text-sub hover:bg-bg-page border-r border-line transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => useConnStore.getState().requestLogout()}
-                className="flex-1 py-2.5 text-sm text-danger hover:bg-bg-page font-medium transition-colors"
-              >
-                退出
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 底部：连接状态（点击可重连） */}
+      <button
+        onClick={() => connState !== 'connected' && useConnStore.getState().requestReconnect()}
+        disabled={connState === 'connected'}
+        className={`flex items-center gap-1 px-3 py-2 border-t border-line bg-panel text-xs text-left flex-shrink-0 ${
+          connState === 'connected' ? 'text-ok cursor-default' : 'text-danger'
+        }`}
+        title={connState === 'connected' ? undefined : '点击重连'}
+      >
+        ● {connState === 'connected' ? '通信正常' : connState === 'connecting' ? '连接中' : '通信中断，点击重连'}
+      </button>
 
       <AddFriendDialog open={showAddFriend} onClose={() => setShowAddFriend(false)} />
       <CreateGroupDialog
