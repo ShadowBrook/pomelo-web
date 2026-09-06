@@ -31,11 +31,11 @@ export function FriendsPanel({ onChatWithFriend }: Props) {
       {/* 待处理申请 */}
       {pendingRequests.length > 0 && (
         <div className="border-b">
-          <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50">好友申请</div>
+          <div className="px-3 py-2 text-xs text-text-sub bg-bg-page">好友申请</div>
           {pendingRequests.map((req) => (
             <div key={req.userId} className="flex items-center px-3 py-2 hover:bg-gray-50">
-              <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs overflow-hidden">
-                {req.avatar ? <img src={req.avatar} alt="" className="w-full h-full object-cover rounded-full" /> : req.nickname.charAt(0).toUpperCase()}
+              <div className="w-9 h-9 rounded-md bg-primary/15 text-primary flex items-center justify-center text-xs overflow-hidden">
+                {req.avatar ? <img src={req.avatar} alt="" className="w-full h-full object-cover" /> : req.nickname.charAt(0).toUpperCase()}
               </div>
               <div className="ml-2 flex-1 min-w-0">
                 <p className="text-sm font-medium text-text-main truncate">{req.nickname}</p>
@@ -53,7 +53,6 @@ export function FriendsPanel({ onChatWithFriend }: Props) {
       )}
 
       {/* 好友列表 */}
-      <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50">好友 ({friends.length})</div>
       {friends.length === 0 ? (
         <p className="text-center text-sm text-gray-400 py-8">暂无好友</p>
       ) : (
@@ -64,8 +63,8 @@ export function FriendsPanel({ onChatWithFriend }: Props) {
             className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-200/50"
           >
             <div className="relative">
-              <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs overflow-hidden">
-                {friend.avatar ? <img src={friend.avatar} alt="" className="w-full h-full object-cover rounded-full" /> : friend.nickname.charAt(0).toUpperCase()}
+              <div className="w-9 h-9 rounded-md bg-primary/15 text-primary flex items-center justify-center text-xs overflow-hidden">
+                {friend.avatar ? <img src={friend.avatar} alt="" className="w-full h-full object-cover" /> : friend.nickname.charAt(0).toUpperCase()}
               </div>
               {friend.online && (
                 <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border border-white"></div>
