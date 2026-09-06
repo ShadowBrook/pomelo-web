@@ -9,7 +9,7 @@ import { useWindowStore } from '@/stores/useWindowStore';
 import { useConnStore } from '@/stores/useConnStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { TopNavBar } from '@/components/TopNavBar';
-import { WindowLayer } from '@/components/window/WindowLayer';
+import { IMShell } from '@/components/IMShell';
 
 export default function ChatPage() {
   const user = useAuthStore((s) => s.user);
@@ -24,9 +24,9 @@ export default function ChatPage() {
     }
   }, [user, token, connect]);
 
-  // 进入工作台：主面板 + 最近一个会话的聊天窗自动吸附展示（无需手动点开会话）
+  // 进入工作台：IM 界面可见 + 最近一个会话（参考 v9 登录即展示）
   useEffect(() => {
-    useWindowStore.getState().openMain();
+    useWindowStore.getState().openIM();
     const sorted = useConversationStore.getState().getSortedList();
     if (sorted.length > 0) {
       useWindowStore.getState().openChat(sorted[0]);
@@ -95,7 +95,7 @@ export default function ChatPage() {
       )}
 
       {/* 浮动窗口层 */}
-      <WindowLayer />
+      <IMShell />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useConversationStore } from '@/stores/useConversationStore';
 import { useChatStore } from '@/stores/useChatStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
-import { useWindowStore, chatWindowId } from '@/stores/useWindowStore';
+import { useWindowStore } from '@/stores/useWindowStore';
 import { useConnStore } from '@/stores/useConnStore';
 import { getProfile } from '@/utils/api';
 import { ConversationItem } from '@/components/ConversationItem';
@@ -75,7 +75,12 @@ export function MainPanel() {
   const handleDeleteConversation = useCallback((peerId: string) => {
     useConversationStore.getState().removeConversation(peerId);
     useChatStore.getState().clearMessages(peerId);
-    useWindowStore.getState().close(chatWindowId(peerId));
+    const ws = useWindowStore.getState();
+    if (ws.chatPeerId === peerId) {
+      const next = useConversationStore.getState().getSortedList()[0];
+      if (next) ws.openChat(next);
+      else ws.closeChat();
+    }
   }, []);
 
   const handleChatWithFriend = useCallback(

@@ -1,103 +1,35 @@
 import { create } from 'zustand';
 
-export type WindowKind = 'main' | 'chat';
-
-export interface WinInfo {
-  id: string;
-  kind: WindowKind;
-  peerId: string | null;
-  pos: { x: number; y: number };
-  zIndex: number;
-  fullscreen: boolean;
-  snapped?: boolean;
-}
-
-export const MAIN_WINDOW_ID = 'main';
+/** 主面板列宽（v9 复合窗左列） */
 export const MAIN_PANEL_WIDTH = 300;
-export const chatWindowId = (peerId: string) => `chat:${peerId}`;
+/** 聊天窗列最小宽度 */
+export const CHAT_PANEL_MIN_WIDTH = 640;
 
 interface WindowState {
-  windows: WinInfo[];
-  topZ: number;
-  openMain: () => void;
+  /** 整个 IM 界面是否可见（聊天窗 ✕ = false，只留导航栏+背景） */
+  imVisible: boolean;
+  /** 复合窗全屏（参考 rb_main2） */
+  fullscreen: boolean;
+  /** 当前聊天窗指向的会话（null = 空态占位） */
+  chatPeerId: string | null;
+
+  openIM: () => void;
+  hideIM: () => void;
+  toggleFullscreen: () => void;
   openChat: (peerId: string) => void;
-  close: (id: string) => void;
-  focus: (id: string) => void;
-  move: (id: string, pos: { x: number; y: number }) => void;
-  toggleFullscreen: (id: string) => void;
+  closeChat: () => void;
   clearAll: () => void;
 }
 
-export const useWindowStore = create<WindowState>()((set, get) => ({
-  windows: [],
-  topZ: 1,
+export const useWindowStore = create<WindowState>()((set) => ({
+  imVisible: false,
+  fullscreen: false,
+  chatPeerId: null,
 
-  openMain: () =>
-    set((s) => {
-      if (s.windows.some((w) => w.id === MAIN_WINDOW_ID)) return s;
-      return {
-        windows: [
-          ...s.windows,
-          { id: MAIN_WINDOW_ID, kind: 'main' as const, peerId: null, pos: { x: 140, y: 100 }, zIndex: s.topZ + 1, fullscreen: false },
-        ],
-        topZ: s.topZ + 1,
-      };
-    }),
-
-  openChat: (peerId) => {
-    const id = chatWindowId(peerId);
-    if (get().windows.some((w) => w.id === id)) {
-      get().focus(id);
-      return;
-    }
-    set((s) => {
-      const main = s.windows.find((w) => w.id === MAIN_WINDOW_ID);
-      const n = s.windows.filter((w) => w.kind === 'chat').length;
-      const pos = main
-        ? { x: main.pos.x + MAIN_PANEL_WIDTH, y: main.pos.y }
-        : { x: 200 + (n % 6) * 28, y: 120 + (n % 6) * 24 };
-      return {
-        windows: [
-          ...s.windows,
-          { id, kind: 'chat' as const, peerId, pos, zIndex: s.topZ + 1, fullscreen: false, ...(main ? { snapped: true } : {}) },
-        ],
-        topZ: s.topZ + 1,
-      };
-    });
-  },
-
-  close: (id) =>
-    set((s) => ({
-      windows: s.windows
-        .filter((w) => w.id !== id)
-        .map((w) => (id === MAIN_WINDOW_ID && w.kind === 'chat' ? { ...w, snapped: false } : w)),
-    })),
-
-  focus: (id) =>
-    set((s) => {
-      const win = s.windows.find((w) => w.id === id);
-      if (!win || win.zIndex === s.topZ) return s;
-      return {
-        windows: s.windows.map((w) => (w.id === id ? { ...w, zIndex: s.topZ + 1 } : w)),
-        topZ: s.topZ + 1,
-      };
-    }),
-
-  move: (id, pos) =>
-    set((s) => ({
-      windows: s.windows.map((w) =>
-        w.id === id
-          ? { ...w, pos, snapped: false }
-          : id === MAIN_WINDOW_ID && w.kind === 'chat'
-            ? { ...w, snapped: false }
-            : w,
-      ),
-    })),
-
-  toggleFullscreen: (id) =>
-    set((s) => ({
-      windows: s.windows.map((w) => (w.id === id ? { ...w, fullscreen: !w.fullscreen } : w)),
-    })),
-
-  clearAll: () => set({ windows: [], topZ: 1 }),
+  openIM: () => set({ imVisible: true }),
+  hideIM: () => set({ imVisible: false }),
+  toggleFullscreen: () => set((s) => ({ fullscreen: !s.fullscreen })),
+  openChat: (peerId) => set({ chatPeerId: peerId, imVisible: true }),
+  closeChat: () => set({ chatPeerId: null }),
+  clearAll: () => set({ imVisible: false, fullscreen: false, chatPeerId: null }),
 }));
