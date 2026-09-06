@@ -1,24 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #2E6BE6;
-  --color-primary-dark: #2456C4;
-  --color-danger: #E64545;
+  --color-primary: #235AAD;
+  --color-primary-dark: #18479F;
+  --color-danger: #FF4D50;
   --color-warn: #E6922E;
-  --color-ok: #3BB54A;
+  --color-ok: #34AD64;
   --color-bg-page: #EDEFF3;
   --color-bg-deco-from: #DBE7FB;
   --color-bg-deco-to: #E8EEFB;
-  --color-sidebar: #F7F8FA;
+  --color-sidebar: #FFFFFF;
   --color-panel: #FFFFFF;
-  --color-bubble-self: #D9E8FF;
-  --color-bubble-other: #F2F3F5;
+  --color-bubble-self: #CAE9FD;
+  --color-bubble-other: #FFFFFF;
+  --color-chat-bg: #F6F7FB;
+  --color-selected: #DDF0FF;
+  --color-accent: #28A0FF;
   --color-text-main: #1F2329;
   --color-text-sub: #8A919F;
   --color-line: #E4E7ED;
-  --color-topbar: #2B2F36;
-  --color-titlebar-from: #3572E8;
-  --color-titlebar-to: #2A5BC8;
+  --color-topbar: #1B232E;
+  --color-titlebar-main: #18479F;
+  --color-titlebar-chat: #235AAD;
+  --color-send-btn: #18479F;
 }
 
 body {
@@ -26,14 +30,14 @@ body {
   background-color: #EDEFF3;
 }
 
-/* 气泡小三角（颜色跟随新 token 值） */
+/* 气泡小三角 */
 .bubble-self::after {
   content: '';
   position: absolute;
   right: -6px;
   top: 8px;
   border: 6px solid transparent;
-  border-left-color: #D9E8FF;
+  border-left-color: #CAE9FD;
   border-right: none;
 }
 
@@ -43,6 +47,16 @@ body {
   left: -6px;
   top: 8px;
   border: 6px solid transparent;
-  border-right-color: #F2F3F5;
+  border-right-color: #FFFFFF;
   border-left: none;
+}
+
+/* 会话选中态左上红色折角（参考 rb_main1） */
+.corner-red::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-top: 12px solid #FF4D50;
+  border-right: 12px solid transparent;
 }
