@@ -39,7 +39,7 @@ export default function ChatPage() {
     document.title = totalUnread > 0 ? `(${totalUnread}) Pomelo Chat` : 'Pomelo Chat';
   }, [totalUnread]);
 
-  // 断线重连（窗口内 ConnectionBanner 通过 useConnStore 触发）
+  // 断线重连（主面板头部通信状态通过 useConnStore 触发）
   const handleReconnect = useCallback(() => {
     if (user && token) {
       disconnect();

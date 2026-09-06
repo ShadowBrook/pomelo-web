@@ -1,34 +1,31 @@
-import { useState } from 'react';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useFriendStore } from '@/stores/useFriendStore';
+import { useGroupStore } from '@/stores/useGroupStore';
 
-/**
- * 聊天窗标题栏：对方名 + 标签 + 声音开关（用户卡已迁至主面板标题栏，见 UserCardTitle）。
- * 声音开关为视觉开关（实际通知音实现见 spec §12.3）。
- */
+/** 聊天窗标题段：名称 + 人数/陌生人徽章（声音/全屏/关闭在头部行右端，见 ChatWindowContent） */
 export function ChatWindowHeader({ peerId }: { peerId: string }) {
   const conversation = useConversationStore((s) => s.conversations[peerId]);
   const friend = useFriendStore((s) => s.friends.find((f) => f.userId === peerId));
-  const [soundOn, setSoundOn] = useState(true);
+  const group = useGroupStore((s) => s.groups[peerId]);
+  const memberCount = useGroupStore((s) => s.groupMembers[peerId]?.length);
 
   const isGroup = conversation?.type === 'group';
   const isStranger = !isGroup && !friend;
+  const count = memberCount ?? group?.memberCount;
 
   return (
-    <div className="flex items-stretch h-12 min-w-0 flex-1">
-      {/* 对方段：对方名 + 标签 + 声音开关（用户卡在主面板标题栏，见 UserCardTitle） */}
-      <div className="flex items-center gap-2 px-3 min-w-0 flex-1">
-        <span className="text-sm font-medium text-white truncate">{conversation?.nickname ?? peerId}</span>
-        {isGroup && <span className="text-[11px] px-1.5 py-0.5 rounded-sm bg-white/20 text-white flex-shrink-0">群聊</span>}
-        {isStranger && <span className="text-[11px] px-1.5 py-0.5 rounded-sm bg-warn text-white flex-shrink-0">陌生人</span>}
-        <button
-          onClick={() => setSoundOn((v) => !v)}
-          title={soundOn ? '声音开' : '声音关'}
-          className="w-6 h-6 rounded text-white/80 hover:text-white hover:bg-white/20 text-sm flex-shrink-0"
-        >
-          {soundOn ? '🔊' : '🔇'}
-        </button>
-      </div>
+    <div className="flex items-center gap-2 px-3 min-w-0 flex-1 h-full">
+      <span className="text-sm font-medium text-white truncate">{conversation?.nickname ?? peerId}</span>
+      {isGroup && (
+        <span className="flex items-center gap-1 text-xs text-white/85 flex-shrink-0">
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2.5 20c.8-3 3.4-5 6.5-5s5.7 2 6.5 5" />
+          </svg>
+          {count != null ? `${count}人` : ''}
+        </span>
+      )}
+      {isStranger && <span className="text-[11px] px-1.5 py-0.5 rounded-sm bg-warn text-white flex-shrink-0">陌生人</span>}
     </div>
   );
 }

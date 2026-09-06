@@ -3,19 +3,14 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { getProfile } from '@/utils/api';
+import type { DetailTab } from '@/components/DetailTabs';
 
 interface Props {
   peerId: string;
   isGroup: boolean;
+  tab: DetailTab;
+  onTabChange: (t: DetailTab) => void;
 }
-
-type Tab = 'info' | 'album' | 'voice';
-
-const TABS: Array<{ key: Tab; label: string }> = [
-  { key: 'info', label: '对方信息' },
-  { key: 'album', label: '对方相册' },
-  { key: 'voice', label: '语音介绍' },
-];
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -35,12 +30,11 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
-export function ChatDetailPanel({ peerId, isGroup }: Props) {
+export function ChatDetailPanel({ peerId, isGroup, tab }: Props) {
   const user = useAuthStore((s) => s.user);
   const friend = useFriendStore((s) => s.friends.find((f) => f.userId === peerId));
   const group = useGroupStore((s) => s.groups[peerId]);
   const memberCount = useGroupStore((s) => s.groupMembers[peerId]?.length);
-  const [tab, setTab] = useState<Tab>('info');
   // 陌生人资料兜底（好友数据缺头像/昵称时也拉一次）
   const [profile, setProfile] = useState<{ nickname: string; avatar: string } | null>(null);
 
@@ -63,29 +57,8 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
     : friend?.nickname ?? profile?.nickname ?? peerId;
   const displayAvatar = isGroup ? '' : friend?.avatar ?? profile?.avatar ?? '';
 
-  const tabBtn = (key: Tab, label: string) => (
-    <button
-      key={key}
-      onClick={() => setTab(key)}
-      className={`flex-1 py-2.5 text-xs transition-colors ${
-        tab === key ? 'text-primary font-medium border-b-2 border-primary' : 'text-text-sub hover:text-text-main'
-      }`}
-    >
-      {label}
-    </button>
-  );
-
   return (
     <div className="w-[260px] flex-shrink-0 border-l border-line bg-panel flex flex-col min-h-0">
-      {/* Tab 头：群聊只有"群组信息"一个 tab；单聊三个 tab */}
-      <div className="flex border-b border-line flex-shrink-0">
-        {isGroup ? (
-          <button className="flex-1 py-2.5 text-xs text-primary font-medium border-b-2 border-primary">群组信息</button>
-        ) : (
-          TABS.map((t) => tabBtn(t.key, t.label))
-        )}
-      </div>
-
       {tab === 'info' && (
         <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
           <div className="flex flex-col items-center gap-1.5 px-4 pt-5 pb-3">

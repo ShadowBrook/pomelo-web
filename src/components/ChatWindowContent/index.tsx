@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react';
 import { useChatSession } from '@/hooks/useChatSession';
-import { useConnStore } from '@/stores/useConnStore';
+import { useWindowStore } from '@/stores/useWindowStore';
+import { useFriendStore } from '@/stores/useFriendStore';
+import { toast } from '@/stores/useToastStore';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
-import { ConnectionBanner } from '@/components/ConnectionBanner';
+import { ChatWindowHeader } from '@/components/ChatWindowHeader';
+import { DetailTabs, DetailTab } from '@/components/DetailTabs';
 import { ChatDetailPanel } from '@/components/ChatDetailPanel';
-
-const QUICK_REPLIES = ['正在处理紧急事情', '有事先离开一会儿'];
 
 interface ReadStatus {
   readers: Array<{ userId: string; nickname: string; avatar: string }>;
@@ -15,8 +16,10 @@ interface ReadStatus {
 
 export function ChatWindowContent({ peerId }: { peerId: string }) {
   const s = useChatSession(peerId);
-  const connState = useConnStore((st) => st.state);
+  const [tab, setTab] = useState<DetailTab>('info');
+  const [soundOn, setSoundOn] = useState(true);
   const [readStatus, setReadStatus] = useState<ReadStatus | null>(null);
+  const friend = useFriendStore((st) => st.friends.find((f) => f.userId === peerId));
 
   // 点击群消息已读圈 → 查询已读用户列表
   const handleReadClick = useCallback(
@@ -37,45 +40,72 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
   }
 
   return (
-    <div className="flex-1 flex min-h-0">
-      {/* 左：聊天区 */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <ConnectionBanner
-          state={connState}
-          onReconnect={() => useConnStore.getState().requestReconnect()}
-        />
-        <MessageList
-          messages={s.messages}
-          currentUserId={s.currentUserId}
-          onRetry={s.retrySend}
-          loadingHistory={s.loadingHistory}
-          hasMore={s.hasMore}
-          onLoadMore={s.loadMoreHistory}
-          isGroup={s.isGroup}
-          onReadClick={handleReadClick}
-        />
-        <MessageInput
-          peerId={peerId}
-          draft={s.draft}
-          onSendText={s.sendText}
-          onSendImage={s.sendImage}
-          onSendFile={s.sendFile}
-          onSendVoice={s.sendVoice}
-          onSendVideo={s.sendVideo}
-          onSendEmoji={s.sendEmoji}
-          onDraftChange={s.onDraftChange}
-          disabled={connState !== 'connected'}
-          statusNode={
-            <span className={`flex items-center gap-1 ${connState === 'connected' ? 'text-ok' : 'text-danger'}`}>
-              ● {connState === 'connected' ? '通信正常' : connState === 'connecting' ? '连接中' : '通信中断'}
-            </span>
-          }
-          quickReplies={QUICK_REPLIES}
-        />
+    <div className="flex-1 flex flex-col min-h-0">
+      {/* 头部行：标题段(蓝) + 页签(右端 260px) + 窗控图标 */}
+      <div className="h-16 flex items-stretch bg-titlebar-chat flex-shrink-0 select-none">
+        <ChatWindowHeader peerId={peerId} />
+        <div className="flex-1" />
+        <DetailTabs isGroup={s.isGroup} isFriend={!!friend} tab={tab} onChange={setTab} />
+        <div className="flex items-center gap-1 px-2 flex-shrink-0">
+          <button
+            onClick={() => { setSoundOn((v) => !v); toast(soundOn ? '提示音已关' : '提示音已开'); }}
+            title={soundOn ? '关闭提示音' : '开启提示音'}
+            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              {soundOn ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /> : <path d="M16 9l6 6M22 9l-6 6" />}
+            </svg>
+          </button>
+          <button
+            onClick={() => useWindowStore.getState().toggleFullscreen()}
+            title={useWindowStore.getState().fullscreen ? '还原' : '全屏'}
+            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => useWindowStore.getState().hideIM()}
+            title="关闭"
+            className="w-7 h-7 rounded text-white/85 hover:bg-danger flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {/* 右：详情栏 */}
-      <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} />
+      {/* 主体：左聊天区 + 右详情栏 */}
+      <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-chat-bg">
+          <MessageList
+            messages={s.messages}
+            currentUserId={s.currentUserId}
+            onRetry={s.retrySend}
+            loadingHistory={s.loadingHistory}
+            hasMore={s.hasMore}
+            onLoadMore={s.loadMoreHistory}
+            isGroup={s.isGroup}
+            onReadClick={handleReadClick}
+          />
+          <MessageInput
+            peerId={peerId}
+            draft={s.draft}
+            onSendText={s.sendText}
+            onSendImage={s.sendImage}
+            onSendFile={s.sendFile}
+            onSendVoice={s.sendVoice}
+            onSendVideo={s.sendVideo}
+            onSendEmoji={s.sendEmoji}
+            onDraftChange={s.onDraftChange}
+            quickReplies={['正在处理紧急事情', '有事先离开一会儿']}
+          />
+        </div>
+        <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} tab={tab} onTabChange={setTab} />
+      </div>
 
       {/* 群消息已读成员弹窗 */}
       {readStatus && (
