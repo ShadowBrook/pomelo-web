@@ -4,10 +4,13 @@ import { IncomingMessage, StatusUpdate, MsgType, MessageStatus } from '@/sdk/typ
 import { generateId } from '@/sdk/protocol';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { buildMediaContent, isMediaType, parseMediaContent } from '@/sdk/media';
 
 export interface ChatMessage {
   id: string;
+  /** 发送确认后 id 会改写为服务端雪花 ID，这里保留原客户端 ID 供后续状态事件匹配 */
+  clientMsgId?: string;
   senderId: string;
   recipientId: string;
   senderUserName?: string;
@@ -62,6 +65,34 @@ function toChatMessage(m: IncomingMessage, peerId: string): ChatMessage {
     timestamp: m.createdAt || Date.now(),
     seq: m.seq,
   };
+}
+
+/**
+ * 清洗持久化消息中的遗留重复：旧版本地发送的消息以客户端生成的 id 持久化，
+ * 刷新后历史拉取会再写入同一条消息的服务端 id 副本（两个 id 并存）。
+ * seq 由服务端分配；C2C 两个方向各自计数，需按消息方向区分后再判重。
+ */
+export function sanitizePersistedMessages(
+  messages: Record<string, ChatMessage[]>,
+  myUserId?: string,
+): { messages: Record<string, ChatMessage[]>; changed: boolean } {
+  let changed = false;
+  const cleaned: Record<string, ChatMessage[]> = {};
+  for (const [pid, msgs] of Object.entries(messages)) {
+    const seen = new Set<string>();
+    cleaned[pid] = msgs.filter((m) => {
+      if (m.seq == null || m.seq <= 0) return true;
+      const own = m.senderId === '__self__' || (myUserId != null && m.senderId === myUserId);
+      const key = `${own ? 'self' : 'peer'}:${m.seq}`;
+      if (seen.has(key)) {
+        changed = true;
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+  return { messages: cleaned, changed };
 }
 
 export const useChatStore = create<ChatState>()(
@@ -160,10 +191,22 @@ export const useChatStore = create<ChatState>()(
           const newMessages = { ...state.messages };
           for (const peerId of Object.keys(newMessages)) {
             const msgs = newMessages[peerId];
-            const idx = msgs.findIndex(m => m.id === update.id);
+            const idx = msgs.findIndex((m) => m.id === update.id || m.clientMsgId === update.id);
             if (idx !== -1) {
-              const updated = [...msgs];
-              updated[idx] = { ...updated[idx], status: update.status, seq: update.seq ?? updated[idx].seq };
+              const cur = msgs[idx];
+              // 发送确认（sent）携带服务端雪花 ID：把本地生成的 id 改写为服务端 id，
+              // 否则刷新后历史拉取按 id 去重匹配不上，自己的消息会重复展示
+              const serverId = update.serverMessageId ?? cur.id;
+              const updated = [
+                ...msgs,
+              ];
+              updated[idx] = {
+                ...cur,
+                id: serverId,
+                clientMsgId: serverId !== cur.id ? cur.id : cur.clientMsgId,
+                status: update.status,
+                seq: update.seq ?? updated[idx].seq,
+              };
               newMessages[peerId] = updated;
               return { messages: newMessages };
             }
@@ -410,6 +453,13 @@ export const useChatStore = create<ChatState>()(
         ),
         hasMoreHistory: state.hasMoreHistory,
       }),
+      // 历史版本遗留清洗：见 sanitizePersistedMessages 注释
+      onRehydrateStorage: () => (state) => {
+        if (!state?.messages) return;
+        const myId = useAuthStore.getState().user?.userId;
+        const { messages: cleaned, changed } = sanitizePersistedMessages(state.messages, myId);
+        if (changed) useChatStore.setState({ messages: cleaned });
+      },
     }
   )
 );

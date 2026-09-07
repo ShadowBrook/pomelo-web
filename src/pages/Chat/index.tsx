@@ -19,9 +19,13 @@ export default function ChatPage() {
   const { totalUnread } = useUnreadCount();
 
   // 页面加载时连接 IM（useIMClient 仅此处调用——它有卸载断连副作用）
+  // 会话列表从 localStorage 恢复，但好友列表不持久化——必须在登录时拉取，
+  // 否则未进过"好友"页签前所有会话都命中陌生人兜底
   useEffect(() => {
     if (user && token) {
       connect(user.userId, token, user.userName, user.nickname);
+      useFriendStore.getState().loadFriends(user.userId);
+      useFriendStore.getState().loadPendingRequests(user.userId);
     }
   }, [user, token, connect]);
 

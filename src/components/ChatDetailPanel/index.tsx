@@ -5,6 +5,7 @@ import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { toast } from '@/stores/useToastStore';
 import { getProfile } from '@/utils/api';
+import { getIMClient } from '@/hooks/useIMClient';
 import { GridAvatar } from '@/components/GridAvatar';
 import type { DetailTab } from '@/components/DetailTabs';
 
@@ -59,12 +60,23 @@ export function ChatDetailPanel({ peerId, isGroup, tab }: Props) {
   // 陌生人资料兜底（好友数据缺头像/昵称时也拉一次）
   const [profile, setProfile] = useState<{ nickname: string; avatar: string } | null>(null);
 
+  // 群成员懒加载兜底：成员列表只在 member-change 推送时刷新，
+  // 打开群聊详情时没有就主动拉一次（群主/创建者昵称、群头像都依赖它）
+  useEffect(() => {
+    if (!isGroup || members) return;
+    getIMClient()
+      ?.getGroupMembers(peerId)
+      .then((ms) => useGroupStore.getState().setMembers(peerId, ms))
+      .catch(() => {});
+  }, [peerId, isGroup, members]);
+
   useEffect(() => {
     let cancelled = false;
     if (!isGroup && !friend) {
       getProfile(peerId)
         .then((res) => {
-          if (!cancelled && res.data) setProfile({ nickname: res.data.nickname, avatar: res.data.avatar });
+          // 后端 ok() 把字段挂在顶层（{code, nickname, avatar, ...}），没有 data 包裹层
+          if (!cancelled && res.nickname) setProfile({ nickname: res.nickname, avatar: res.avatar });
         })
         .catch(() => {});
     }
