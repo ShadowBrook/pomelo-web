@@ -3,6 +3,8 @@ import {
   buildMediaContent,
   parseMediaContent,
   getMediaUrl,
+  getMediaThumbUrl,
+  formatDuration,
   mediaPreview,
   isMediaType,
 } from './media';
@@ -28,6 +30,30 @@ describe('media helpers', () => {
   it('buildMediaContent 无 duration 时不带该字段', () => {
     const raw = buildMediaContent({ key: 'file/1/b.pdf', fileName: 'b.pdf', size: 10 });
     expect(JSON.parse(raw).duration).toBeUndefined();
+  });
+
+  it('buildMediaContent 携带视频封面 thumb key，url/thumbUrl 不落 content', () => {
+    const raw = buildMediaContent({
+      key: 'video/1/c.mp4', fileName: 'c.mp4', size: 2048, duration: 65000, thumb: 'image/1/poster.jpg',
+    });
+    const c = JSON.parse(raw);
+    expect(c.thumb).toBe('image/1/poster.jpg');
+    expect(c.url).toBeUndefined();
+    expect(c.thumbUrl).toBeUndefined();
+  });
+
+  it('getMediaThumbUrl 取服务端注入的 thumbUrl', () => {
+    expect(getMediaThumbUrl({ content: '{"key":"v.mp4","thumbUrl":"http://s/poster.jpg"}' })).toBe('http://s/poster.jpg');
+    expect(getMediaThumbUrl({ content: '{"key":"v.mp4"}' })).toBeUndefined();
+    expect(getMediaThumbUrl({ content: 'bad' })).toBeUndefined();
+  });
+
+  it('formatDuration 毫秒转 m:ss', () => {
+    expect(formatDuration(undefined)).toBeUndefined();
+    expect(formatDuration(0)).toBeUndefined();
+    expect(formatDuration(1000)).toBe('0:01');
+    expect(formatDuration(65000)).toBe('1:05');
+    expect(formatDuration(600000)).toBe('10:00');
   });
 
   it('parseMediaContent 解析合法 JSON，坏 JSON 返回 null', () => {

@@ -23,13 +23,15 @@ export function parseMediaContent(content: string): MediaContent | null {
 
 /**
  * 构造媒体消息 content JSON（发送方用）。
- * 只存 key + 元数据，不存 url；url 由服务端读侧注入。
+ * 只存 key + 元数据，不存 url；url/thumbUrl 由服务端读侧注入。
+ * thumb 为视频封面帧的对象存储 key（发送端本地抓帧后上传）。
  */
 export function buildMediaContent(params: {
   key: string;
   fileName: string;
   size: number;
   duration?: number;
+  thumb?: string;
 }): string {
   const ext = (params.fileName.split('.').pop() || '').toLowerCase();
   const content: MediaContent = {
@@ -41,7 +43,73 @@ export function buildMediaContent(params: {
   if (params.duration && params.duration > 0) {
     content.duration = params.duration;
   }
+  if (params.thumb) {
+    content.thumb = params.thumb;
+  }
   return JSON.stringify(content);
+}
+
+/** 视频封面缩略图 URL（服务端注入的 thumbUrl） */
+export function getMediaThumbUrl(msg: { content: string }): string | undefined {
+  return parseMediaContent(msg.content)?.thumbUrl;
+}
+
+/**
+ * 视频时长毫秒 → "m:ss" 展示文案。
+ */
+export function formatDuration(ms?: number): string | undefined {
+  if (!ms || ms <= 0) return undefined;
+  const totalSec = Math.round(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * 从本地视频文件抓取封面帧：定位到 10% 处（跳过常见黑帧）绘制到 canvas。
+ * 返回 JPEG Blob 与视频时长毫秒数；失败抛错（调用方降级为无封面）。
+ */
+export async function captureVideoPoster(file: File): Promise<{ blob: Blob; durationMs: number }> {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.src = url;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('视频元数据加载失败'));
+    });
+    const durationMs =
+      Number.isFinite(video.duration) && video.duration > 0 ? Math.round(video.duration * 1000) : 0;
+    const seekTo = Math.min(Math.max((durationMs * 0.1) / 1000, 0.1), Math.max(video.duration - 0.1, 0.1));
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('视频帧定位超时')), 3000);
+      video.onseeked = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      video.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error('视频帧定位失败'));
+      };
+      video.currentTime = seekTo;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 360;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D 上下文不可用');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.7));
+    if (!blob) throw new Error('封面帧生成失败');
+    return { blob, durationMs };
+  } finally {
+    video.removeAttribute('src');
+    video.load();
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**
