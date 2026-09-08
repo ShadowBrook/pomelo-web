@@ -130,7 +130,13 @@ export function useChatSession(peerId: string) {
     loadMoreHistory,
     sendText,
     sendImage: (f: File) => sendMedia({ msgType: MsgType.IMAGE, file: f }),
-    sendFile: (f: File) => sendMedia({ msgType: MsgType.FILE, file: f }),
+    sendFile: (f: File) => {
+      // 通用文件入口按 MIME 分流：视频/图片自动升级为对应媒体消息（对齐主流 IM 习惯），
+      // 否则视频会以 FILE 类型展示为回形针附件，无法触发封面缩略图与播放器
+      if (f.type.startsWith('video/')) return sendMedia({ msgType: MsgType.VIDEO, file: f });
+      if (f.type.startsWith('image/')) return sendMedia({ msgType: MsgType.IMAGE, file: f });
+      return sendMedia({ msgType: MsgType.FILE, file: f });
+    },
     sendVoice: (f: File, duration?: number) => sendMedia({ msgType: MsgType.VOICE, file: f, duration }),
     sendVideo: (f: File) => sendMedia({ msgType: MsgType.VIDEO, file: f }),
     sendEmoji: (f: File) => sendMedia({ msgType: MsgType.EMOJI, file: f }),

@@ -1,9 +1,70 @@
 import React, { useState } from 'react';
 import { ChatMessage } from '@/stores/useChatStore';
 import { MsgType } from '@/sdk/types';
-import { parseMediaContent, getMediaUrl, formatBytes } from '@/sdk/media';
+import { parseMediaContent, getMediaUrl, getMediaThumbUrl, formatBytes, formatDuration } from '@/sdk/media';
 import { useAuthStore } from '@/stores/useAuthStore';
 
+/** 视频消息：封面缩略图 + 播放浮层 + 时长角标，点击弹出全屏播放页 */
+function VideoMessage({ url, thumbUrl, durationMs }: { url?: string; thumbUrl?: string; durationMs?: number }) {
+  const [open, setOpen] = useState(false);
+  const duration = formatDuration(durationMs);
+
+  // 上传完成前（localUrl 阶段）或无封面降级：用 video preload=metadata 展示首帧
+  if (!url) {
+    return <span className="text-xs text-gray-400">[视频]</span>;
+  }
+
+  return (
+    <>
+      <div
+        className="relative cursor-pointer rounded overflow-hidden"
+        style={{ width: 220, height: 140, backgroundColor: 'rgba(0,0,0,0.06)' }}
+        onClick={() => setOpen(true)}
+        title="点击播放"
+      >
+        {thumbUrl ? (
+          <img src={thumbUrl} alt="视频封面" className="w-full h-full object-cover" />
+        ) : (
+          <video src={url} preload="metadata" muted className="w-full h-full object-cover" />
+        )}
+        {/* 播放浮层 */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-black/45 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 text-white ml-0.5" fill="currentColor">
+              <path d="M8 5.5v13l11-6.5z" />
+            </svg>
+          </div>
+        </div>
+        {duration && (
+          <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] leading-none">
+            {duration}
+          </span>
+        )}
+      </div>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center cursor-zoom-out"
+          onClick={() => setOpen(false)}
+        >
+          <video
+            src={url}
+            controls
+            autoPlay
+            className="max-w-[92vw] max-h-[90vh] rounded shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/15 text-white text-lg leading-none hover:bg-white/25"
+            title="关闭"
+            onClick={() => setOpen(false)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
 /** 图片点开展开全屏预览，再次点击关闭 */
 function ImageMessage({ url }: { url: string }) {
   const [open, setOpen] = useState(false);
@@ -65,10 +126,16 @@ function Body({ message }: { message: ChatMessage }) {
       );
     }
 
-    case MsgType.VIDEO:
-      return url
-        ? <video controls src={url} className="max-w-[260px] max-h-[260px] rounded" />
-        : <span className="text-xs text-gray-400">[视频]</span>;
+    case MsgType.VIDEO: {
+      const durationMs = parseMediaContent(message.content)?.duration;
+      return (
+        <VideoMessage
+          url={url}
+          thumbUrl={getMediaThumbUrl(message)}
+          durationMs={durationMs}
+        />
+      );
+    }
 
     case MsgType.FILE: {
       const c = parseMediaContent(message.content);

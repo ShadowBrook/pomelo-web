@@ -5,7 +5,7 @@ import { generateId } from '@/sdk/protocol';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { buildMediaContent, isMediaType, parseMediaContent } from '@/sdk/media';
+import { buildMediaContent, captureVideoPoster, isMediaType, parseMediaContent } from '@/sdk/media';
 
 export interface ChatMessage {
   id: string;
@@ -128,7 +128,7 @@ export const useChatStore = create<ChatState>()(
       },
 
       sendMedia: (peerId, params, sendFn) => {
-        const { msgType, file, duration } = params;
+        const { msgType, file } = params;
         const client = getIMClient();
 
         // 本地预览 object URL；上传/发送失败也保留，让用户看到所选内容
@@ -159,8 +159,31 @@ export const useChatStore = create<ChatState>()(
         client.requestUpload(msgType, file.name, file.size, file.type || undefined)
           .then(async (resp) => {
             await client.putFileToPresignedUrl(resp.presignedUrl, file);
+
+            // 视频封面：本地抓帧上传为图片对象，key 写入 content.thumb，
+            // 服务端读侧签名注入 thumbUrl。失败降级为无封面，不阻断发送。
+            let thumb: string | undefined;
+            let duration = params.duration;
+            if (msgType === MsgType.VIDEO) {
+              try {
+                const poster = await captureVideoPoster(file);
+                if ((duration == null || duration <= 0) && poster.durationMs > 0) {
+                  duration = poster.durationMs;
+                }
+                const posterName = `poster-${Date.now()}.jpg`;
+                const posterFile = new File([poster.blob], posterName, { type: 'image/jpeg' });
+                const posterResp = await client.requestUpload(
+                  MsgType.IMAGE, posterFile.name, posterFile.size, posterFile.type,
+                );
+                await client.putFileToPresignedUrl(posterResp.presignedUrl, posterFile);
+                thumb = posterResp.objectKey;
+              } catch (e) {
+                console.warn('视频封面上传失败，降级为无封面:', e);
+              }
+            }
+
             const content = buildMediaContent({
-              key: resp.objectKey, fileName: file.name, size: file.size, duration,
+              key: resp.objectKey, fileName: file.name, size: file.size, duration, thumb,
             });
             const msgId = sendFn({ recipientId: peerId, msgType, content });
             appendMsg({ id: msgId, status: 'sending', content });
