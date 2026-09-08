@@ -49,6 +49,15 @@ export class IMClient {
   private nickname: string = '';
   private token: string = '';
   private connected: boolean = false;
+  // 网关拒绝未认证连接的业务命令（仅放行 PING/AUTH_REQ），
+  // 因此拉取/补发/业务请求必须等 AUTH_RESP 成功后才能发出
+  private authed: boolean = false;
+  // 等待认证完成的挂起请求（认证成功批量放行，断连/超时拒绝）
+  private authWaiters: {
+    resolve: () => void;
+    reject: (e: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+  }[] = [];
   private reconnectAttempts: number = 0;
   private url: string;
   private maxReconnectAttempts: number;
@@ -138,6 +147,8 @@ export class IMClient {
     this.token = token;
     // Fix 5：连接时重置主动断开标志
     this.intentionallyDisconnected = false;
+    // 每次新连接都需重新认证
+    this.authed = false;
 
     return new Promise<void>((resolve, reject) => {
       try {
@@ -155,8 +166,8 @@ export class IMClient {
             this.reconnectAttempts = 0;
             this._setState('connected');
             this._startHeartbeat();
-            this._pullOfflineMessages();
-            this._resendPending();
+            // 离线拉取与队列补发延迟到 AUTH_RESP 成功后执行
+            // （网关对未认证连接只放行 PING/AUTH_REQ，提前发会被 401 拒绝）
             resolve();
           } catch (e) {
             reject(e);
@@ -169,7 +180,9 @@ export class IMClient {
 
         this.ws.onclose = (event: CloseEvent) => {
           this.connected = false;
+          this.authed = false;
           this._stopHeartbeat();
+          this._rejectAuthWaiters('连接已断开');
           for (const [, msg] of this.pendingQueue) {
             if (msg.timer) {
               clearTimeout(msg.timer);
@@ -207,6 +220,8 @@ export class IMClient {
     this.intentionallyDisconnected = true;
     this.maxReconnectAttempts = 0;
     this._stopHeartbeat();
+    this.authed = false;
+    this._rejectAuthWaiters('连接已断开');
 
     // Fix 3：清理重连定时器，避免 disconnect 后连接“复活”
     if (this.reconnectTimer) {
@@ -269,6 +284,7 @@ export class IMClient {
       status: 'pending',
       createdAt: Date.now(),
       retryCount: 0,
+      kind: 'c2c',
     };
 
     this.pendingQueue.set(msgId, msg);
@@ -329,20 +345,23 @@ export class IMClient {
     idPrefix: string,
     timeoutMs = 5000,
   ): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      if (this.ws?.readyState !== WebSocket.OPEN) {
-        reject(new Error('WebSocket 未连接'));
-        return;
-      }
-      const messageId = `${idPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const timeoutId = setTimeout(() => {
-        this.pendingFriendOps.delete(messageId);
-        reject(new Error('操作超时'));
-      }, timeoutMs);
-      this.pendingFriendOps.set(messageId, { resolve, reject, timeoutId, expectedCmd: respCmd });
-      const buf = encode(reqCmd, messageId, body, this.userId);
-      this.ws!.send(buf);
-    });
+    return this._whenAuthed().then(
+      () =>
+        new Promise<T>((resolve, reject) => {
+          if (this.ws?.readyState !== WebSocket.OPEN) {
+            reject(new Error('WebSocket 未连接'));
+            return;
+          }
+          const messageId = `${idPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const timeoutId = setTimeout(() => {
+            this.pendingFriendOps.delete(messageId);
+            reject(new Error('操作超时'));
+          }, timeoutMs);
+          this.pendingFriendOps.set(messageId, { resolve, reject, timeoutId, expectedCmd: respCmd });
+          const buf = encode(reqCmd, messageId, body, this.userId);
+          this.ws!.send(buf);
+        }),
+    );
   }
 
   /** 搜索用户 */
@@ -395,22 +414,25 @@ export class IMClient {
    *                   0 / 不传 = 拉取最新一页。
    */
   pullHistory(peerId: string, beforeTime?: number, limit = 50): Promise<PullHistoryResp> {
-    return new Promise<PullHistoryResp>((resolve, reject) => {
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        reject(new Error('WebSocket 未连接'));
-        return;
-      }
-      // PullReq proto 无 peerId/userId 字段；peerId 只能放 varHeader（encode 会自动带上 userId）
-      const bodyBytes = enc(im.pull.PullReq, { seq: beforeTime || 0, limit });
-      const messageId = `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const timeoutId = setTimeout(() => {
-        this.pendingHistoryPulls.delete(messageId);
-        reject(new Error('拉取历史消息超时'));
-      }, 10000);
-      this.pendingHistoryPulls.set(messageId, { resolve, reject, timeoutId });
-      const buf = encode(Cmd.PULL_REQ, messageId, bodyBytes, this.userId, { peerId });
-      this.ws.send(buf);
-    });
+    return this._whenAuthed().then(
+      () =>
+        new Promise<PullHistoryResp>((resolve, reject) => {
+          if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            reject(new Error('WebSocket 未连接'));
+            return;
+          }
+          // PullReq proto 无 peerId/userId 字段；peerId 只能放 varHeader（encode 会自动带上 userId）
+          const bodyBytes = enc(im.pull.PullReq, { seq: beforeTime || 0, limit });
+          const messageId = `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const timeoutId = setTimeout(() => {
+            this.pendingHistoryPulls.delete(messageId);
+            reject(new Error('拉取历史消息超时'));
+          }, 10000);
+          this.pendingHistoryPulls.set(messageId, { resolve, reject, timeoutId });
+          const buf = encode(Cmd.PULL_REQ, messageId, bodyBytes, this.userId, { peerId });
+          this.ws.send(buf);
+        }),
+    );
   }
 
   // ================================================================
@@ -423,24 +445,27 @@ export class IMClient {
    * 成功后拿 objectKey + presigned PUT URL，客户端直传 MinIO。
    */
   requestUpload(mediaType: number, fileName: string, size: number, contentType?: string): Promise<UploadResp> {
-    return new Promise<UploadResp>((resolve, reject) => {
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        reject(new Error('WebSocket 未连接'));
-        return;
-      }
-      const messageId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const timeoutId = setTimeout(() => {
-        this.pendingUploads.delete(messageId);
-        reject(new Error('获取上传预签名超时'));
-      }, 10000);
-      this.pendingUploads.set(messageId, { resolve, reject, timeoutId });
-      const fields: Record<string, unknown> = { mediaType, fileName, size };
-      if (contentType) {
-        fields.contentType = contentType;
-      }
-      const buf = encode(Cmd.CMD_UPLOAD_REQ, messageId, enc(im.upload.UploadReq, fields), this.userId);
-      this.ws.send(buf);
-    });
+    return this._whenAuthed().then(
+      () =>
+        new Promise<UploadResp>((resolve, reject) => {
+          if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            reject(new Error('WebSocket 未连接'));
+            return;
+          }
+          const messageId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const timeoutId = setTimeout(() => {
+            this.pendingUploads.delete(messageId);
+            reject(new Error('获取上传预签名超时'));
+          }, 10000);
+          this.pendingUploads.set(messageId, { resolve, reject, timeoutId });
+          const fields: Record<string, unknown> = { mediaType, fileName, size };
+          if (contentType) {
+            fields.contentType = contentType;
+          }
+          const buf = encode(Cmd.CMD_UPLOAD_REQ, messageId, enc(im.upload.UploadReq, fields), this.userId);
+          this.ws.send(buf);
+        }),
+    );
   }
 
   /**
@@ -465,25 +490,30 @@ export class IMClient {
 
   /** body 为 pbcodec 编码好的 protobuf 字节。 */
   private _sendGroupOp<T>(reqCmd: Cmd, respCmd: Cmd, body: Uint8Array, timeoutMs = 5000): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      if (this.ws?.readyState !== WebSocket.OPEN) {
-        reject(new Error('WebSocket 未连接'));
-        return;
-      }
-      const messageId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const timeoutId = setTimeout(() => {
-        this.pendingFriendOps.delete(messageId);
-        reject(new Error('操作超时'));
-      }, timeoutMs);
-      this.pendingFriendOps.set(messageId, { resolve, reject, timeoutId, expectedCmd: respCmd });
-      const buf = encode(reqCmd, messageId, body, this.userId);
-      this.ws!.send(buf);
-    });
+    return this._whenAuthed().then(
+      () =>
+        new Promise<T>((resolve, reject) => {
+          if (this.ws?.readyState !== WebSocket.OPEN) {
+            reject(new Error('WebSocket 未连接'));
+            return;
+          }
+          const messageId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const timeoutId = setTimeout(() => {
+            this.pendingFriendOps.delete(messageId);
+            reject(new Error('操作超时'));
+          }, timeoutMs);
+          this.pendingFriendOps.set(messageId, { resolve, reject, timeoutId, expectedCmd: respCmd });
+          const buf = encode(reqCmd, messageId, body, this.userId);
+          this.ws!.send(buf);
+        }),
+    );
   }
 
   sendGroupMessage(groupId: string, msgType: MsgType, content: string): string {
     if (!this.connected) throw new Error('Not connected');
     const msgId = generateId();
+    // 与 C2C 一致走发送队列：认证未完成时延迟发送，断线重连后自动补发
+    // （后端按 (group_id, sender_id, client_msg_id) 幂等，补发不会产生重复消息）
     const msg: OutgoingMessage = {
       id: msgId,
       recipientId: groupId,
@@ -492,22 +522,10 @@ export class IMClient {
       status: 'pending',
       createdAt: Date.now(),
       retryCount: 0,
+      kind: 'group',
     };
     this.pendingQueue.set(msgId, msg);
-    const bodyBytes = enc(im.group.C2GReq, {
-      groupId,
-      messageId: msgId,
-      message: { msgType, content: utf8(content) },
-    });
-    const buf = encode(Cmd.C2G_REQ, msgId, bodyBytes, this.userId, {
-      userName: this.userName,
-      nickname: this.nickname,
-    });
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(buf);
-      msg.status = 'sending';
-      this._emit('statusChange', { id: msg.id, status: msg.status });
-    }
+    this._flush();
     return msgId;
   }
 
@@ -531,10 +549,14 @@ export class IMClient {
   sendGroupAck(groupId: string, lastReadSeq: number): void {
     if (!this.connected) return;
     const bodyBytes = enc(im.group.GroupAckReq, { groupId, lastReadSeq });
-    const buf = encode(Cmd.GROUP_ACK_REQ, 'gack-' + Date.now(), bodyBytes, this.userId);
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(buf);
-    }
+    this._whenAuthed().then(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        const buf = encode(Cmd.GROUP_ACK_REQ, 'gack-' + Date.now(), bodyBytes, this.userId);
+        this.ws.send(buf);
+      }
+    }).catch(() => {
+      // 认证等待失败（断连/超时），读回执丢失可由下次触发补报，无需处理
+    });
   }
 
   createGroup(name: string, avatar?: string): Promise<CreateGroupResp> {
@@ -580,6 +602,44 @@ export class IMClient {
   // ================================================================
   // Connection & Heartbeat
   // ================================================================
+
+  /** 认证成功：放行所有等待认证的挂起请求 */
+  private _setAuthed(): void {
+    if (this.authed) return;
+    this.authed = true;
+    const waiters = this.authWaiters;
+    this.authWaiters = [];
+    for (const w of waiters) {
+      clearTimeout(w.timer);
+      w.resolve();
+    }
+  }
+
+  /** 认证已通过直接返回；否则挂起至认证成功（超时/断连拒绝） */
+  private _whenAuthed(timeoutMs = 5000): Promise<void> {
+    if (this.authed) return Promise.resolve();
+    return new Promise<void>((resolve, reject) => {
+      const waiter = {
+        resolve,
+        reject,
+        timer: null as unknown as ReturnType<typeof setTimeout>,
+      };
+      waiter.timer = setTimeout(() => {
+        this.authWaiters = this.authWaiters.filter((w) => w !== waiter);
+        reject(new Error('等待认证超时'));
+      }, timeoutMs);
+      this.authWaiters.push(waiter);
+    });
+  }
+
+  private _rejectAuthWaiters(reason: string): void {
+    const waiters = this.authWaiters;
+    this.authWaiters = [];
+    for (const w of waiters) {
+      clearTimeout(w.timer);
+      w.reject(new Error(reason));
+    }
+  }
 
   private _authenticate(): void {
     const bodyBytes = enc(im.auth.AuthReq, {
@@ -678,18 +738,30 @@ export class IMClient {
       msg.status = 'pending';
       return;
     }
+    // 网关拒绝未认证的业务命令：认证完成前保留在队列，AUTH_RESP 后 _resendPending 补发
+    if (!this.authed) {
+      msg.status = 'pending';
+      return;
+    }
 
     msg.status = 'sending';
 
-    const bodyBytes = enc(im.chat.C2CReq, {
-      senderId: this.userId,
-      recipientId: msg.recipientId,
-      messageId: msg.id,
-      message: { msgType: msg.msgType, content: utf8(msg.content) },
-    });
+    const isGroup = msg.kind === 'group';
+    const bodyBytes = isGroup
+      ? enc(im.group.C2GReq, {
+          groupId: msg.recipientId,
+          messageId: msg.id,
+          message: { msgType: msg.msgType, content: utf8(msg.content) },
+        })
+      : enc(im.chat.C2CReq, {
+          senderId: this.userId,
+          recipientId: msg.recipientId,
+          messageId: msg.id,
+          message: { msgType: msg.msgType, content: utf8(msg.content) },
+        });
 
-    // 将 userName / nickname 放入 varHeaders，供后端填充 C2CNotify 的 senderNickname
-    const buf = encode(Cmd.C2C_REQ, msg.id, bodyBytes, this.userId, {
+    // 将 userName / nickname 放入 varHeaders，供后端填充 Notify 的 senderNickname
+    const buf = encode(isGroup ? Cmd.C2G_REQ : Cmd.C2C_REQ, msg.id, bodyBytes, this.userId, {
       userName: this.userName,
       nickname: this.nickname,
     });
@@ -841,13 +913,19 @@ export class IMClient {
   private _sendAck(messageIds: string[], ackType: AckType): void {
     // 保持 messageIds 为字符串，避免 JavaScript Number 精度丢失（snowflake ID > 2^53）
     const bodyBytes = enc(im.ack.AckReq, { messageIds, ackType });
-    const buf = encode(Cmd.ACK_REQ, 'ack-' + Date.now(), bodyBytes, this.userId);
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(buf);
-      console.log(
-        `[IMClient] ACK: ${messageIds.length} msgs, type=${ackType === AckType.RECEIVED ? 'RECEIVED' : 'SEEN'}`,
-      );
-    }
+    this._whenAuthed()
+      .then(() => {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          const buf = encode(Cmd.ACK_REQ, 'ack-' + Date.now(), bodyBytes, this.userId);
+          this.ws.send(buf);
+          console.log(
+            `[IMClient] ACK: ${messageIds.length} msgs, type=${ackType === AckType.RECEIVED ? 'RECEIVED' : 'SEEN'}`,
+          );
+        }
+      })
+      .catch(() => {
+        // 未认证即断连：ACK 丢失无妨，接收方下次拉取仍会拿到消息
+      });
   }
 
   // ================================================================
@@ -1039,6 +1117,10 @@ export class IMClient {
           return;
         }
         console.log('[IMClient] 认证成功');
+        // 认证通过：放行挂起的业务请求，拉取离线消息并补发队列
+        this._setAuthed();
+        this._pullOfflineMessages();
+        this._resendPending();
         break;
       }
 

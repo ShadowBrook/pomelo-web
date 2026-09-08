@@ -100,6 +100,8 @@ export interface OutgoingMessage {
   retryCount: number;
   timer?: ReturnType<typeof setTimeout>;
   serverMessageId?: string;
+  /** 消息种类：c2c 走 C2CReq 补发，group 走 C2GReq 补发（重连/认证后重发时区分编码路径） */
+  kind?: 'c2c' | 'group';
 }
 
 // 接收消息（归一化）。C2C 消息用 recipientId，群消息用 groupId
