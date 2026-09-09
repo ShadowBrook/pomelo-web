@@ -102,7 +102,10 @@ export function useIMClient() {
     setKickedReason(null);
 
     const client = new IMClient({
-      url: 'ws://localhost:9001',
+      // 网关地址：优先 VITE_WS_URL；否则按页面协议派生（https 页面 → wss），
+      // 端口默认 9001（服务端 TLS 启用时自动走 wss）
+      url: import.meta.env.VITE_WS_URL
+        || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:9001`,
       maxReconnectAttempts: 10,
       heartbeatInterval: 30000,
     });
