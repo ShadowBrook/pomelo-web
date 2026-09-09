@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getIMClient, syncGroupMessages } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useFriendStore } from '@/stores/useFriendStore';
+import { GridAvatar } from '@/components/GridAvatar';
 import type { GroupInfo } from '@/sdk/types';
 
 interface Props {
@@ -9,13 +10,17 @@ interface Props {
   onSelect: (groupId: string, name: string) => void;
 }
 
+/** 创建时间展示格式：YYYY-MM-DD HH:mm */
+const fmtDate = (ts: number) => {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 export function GroupPanel({ activeGroupId, onSelect }: Props) {
   const groups = useGroupStore((s) => s.groups);
   const setGroups = useGroupStore((s) => s.setGroups);
-  const addGroup = useGroupStore((s) => s.addGroup);
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [creating, setCreating] = useState(false);
 
   const loadGroups = () => {
     const client = getIMClient();
@@ -32,64 +37,13 @@ export function GroupPanel({ activeGroupId, onSelect }: Props) {
 
   useEffect(() => { loadGroups(); }, [setGroups]);
 
-  const handleCreate = async () => {
-    if (!newName.trim()) return;
-    const client = getIMClient();
-    if (!client) return;
-    setCreating(true);
-    try {
-      const resp = await client.createGroup(newName.trim());
-      addGroup(resp.group);
-      setNewName('');
-      setShowCreate(false);
-    } catch { /* ignore */ }
-    setCreating(false);
-  };
-
   const groupList = Object.values(groups);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* 创建群按钮 */}
-      <div className="p-2 border-b border-gray-200">
-        <button
-          onClick={() => setShowCreate(true)}
-          className="w-full py-1.5 text-sm rounded bg-wechat-green text-white hover:bg-wechat-green-dark transition-colors"
-        >
-          + 创建群聊
-        </button>
-      </div>
-
-      {/* 创建群弹窗 */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-             onClick={() => setShowCreate(false)}>
-          <div className="bg-white rounded-lg shadow-xl w-[280px] p-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-medium mb-3">创建群聊</h3>
-            <input
-              autoFocus
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
-              placeholder="输入群名称"
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded outline-none focus:border-wechat-green"
-            />
-            <div className="flex gap-2 mt-3 justify-end">
-              <button onClick={() => setShowCreate(false)}
-                className="px-3 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200">取消</button>
-              <button onClick={handleCreate} disabled={creating || !newName.trim()}
-                className="px-3 py-1 text-xs rounded bg-wechat-green text-white hover:bg-wechat-green-dark disabled:opacity-50">
-                {creating ? '创建中...' : '创建'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto">
       {groupList.length === 0 ? (
-        <div className="text-center text-wechat-text-secondary text-sm mt-10 px-4">
-          暂无群聊，点击上方按钮创建
+        <div className="text-center text-text-sub text-sm mt-10 px-4">
+          暂无群聊
         </div>
       ) : (
         groupList.map((g) => (
@@ -102,7 +56,6 @@ export function GroupPanel({ activeGroupId, onSelect }: Props) {
         ))
       )}
     </div>
-    </div>
   );
 }
 
@@ -114,6 +67,7 @@ function GroupItem({ group, isActive, onClick }: {
   const [showInvite, setShowInvite] = useState(false);
   const [inviting, setInviting] = useState(false);
   const friends = useFriendStore((s) => s.friends);
+  const members = useGroupStore((s) => s.groupMembers[group.groupId]);
 
   const handleInvite = async (friendId: string) => {
     const client = getIMClient();
@@ -130,42 +84,40 @@ function GroupItem({ group, isActive, onClick }: {
     <>
       <div
         onClick={onClick}
-        className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors border-b border-gray-100 ${
-          isActive ? 'bg-wechat-green/10' : 'hover:bg-gray-50'
+        className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors border-b border-line ${
+          isActive ? 'bg-selected' : 'hover:bg-bg-page'
         }`}
       >
-        <div className="w-10 h-10 rounded-md bg-wechat-green text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
-          {group.name.charAt(0).toUpperCase()}
-        </div>
+        <GridAvatar name={group.name} members={members} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-wechat-text truncate">{group.name}</span>
+            <span className="text-sm text-text-main truncate">{group.name}</span>
           </div>
-          <span className="text-xs text-wechat-text-secondary">{group.memberCount} 人</span>
+          <span className="text-xs text-text-sub">创建于 {fmtDate(group.createdAt)}</span>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); setShowInvite(!showInvite); }}
-          className="text-xs text-wechat-green hover:bg-wechat-green/10 px-2 py-1 rounded flex-shrink-0"
+          className="text-xs text-accent hover:underline px-1 flex-shrink-0"
         >
           邀请
         </button>
       </div>
       {showInvite && (
-        <div className="border-b border-gray-100 bg-gray-50 max-h-[200px] overflow-y-auto">
+        <div className="border-b border-line bg-bg-page max-h-[200px] overflow-y-auto">
           {friends.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-wechat-text-secondary">暂无好友</div>
+            <div className="px-3 py-2 text-xs text-text-sub">暂无好友</div>
           ) : (
             friends.map((f) => (
               <div
                 key={f.userId}
                 onClick={() => handleInvite(f.userId)}
-                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer text-xs"
+                className="flex items-center gap-2 px-3 py-2 hover:bg-bg-page cursor-pointer text-xs"
               >
-                <div className="w-6 h-6 rounded-full bg-wechat-green/20 text-wechat-green flex items-center justify-center text-xs flex-shrink-0">
+                <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs flex-shrink-0">
                   {(f.nickname || f.userName).charAt(0).toUpperCase()}
                 </div>
                 <span className="flex-1 truncate">{f.nickname || f.userName}</span>
-                {inviting && <span className="text-wechat-text-secondary">...</span>}
+                {inviting && <span className="text-text-sub">...</span>}
               </div>
             ))
           )}

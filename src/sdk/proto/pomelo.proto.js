@@ -1067,6 +1067,8 @@ export const im = $root.im = (() => {
          * @property {number} CMD_GROUP_ACK_RESP=151 CMD_GROUP_ACK_RESP value
          * @property {number} CMD_GROUP_MSG_READ_REQ=152 CMD_GROUP_MSG_READ_REQ value
          * @property {number} CMD_GROUP_MSG_READ_RESP=153 CMD_GROUP_MSG_READ_RESP value
+         * @property {number} CMD_GROUP_READ_STATE_REQ=154 CMD_GROUP_READ_STATE_REQ value
+         * @property {number} CMD_GROUP_READ_STATE_RESP=155 CMD_GROUP_READ_STATE_RESP value
          * @property {number} CMD_UPLOAD_REQ=160 CMD_UPLOAD_REQ value
          * @property {number} CMD_UPLOAD_RESP=161 CMD_UPLOAD_RESP value
          * @property {number} CMD_ERROR=65535 CMD_ERROR value
@@ -1122,6 +1124,8 @@ export const im = $root.im = (() => {
             values[valuesById[151] = "CMD_GROUP_ACK_RESP"] = 151;
             values[valuesById[152] = "CMD_GROUP_MSG_READ_REQ"] = 152;
             values[valuesById[153] = "CMD_GROUP_MSG_READ_RESP"] = 153;
+            values[valuesById[154] = "CMD_GROUP_READ_STATE_REQ"] = 154;
+            values[valuesById[155] = "CMD_GROUP_READ_STATE_RESP"] = 155;
             values[valuesById[160] = "CMD_UPLOAD_REQ"] = 160;
             values[valuesById[161] = "CMD_UPLOAD_RESP"] = 161;
             values[valuesById[65535] = "CMD_ERROR"] = 65535;
@@ -1139,7 +1143,9 @@ export const im = $root.im = (() => {
          * @property {number} MSG_TYPE_VIDEO=4 MSG_TYPE_VIDEO value
          * @property {number} MSG_TYPE_FILE=5 MSG_TYPE_FILE value
          * @property {number} MSG_TYPE_EMOJI=6 MSG_TYPE_EMOJI value
-         * @property {number} MSG_TYPE_SYSTEM=7 MSG_TYPE_SYSTEM value
+         * @property {number} MSG_TYPE_FORWARD=8 MSG_TYPE_FORWARD value
+         * @property {number} MSG_TYPE_REPLY=9 MSG_TYPE_REPLY value
+         * @property {number} MSG_TYPE_SYSTEM=99 MSG_TYPE_SYSTEM value
          */
         common.MsgType = (function() {
             const valuesById = $Object.create(null), values = $Object.create(valuesById);
@@ -1150,7 +1156,9 @@ export const im = $root.im = (() => {
             values[valuesById[4] = "MSG_TYPE_VIDEO"] = 4;
             values[valuesById[5] = "MSG_TYPE_FILE"] = 5;
             values[valuesById[6] = "MSG_TYPE_EMOJI"] = 6;
-            values[valuesById[7] = "MSG_TYPE_SYSTEM"] = 7;
+            values[valuesById[8] = "MSG_TYPE_FORWARD"] = 8;
+            values[valuesById[9] = "MSG_TYPE_REPLY"] = 9;
+            values[valuesById[99] = "MSG_TYPE_SYSTEM"] = 99;
             return values;
         })();
 
@@ -1518,9 +1526,17 @@ export const im = $root.im = (() => {
                     case 6:
                         message.msgType = 6;
                         break;
+                    case "MSG_TYPE_FORWARD":
+                    case 8:
+                        message.msgType = 8;
+                        break;
+                    case "MSG_TYPE_REPLY":
+                    case 9:
+                        message.msgType = 9;
+                        break;
                     case "MSG_TYPE_SYSTEM":
-                    case 7:
-                        message.msgType = 7;
+                    case 99:
+                        message.msgType = 99;
                         break;
                     default:
                         if (typeof object.msgType === "number" && (object.msgType | 0) === object.msgType)
@@ -13456,6 +13472,986 @@ export const im = $root.im = (() => {
             return GetGroupMsgReadStatusResp;
         })();
 
+        group.GetGroupReadStateReq = (function() {
+
+            /**
+             * Properties of a GetGroupReadStateReq.
+             * @typedef {Object} im.group.GetGroupReadStateReq.$Properties
+             * @property {number|Long|null} [groupId] GetGroupReadStateReq groupId
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a GetGroupReadStateReq.
+             * @memberof im.group
+             * @interface IGetGroupReadStateReq
+             * @augments im.group.GetGroupReadStateReq.$Properties
+             * @deprecated Use im.group.GetGroupReadStateReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a GetGroupReadStateReq.
+             * @typedef {im.group.GetGroupReadStateReq.$Properties} im.group.GetGroupReadStateReq.$Shape
+             */
+
+            /**
+             * Constructs a new GetGroupReadStateReq.
+             * @memberof im.group
+             * @classdesc Represents a GetGroupReadStateReq.
+             * @constructor
+             * @param {im.group.GetGroupReadStateReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const GetGroupReadStateReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * GetGroupReadStateReq groupId.
+             * @member {number|Long} groupId
+             * @memberof im.group.GetGroupReadStateReq
+             * @instance
+             */
+            GetGroupReadStateReq.prototype.groupId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * Creates a new GetGroupReadStateReq instance using the specified properties.
+             * @function create
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {im.group.GetGroupReadStateReq.$Properties=} [properties] Properties to set
+             * @returns {im.group.GetGroupReadStateReq} GetGroupReadStateReq instance
+             * @type {{
+             *   (properties: im.group.GetGroupReadStateReq.$Shape): im.group.GetGroupReadStateReq & im.group.GetGroupReadStateReq.$Shape;
+             *   (properties?: im.group.GetGroupReadStateReq.$Properties): im.group.GetGroupReadStateReq;
+             * }}
+             */
+            GetGroupReadStateReq.create = function(properties) {
+                return new GetGroupReadStateReq(properties);
+            };
+
+            /**
+             * Encodes the specified GetGroupReadStateReq message. Does not implicitly {@link im.group.GetGroupReadStateReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {im.group.GetGroupReadStateReq.$Properties} message GetGroupReadStateReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            GetGroupReadStateReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId") && (typeof message.groupId === "object" ? message.groupId.low || message.groupId.high : message.groupId !== 0))
+                    writer.uint32(/* id 1, wireType 0 =*/8).int64(message.groupId);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified GetGroupReadStateReq message, length delimited. Does not implicitly {@link im.group.GetGroupReadStateReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {im.group.GetGroupReadStateReq.$Properties} message GetGroupReadStateReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            GetGroupReadStateReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a GetGroupReadStateReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.GetGroupReadStateReq & im.group.GetGroupReadStateReq.$Shape} GetGroupReadStateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            GetGroupReadStateReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.GetGroupReadStateReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.groupId = value;
+                            else
+                                delete message.groupId;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a GetGroupReadStateReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.GetGroupReadStateReq & im.group.GetGroupReadStateReq.$Shape} GetGroupReadStateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            GetGroupReadStateReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a GetGroupReadStateReq message.
+             * @function verify
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            GetGroupReadStateReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (!$util.isInteger(message.groupId) && !(message.groupId && $util.isInteger(message.groupId.low) && $util.isInteger(message.groupId.high)))
+                        return "groupId: integer|Long expected";
+                return null;
+            };
+
+            /**
+             * Creates a GetGroupReadStateReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.GetGroupReadStateReq} GetGroupReadStateReq
+             */
+            GetGroupReadStateReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.GetGroupReadStateReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.GetGroupReadStateReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.GetGroupReadStateReq();
+                if (object.groupId != null)
+                    if (typeof object.groupId === "object" ? object.groupId.low || object.groupId.high : $Number(object.groupId) !== 0)
+                        if ($util.Long)
+                            message.groupId = $util.Long.fromValue(object.groupId, false);
+                        else if (typeof object.groupId === "string")
+                            message.groupId = $parseInt(object.groupId, 10);
+                        else if (typeof object.groupId === "number")
+                            message.groupId = object.groupId;
+                        else if (typeof object.groupId === "object")
+                            message.groupId = new $util.LongBits(object.groupId.low >>> 0, object.groupId.high >>> 0).toNumber();
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a GetGroupReadStateReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {im.group.GetGroupReadStateReq} message GetGroupReadStateReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            GetGroupReadStateReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults)
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.groupId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.groupId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.groupId = typeof message.groupId === "number" ? $BigInt(message.groupId) : $util.Long.fromBits(message.groupId.low >>> 0, message.groupId.high >>> 0, false).toBigInt();
+                    else if (typeof message.groupId === "number")
+                        object.groupId = options.longs === $String ? $String(message.groupId) : message.groupId;
+                    else
+                        object.groupId = options.longs === $String ? $util.Long.prototype.toString.call(message.groupId) : options.longs === $Number ? new $util.LongBits(message.groupId.low >>> 0, message.groupId.high >>> 0).toNumber() : message.groupId;
+                return object;
+            };
+
+            /**
+             * Converts this GetGroupReadStateReq to JSON.
+             * @function toJSON
+             * @memberof im.group.GetGroupReadStateReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            GetGroupReadStateReq.prototype.toJSON = function() {
+                return GetGroupReadStateReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for GetGroupReadStateReq
+             * @function getTypeUrl
+             * @memberof im.group.GetGroupReadStateReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            GetGroupReadStateReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.GetGroupReadStateReq";
+            };
+
+            return GetGroupReadStateReq;
+        })();
+
+        group.MemberReadState = (function() {
+
+            /**
+             * Properties of a MemberReadState.
+             * @typedef {Object} im.group.MemberReadState.$Properties
+             * @property {number|Long|null} [userId] MemberReadState userId
+             * @property {number|Long|null} [lastReadSeq] MemberReadState lastReadSeq
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a MemberReadState.
+             * @memberof im.group
+             * @interface IMemberReadState
+             * @augments im.group.MemberReadState.$Properties
+             * @deprecated Use im.group.MemberReadState.$Properties instead.
+             */
+
+            /**
+             * Shape of a MemberReadState.
+             * @typedef {im.group.MemberReadState.$Properties} im.group.MemberReadState.$Shape
+             */
+
+            /**
+             * Constructs a new MemberReadState.
+             * @memberof im.group
+             * @classdesc Represents a MemberReadState.
+             * @constructor
+             * @param {im.group.MemberReadState.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const MemberReadState = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * MemberReadState userId.
+             * @member {number|Long} userId
+             * @memberof im.group.MemberReadState
+             * @instance
+             */
+            MemberReadState.prototype.userId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * MemberReadState lastReadSeq.
+             * @member {number|Long} lastReadSeq
+             * @memberof im.group.MemberReadState
+             * @instance
+             */
+            MemberReadState.prototype.lastReadSeq = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * Creates a new MemberReadState instance using the specified properties.
+             * @function create
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {im.group.MemberReadState.$Properties=} [properties] Properties to set
+             * @returns {im.group.MemberReadState} MemberReadState instance
+             * @type {{
+             *   (properties: im.group.MemberReadState.$Shape): im.group.MemberReadState & im.group.MemberReadState.$Shape;
+             *   (properties?: im.group.MemberReadState.$Properties): im.group.MemberReadState;
+             * }}
+             */
+            MemberReadState.create = function(properties) {
+                return new MemberReadState(properties);
+            };
+
+            /**
+             * Encodes the specified MemberReadState message. Does not implicitly {@link im.group.MemberReadState.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {im.group.MemberReadState.$Properties} message MemberReadState message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            MemberReadState.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.userId != null && $Object.hasOwnProperty.call(message, "userId") && (typeof message.userId === "object" ? message.userId.low || message.userId.high : message.userId !== 0))
+                    writer.uint32(/* id 1, wireType 0 =*/8).int64(message.userId);
+                if (message.lastReadSeq != null && $Object.hasOwnProperty.call(message, "lastReadSeq") && (typeof message.lastReadSeq === "object" ? message.lastReadSeq.low || message.lastReadSeq.high : message.lastReadSeq !== 0))
+                    writer.uint32(/* id 2, wireType 0 =*/16).int64(message.lastReadSeq);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified MemberReadState message, length delimited. Does not implicitly {@link im.group.MemberReadState.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {im.group.MemberReadState.$Properties} message MemberReadState message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            MemberReadState.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a MemberReadState message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.MemberReadState & im.group.MemberReadState.$Shape} MemberReadState
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            MemberReadState.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.MemberReadState();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.userId = value;
+                            else
+                                delete message.userId;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.lastReadSeq = value;
+                            else
+                                delete message.lastReadSeq;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a MemberReadState message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.MemberReadState & im.group.MemberReadState.$Shape} MemberReadState
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            MemberReadState.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a MemberReadState message.
+             * @function verify
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            MemberReadState.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.userId != null && $Object.hasOwnProperty.call(message, "userId"))
+                    if (!$util.isInteger(message.userId) && !(message.userId && $util.isInteger(message.userId.low) && $util.isInteger(message.userId.high)))
+                        return "userId: integer|Long expected";
+                if (message.lastReadSeq != null && $Object.hasOwnProperty.call(message, "lastReadSeq"))
+                    if (!$util.isInteger(message.lastReadSeq) && !(message.lastReadSeq && $util.isInteger(message.lastReadSeq.low) && $util.isInteger(message.lastReadSeq.high)))
+                        return "lastReadSeq: integer|Long expected";
+                return null;
+            };
+
+            /**
+             * Creates a MemberReadState message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.MemberReadState} MemberReadState
+             */
+            MemberReadState.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.MemberReadState)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.MemberReadState: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.MemberReadState();
+                if (object.userId != null)
+                    if (typeof object.userId === "object" ? object.userId.low || object.userId.high : $Number(object.userId) !== 0)
+                        if ($util.Long)
+                            message.userId = $util.Long.fromValue(object.userId, false);
+                        else if (typeof object.userId === "string")
+                            message.userId = $parseInt(object.userId, 10);
+                        else if (typeof object.userId === "number")
+                            message.userId = object.userId;
+                        else if (typeof object.userId === "object")
+                            message.userId = new $util.LongBits(object.userId.low >>> 0, object.userId.high >>> 0).toNumber();
+                if (object.lastReadSeq != null)
+                    if (typeof object.lastReadSeq === "object" ? object.lastReadSeq.low || object.lastReadSeq.high : $Number(object.lastReadSeq) !== 0)
+                        if ($util.Long)
+                            message.lastReadSeq = $util.Long.fromValue(object.lastReadSeq, false);
+                        else if (typeof object.lastReadSeq === "string")
+                            message.lastReadSeq = $parseInt(object.lastReadSeq, 10);
+                        else if (typeof object.lastReadSeq === "number")
+                            message.lastReadSeq = object.lastReadSeq;
+                        else if (typeof object.lastReadSeq === "object")
+                            message.lastReadSeq = new $util.LongBits(object.lastReadSeq.low >>> 0, object.lastReadSeq.high >>> 0).toNumber();
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a MemberReadState message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {im.group.MemberReadState} message MemberReadState
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            MemberReadState.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.userId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.userId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.lastReadSeq = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.lastReadSeq = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                }
+                if (message.userId != null && $Object.hasOwnProperty.call(message, "userId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.userId = typeof message.userId === "number" ? $BigInt(message.userId) : $util.Long.fromBits(message.userId.low >>> 0, message.userId.high >>> 0, false).toBigInt();
+                    else if (typeof message.userId === "number")
+                        object.userId = options.longs === $String ? $String(message.userId) : message.userId;
+                    else
+                        object.userId = options.longs === $String ? $util.Long.prototype.toString.call(message.userId) : options.longs === $Number ? new $util.LongBits(message.userId.low >>> 0, message.userId.high >>> 0).toNumber() : message.userId;
+                if (message.lastReadSeq != null && $Object.hasOwnProperty.call(message, "lastReadSeq"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.lastReadSeq = typeof message.lastReadSeq === "number" ? $BigInt(message.lastReadSeq) : $util.Long.fromBits(message.lastReadSeq.low >>> 0, message.lastReadSeq.high >>> 0, false).toBigInt();
+                    else if (typeof message.lastReadSeq === "number")
+                        object.lastReadSeq = options.longs === $String ? $String(message.lastReadSeq) : message.lastReadSeq;
+                    else
+                        object.lastReadSeq = options.longs === $String ? $util.Long.prototype.toString.call(message.lastReadSeq) : options.longs === $Number ? new $util.LongBits(message.lastReadSeq.low >>> 0, message.lastReadSeq.high >>> 0).toNumber() : message.lastReadSeq;
+                return object;
+            };
+
+            /**
+             * Converts this MemberReadState to JSON.
+             * @function toJSON
+             * @memberof im.group.MemberReadState
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            MemberReadState.prototype.toJSON = function() {
+                return MemberReadState.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for MemberReadState
+             * @function getTypeUrl
+             * @memberof im.group.MemberReadState
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            MemberReadState.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.MemberReadState";
+            };
+
+            return MemberReadState;
+        })();
+
+        group.GetGroupReadStateResp = (function() {
+
+            /**
+             * Properties of a GetGroupReadStateResp.
+             * @typedef {Object} im.group.GetGroupReadStateResp.$Properties
+             * @property {number|null} [code] GetGroupReadStateResp code
+             * @property {string|null} [message] GetGroupReadStateResp message
+             * @property {Array.<im.group.MemberReadState.$Properties>|null} [members] GetGroupReadStateResp members
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a GetGroupReadStateResp.
+             * @memberof im.group
+             * @interface IGetGroupReadStateResp
+             * @augments im.group.GetGroupReadStateResp.$Properties
+             * @deprecated Use im.group.GetGroupReadStateResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a GetGroupReadStateResp.
+             * @typedef {im.group.GetGroupReadStateResp.$Properties} im.group.GetGroupReadStateResp.$Shape
+             */
+
+            /**
+             * Constructs a new GetGroupReadStateResp.
+             * @memberof im.group
+             * @classdesc Represents a GetGroupReadStateResp.
+             * @constructor
+             * @param {im.group.GetGroupReadStateResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const GetGroupReadStateResp = function (properties) {
+                this.members = [];
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * GetGroupReadStateResp code.
+             * @member {number} code
+             * @memberof im.group.GetGroupReadStateResp
+             * @instance
+             */
+            GetGroupReadStateResp.prototype.code = 0;
+
+            /**
+             * GetGroupReadStateResp message.
+             * @member {string} message
+             * @memberof im.group.GetGroupReadStateResp
+             * @instance
+             */
+            GetGroupReadStateResp.prototype.message = "";
+
+            /**
+             * GetGroupReadStateResp members.
+             * @member {Array.<im.group.MemberReadState.$Properties>} members
+             * @memberof im.group.GetGroupReadStateResp
+             * @instance
+             */
+            GetGroupReadStateResp.prototype.members = $util.emptyArray;
+
+            /**
+             * Creates a new GetGroupReadStateResp instance using the specified properties.
+             * @function create
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {im.group.GetGroupReadStateResp.$Properties=} [properties] Properties to set
+             * @returns {im.group.GetGroupReadStateResp} GetGroupReadStateResp instance
+             * @type {{
+             *   (properties: im.group.GetGroupReadStateResp.$Shape): im.group.GetGroupReadStateResp & im.group.GetGroupReadStateResp.$Shape;
+             *   (properties?: im.group.GetGroupReadStateResp.$Properties): im.group.GetGroupReadStateResp;
+             * }}
+             */
+            GetGroupReadStateResp.create = function(properties) {
+                return new GetGroupReadStateResp(properties);
+            };
+
+            /**
+             * Encodes the specified GetGroupReadStateResp message. Does not implicitly {@link im.group.GetGroupReadStateResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {im.group.GetGroupReadStateResp.$Properties} message GetGroupReadStateResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            GetGroupReadStateResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.members != null && message.members.length)
+                    for (let i = 0; i < message.members.length; ++i)
+                        $root.im.group.MemberReadState.encode(message.members[i], writer.uint32(/* id 3, wireType 2 =*/26).fork(), _depth + 1).ldelim();
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified GetGroupReadStateResp message, length delimited. Does not implicitly {@link im.group.GetGroupReadStateResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {im.group.GetGroupReadStateResp.$Properties} message GetGroupReadStateResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            GetGroupReadStateResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a GetGroupReadStateResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.GetGroupReadStateResp & im.group.GetGroupReadStateResp.$Shape} GetGroupReadStateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            GetGroupReadStateResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.GetGroupReadStateResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    case 3: {
+                            if (wireType !== 2)
+                                break;
+                            if (!(message.members && message.members.length))
+                                message.members = [];
+                            message.members.push($root.im.group.MemberReadState.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a GetGroupReadStateResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.GetGroupReadStateResp & im.group.GetGroupReadStateResp.$Shape} GetGroupReadStateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            GetGroupReadStateResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a GetGroupReadStateResp message.
+             * @function verify
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            GetGroupReadStateResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                if (message.members != null && $Object.hasOwnProperty.call(message, "members")) {
+                    if (!$Array.isArray(message.members))
+                        return "members: array expected";
+                    for (let i = 0; i < message.members.length; ++i) {
+                        let error = $root.im.group.MemberReadState.verify(message.members[i], _depth + 1);
+                        if (error)
+                            return "members." + error;
+                    }
+                }
+                return null;
+            };
+
+            /**
+             * Creates a GetGroupReadStateResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.GetGroupReadStateResp} GetGroupReadStateResp
+             */
+            GetGroupReadStateResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.GetGroupReadStateResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.GetGroupReadStateResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.GetGroupReadStateResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                if (object.members) {
+                    if (!$Array.isArray(object.members))
+                        throw $TypeError(".im.group.GetGroupReadStateResp.members: array expected");
+                    message.members = $Array(object.members.length);
+                    for (let i = 0; i < object.members.length; ++i) {
+                        if (!$util.isObject(object.members[i]))
+                            throw $TypeError(".im.group.GetGroupReadStateResp.members: object expected");
+                        message.members[i] = $root.im.group.MemberReadState.fromObject(object.members[i], _depth + 1);
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a GetGroupReadStateResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {im.group.GetGroupReadStateResp} message GetGroupReadStateResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            GetGroupReadStateResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.arrays || options.defaults)
+                    object.members = [];
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                if (message.members && message.members.length) {
+                    object.members = $Array(message.members.length);
+                    for (let j = 0; j < message.members.length; ++j)
+                        object.members[j] = $root.im.group.MemberReadState.toObject(message.members[j], options, _depth + 1);
+                }
+                return object;
+            };
+
+            /**
+             * Converts this GetGroupReadStateResp to JSON.
+             * @function toJSON
+             * @memberof im.group.GetGroupReadStateResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            GetGroupReadStateResp.prototype.toJSON = function() {
+                return GetGroupReadStateResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for GetGroupReadStateResp
+             * @function getTypeUrl
+             * @memberof im.group.GetGroupReadStateResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            GetGroupReadStateResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.GetGroupReadStateResp";
+            };
+
+            return GetGroupReadStateResp;
+        })();
+
         return group;
     })();
 
@@ -15179,6 +16175,14 @@ export const im = $root.im = (() => {
                     case "CMD_GROUP_MSG_READ_RESP":
                     case 153:
                         message.cmd = 153;
+                        break;
+                    case "CMD_GROUP_READ_STATE_REQ":
+                    case 154:
+                        message.cmd = 154;
+                        break;
+                    case "CMD_GROUP_READ_STATE_RESP":
+                    case 155:
+                        message.cmd = 155;
                         break;
                     case "CMD_UPLOAD_REQ":
                     case 160:

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useConversationStore } from '@/stores/useConversationStore';
+import { useFriendStore } from '@/stores/useFriendStore';
+import { formatListTime } from '@/utils/imTime';
 
 interface Props {
   peerId: string;
@@ -8,102 +10,84 @@ interface Props {
   onDelete: (peerId: string) => void;
 }
 
+/** 预览文本前缀着色：[草稿] 红；[图片] 等媒体标签橙 */
+function renderPreview(text: string) {
+  if (!text) return <span className="text-text-sub">暂无消息</span>;
+  const m = text.match(/^(\[[^\]]{1,6}\])\s*(.*)$/);
+  if (!m) return <span className="text-text-sub">{text}</span>;
+  const tag = m[1];
+  const rest = m[2];
+  const isDraft = tag === '[草稿]';
+  return (
+    <span className="text-text-sub">
+      <span className={isDraft ? 'text-danger' : 'text-warn'}>{tag}</span>
+      {rest ? ` ${rest}` : ''}
+    </span>
+  );
+}
+
 export const ConversationItem = React.memo(function ConversationItem({ peerId, isActive, onClick, onDelete }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  // 各自从 store 订阅自己的数据，避免接收整个 conversation 对象作为 props
+  const friends = useFriendStore((s) => s.friends);
   const conversation = useConversationStore((s) => s.conversations[peerId]);
   if (!conversation) return null;
 
-  const { nickname, avatar, lastMessage, lastMessageTime, unreadCount } = conversation;
+  const { nickname, avatar, lastMessage, lastMessageTime, unreadCount, draft, type } = conversation;
+  const isGroup = type === 'group';
+  const isStranger = !isGroup && !friends.some((f) => f.userId === peerId);
 
-  const formatTime = (ts: number) => {
-    if (!ts) return '';
-    const date = new Date(ts);
-    const now = new Date();
-    if (date.toDateString() === now.toDateString()) {
-      return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    }
-    return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete(peerId);
-    setShowDeleteConfirm(false);
-  };
-
-  const handleCancelDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowDeleteConfirm(false);
-  };
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
     <div
       onClick={onClick}
-      className={`group flex items-center px-3 py-3 cursor-pointer hover:bg-gray-200/50 transition-colors relative ${
-        isActive ? 'bg-wechat-green/10 border-l-2 border-wechat-green' : ''
+      className={`group relative flex items-center px-3 py-2.5 cursor-pointer transition-colors ${
+        isActive ? 'bg-selected corner-red' : 'hover:bg-bg-page'
       }`}
     >
       {/* 头像 */}
-      <div className="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center text-white text-sm font-bold overflow-hidden">
-        {avatar ? (
-          <img src={avatar} alt={nickname} className="w-full h-full object-cover" />
-        ) : (
-          nickname.charAt(0).toUpperCase()
+      <div className="relative flex-shrink-0">
+        <div className="w-10 h-10 rounded-md bg-primary/15 flex items-center justify-center text-primary text-sm font-bold overflow-hidden">
+          {avatar ? <img src={avatar} alt={nickname} className="w-full h-full object-cover" /> : nickname.charAt(0).toUpperCase()}
+        </div>
+        {isStranger && (
+          <span className="absolute -top-1 -left-1 w-4 h-4 rounded-sm bg-warn text-white text-[9px] leading-4 text-center font-bold">陌</span>
+        )}
+        {unreadCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] leading-[18px] text-center group-hover:hidden">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
       </div>
 
-      {/* 内容 */}
-      <div className="ml-3 flex-1 min-w-0">
+      {/* 两行内容 */}
+      <div className="ml-2.5 flex-1 min-w-0">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-wechat-text truncate">{nickname}</span>
-          <span className="text-xs text-wechat-text-secondary flex-shrink-0 ml-2">{formatTime(lastMessageTime)}</span>
+          <span className="text-sm font-medium text-text-main truncate flex items-center gap-1 min-w-0">
+            {isGroup && <span className="text-[11px] text-accent flex-shrink-0 font-normal">群</span>}
+            <span className="truncate">{nickname}</span>
+          </span>
+          <span className="text-[11px] text-text-sub flex-shrink-0 ml-2">{formatListTime(lastMessageTime)}</span>
         </div>
-        <p className="text-xs text-wechat-text-secondary truncate mt-0.5">{lastMessage || '暂无消息'}</p>
+        <p className="text-xs truncate mt-0.5">{draft ? renderPreview(`[草稿] ${draft}`) : renderPreview(lastMessage)}</p>
       </div>
 
-      {/* 未读红点 或 悬停时显示的删除按钮 */}
-      {unreadCount > 0 ? (
-        <div className="ml-2 flex-shrink-0 min-w-[18px] h-[18px] rounded-full bg-red-500 flex items-center justify-center group-hover:hidden">
-          <span className="text-white text-[10px] px-1">{unreadCount > 99 ? '99+' : unreadCount}</span>
-        </div>
-      ) : null}
-
-      {/* 删除按钮 — hover 时显示 */}
+      {/* 悬停删除 */}
       <button
-        onClick={handleDeleteClick}
-        className={`ml-2 flex-shrink-0 w-5 h-5 rounded-full bg-gray-400 hover:bg-red-500 text-white text-xs flex items-center justify-center transition-all ${
-          unreadCount > 0 ? 'hidden group-hover:flex' : 'hidden group-hover:flex'
-        }`}
+        onClick={(e) => { stop(e); setShowDeleteConfirm(true); }}
+        className="absolute right-2 top-1.5 hidden group-hover:flex w-4 h-4 items-center justify-center text-text-sub hover:text-danger text-xs"
         title="删除会话"
       >
         ✕
       </button>
 
-      {/* 删除确认浮层 */}
       {showDeleteConfirm && (
-        <div
-          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg border border-gray-200 px-3 py-2 z-10 flex items-center gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span className="text-xs text-wechat-text whitespace-nowrap">删除该会话？</span>
-          <button
-            onClick={handleConfirmDelete}
-            className="text-xs text-red-500 hover:text-red-600 font-medium px-1"
-          >
-            删除
-          </button>
-          <button
-            onClick={handleCancelDelete}
-            className="text-xs text-wechat-text-secondary hover:text-wechat-text px-1"
-          >
-            取消
-          </button>
+        <div className="absolute inset-0 z-10 bg-panel flex flex-col items-center justify-center gap-2" onClick={stop}>
+          <span className="text-xs text-text-main">删除该会话？</span>
+          <div className="flex gap-2">
+            <button onClick={(e) => { stop(e); setShowDeleteConfirm(false); }} className="px-3 py-1 text-xs rounded border border-line text-text-sub hover:text-text-main">取消</button>
+            <button onClick={(e) => { stop(e); onDelete(peerId); }} className="px-3 py-1 text-xs rounded bg-danger text-white hover:opacity-90">删除</button>
+          </div>
         </div>
       )}
     </div>

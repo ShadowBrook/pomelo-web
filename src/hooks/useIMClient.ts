@@ -7,6 +7,7 @@ import { useConversationStore } from '@/stores/useConversationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { useConnStore } from '@/stores/useConnStore';
 import { mediaPreview } from '@/sdk/media';
 
 // 模块级单例
@@ -117,14 +118,38 @@ export function useIMClient() {
     });
 
     client.on('connectionChange', (state: ConnectionState) => {
+      useConnStore.getState().set(state);
       setConnectionState(state);
       if (state === 'connected') {
-        // C2C 离线消息由 client 内部 _pullOfflineMessages 处理；
-        // 群聊离线增量：重连/首次上线后遍历所有已加入的群同步
-        const groups = useGroupStore.getState().groups;
-        for (const gid of Object.keys(groups)) {
-          syncGroupMessages(gid);
-        }
+        // 群列表：登录/重连后即拉取。之前只在"群聊"页签挂载时才拉，
+        // 直接从会话列表进群聊时 groups 为空 → 群名/群主都显示成数字 ID
+        client.getMyGroups()
+          .then((list) => {
+            useGroupStore.getState().setGroups(list);
+            const convs = useConversationStore.getState().conversations;
+            for (const g of list) {
+              // 纠正历史遗留：会话昵称被写成 groupId 的，改回群名
+              const conv = convs[g.groupId];
+              if (conv && conv.nickname === g.groupId && g.name) {
+                useConversationStore.setState((s) => ({
+                  conversations: {
+                    ...s.conversations,
+                    [g.groupId]: { ...s.conversations[g.groupId], nickname: g.name },
+                  },
+                }));
+              }
+              // 群聊离线增量（首次登录时序：连接先建立、群列表后到，旧逻辑在此处会空跑）
+              syncGroupMessages(g.groupId);
+            }
+          })
+          .catch((err) => {
+            console.error('群列表加载失败:', err);
+            // 兜底：已知的群仍做离线增量同步
+            const groups = useGroupStore.getState().groups;
+            for (const gid of Object.keys(groups)) {
+              syncGroupMessages(gid);
+            }
+          });
       }
     });
 
@@ -258,13 +283,6 @@ export function useIMClient() {
     }
   }, []);
 
-  // 重试发送失败的消息：从 chat store 查找原始内容并重新发送
-  const retrySend = useCallback((messageId: string) => {
-    useChatStore.getState().retryMessage(messageId, (params) => {
-      return sendMessage(params);
-    });
-  }, [sendMessage]);
-
   // 好友操作：转发到 SDK 单例（供组件直接调用；Store 通过 getIMClient 调用）
   const searchUsers = useCallback((keyword: string) => {
     if (!clientInstance) {
@@ -326,7 +344,6 @@ export function useIMClient() {
     disconnect,
     sendMessage,
     markSeen,
-    retrySend,
     searchUsers,
     addFriend,
     acceptFriend,

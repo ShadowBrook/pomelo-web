@@ -1,8 +1,16 @@
-import { useState, useRef, KeyboardEvent, useEffect, lazy, Suspense } from 'react';
+import { useState, useRef, KeyboardEvent, useEffect, lazy, Suspense, ReactNode } from 'react';
+import { toast } from '@/stores/useToastStore';
 
 const EmojiPicker = lazy(() => import('@/components/EmojiPicker'));
 
+interface ReplyPreview {
+  senderName: string;
+  snippet: string;
+}
+
 interface Props {
+  replyPreview?: ReplyPreview;
+  onCancelReply?: () => void;
   peerId: string;
   draft?: string;
   onSendText: (text: string) => void;
@@ -12,7 +20,7 @@ interface Props {
   onSendVideo: (file: File) => void;
   onSendEmoji: (file: File) => void;
   onDraftChange: (text: string) => void;
-  disabled?: boolean;
+  quickReplies?: string[];
 }
 
 /** MediaRecorder MIME → 扩展名（Chrome 默认 webm，Safari 为 mp4/m4a） */
@@ -23,7 +31,17 @@ function voiceExt(mime: string): string {
   return 'webm';
 }
 
+function ToolButton({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button onClick={onClick} title={title} className="p-1.5 text-text-sub hover:text-text-main transition-colors">
+      {children}
+    </button>
+  );
+}
+
 export function MessageInput({
+  replyPreview,
+  onCancelReply,
   peerId,
   draft,
   onSendText,
@@ -33,11 +51,12 @@ export function MessageInput({
   onSendVideo,
   onSendEmoji,
   onDraftChange,
-  disabled,
+  quickReplies = ['正在处理紧急事情', '有事先离开一会儿'],
 }: Props) {
   const [text, setText] = useState(draft || '');
   const [showEmoji, setShowEmoji] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [showQuick, setShowQuick] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +89,7 @@ export function MessageInput({
 
   const handleSend = () => {
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed) return;
     onSendText(trimmed);
     setText('');
     onDraftChange('');
@@ -78,6 +97,14 @@ export function MessageInput({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ctrl/Cmd+Enter：插入换行（参考产品行为）
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      const next = text + '\n';
+      setText(next);
+      onDraftChange(next);
+      return;
+    }
     // IME 组合态（中文输入法等）时 Enter 用于确认候选词，不发送消息
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
@@ -133,7 +160,6 @@ export function MessageInput({
       stopRecording();
       return;
     }
-    if (disabled) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -168,31 +194,16 @@ export function MessageInput({
   };
 
   return (
-    <div className="bg-white border-t border-gray-200 p-3">
-      {/* 工具栏 */}
-      <div className="flex gap-3 mb-2 text-xl">
-        <button onClick={() => imageInputRef.current?.click()} disabled={disabled} className="hover:opacity-70 transition-opacity disabled:opacity-40" title="发送图片">
-          🖼️
-        </button>
-        <button onClick={() => fileInputRef.current?.click()} disabled={disabled} className="hover:opacity-70 transition-opacity disabled:opacity-40" title="发送文件">
-          📎
-        </button>
-        {/* 录音中保持可点击，用于停止并发送（即使期间断线） */}
-        <button
-          onClick={toggleRecord}
-          disabled={disabled && !recording}
-          className={`hover:opacity-70 transition-opacity disabled:opacity-40 ${recording ? 'text-red-500 animate-pulse' : ''}`}
-          title={recording ? '停止录音' : '语音'}
-        >
-          {recording ? '●' : '🎤'}
-        </button>
-        <button onClick={() => videoInputRef.current?.click()} disabled={disabled} className="hover:opacity-70 transition-opacity disabled:opacity-40" title="发送视频">
-          🎬
-        </button>
+    <div className="bg-panel border-t border-line px-3 pt-2 pb-2">
+      {/* 工具栏：参考图 8 图标 + 麦克风（保留录音能力） */}
+      <div className="flex items-center gap-1 mb-1.5">
         <div className="relative">
-          <button onClick={() => setShowEmoji(!showEmoji)} disabled={disabled} className="hover:opacity-70 transition-opacity disabled:opacity-40" title="表情">
-            😊
-          </button>
+          <ToolButton title="表情" onClick={() => setShowEmoji((v) => !v)}>
+            <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <circle cx="12" cy="12" r="9" /><path d="M8.5 14.5c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8" strokeLinecap="round" />
+              <circle cx="9" cy="9.5" r="0.9" fill="currentColor" stroke="none" /><circle cx="15" cy="9.5" r="0.9" fill="currentColor" stroke="none" />
+            </svg>
+          </ToolButton>
           {showEmoji && (
             <Suspense fallback={<div className="absolute bottom-full left-0 mb-2 w-[280px] h-[200px] bg-white border rounded-lg animate-pulse" />}>
               <EmojiPicker
@@ -210,7 +221,62 @@ export function MessageInput({
             </Suspense>
           )}
         </div>
+        <ToolButton title="发送文件" onClick={() => fileInputRef.current?.click()}>
+          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+          </svg>
+        </ToolButton>
+        <ToolButton title="发送图片" onClick={() => imageInputRef.current?.click()}>
+          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="1.6" /><path d="M4 18l5-5 3 3 4-4 4 4" />
+          </svg>
+        </ToolButton>
+        <ToolButton title="发送视频" onClick={() => videoInputRef.current?.click()}>
+          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <rect x="2.5" y="5" width="13" height="14" rx="2" /><path d="M15.5 10.5L21 7v10l-5.5-3.5z" />
+          </svg>
+        </ToolButton>
+        <ToolButton title="个人名片" onClick={() => toast('功能开发中')}>
+          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <circle cx="12" cy="8" r="3.5" /><path d="M5 20c.9-3.2 3.7-5 7-5s6.1 1.8 7 5" />
+          </svg>
+        </ToolButton>
+        <ToolButton title="群名片" onClick={() => toast('功能开发中')}>
+          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <circle cx="9" cy="8.5" r="3" /><circle cx="16.5" cy="9.5" r="2.4" />
+            <path d="M3.5 19.5c.7-2.8 2.9-4.5 5.5-4.5s4.8 1.7 5.5 4.5M15 15.3c1.9.2 3.4 1.5 4 3.7" />
+          </svg>
+        </ToolButton>
+        <ToolButton title="位置" onClick={() => toast('功能开发中')}>
+          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" /><circle cx="12" cy="10" r="2.6" />
+          </svg>
+        </ToolButton>
+        <ToolButton title="@" onClick={() => toast('功能开发中')}>
+          <span className="text-[15px] leading-none font-medium">@</span>
+        </ToolButton>
+        <ToolButton title="清屏" onClick={() => toast('功能开发中')}>
+          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <path d="M4 20h16M9 15l9-9a2.1 2.1 0 0 0-3-3l-9 9v3h3z" />
+          </svg>
+        </ToolButton>
+        <ToolButton title={recording ? '停止录音' : '语音输入'} onClick={toggleRecord}>
+          <svg viewBox="0 0 24 24" className={`w-[18px] h-[18px] ${recording ? 'text-danger animate-pulse' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.7">
+            <rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" strokeLinecap="round" />
+          </svg>
+        </ToolButton>
       </div>
+
+      {/* 引用条 */}
+      {replyPreview && (
+        <div className="mb-1.5 flex items-center gap-2 bg-black/5 rounded px-2 py-1">
+          <div className="min-w-0 flex-1 text-xs">
+            <span className="text-primary">回复 {replyPreview.senderName}：</span>
+            <span className="text-text-sub">{replyPreview.snippet}</span>
+          </div>
+          <button className="text-text-sub hover:text-text-main text-sm leading-none px-1" title="取消引用" onClick={onCancelReply}>×</button>
+        </div>
+      )}
 
       {/* 录音提示条 */}
       {recording && (
@@ -220,25 +286,53 @@ export function MessageInput({
         </div>
       )}
 
-      {/* 输入区域 */}
-      <div className="flex gap-2 items-end">
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => handleChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="输入消息..."
-          disabled={disabled}
-          rows={3}
-          className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-wechat-green disabled:bg-gray-100"
-        />
-        <button
-          onClick={handleSend}
-          disabled={disabled || !text.trim()}
-          className="px-5 py-2 bg-wechat-green text-white rounded-lg text-sm font-medium hover:bg-wechat-green-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-        >
-          发送
-        </button>
+      {/* 输入区域（无边框，白底透明输入） */}
+      <textarea
+        ref={textareaRef}
+        value={text}
+        onChange={(e) => handleChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="输入聊天信息，按 Enter 键快速发送 ..."
+        rows={3}
+        className="w-full resize-none bg-transparent px-1 py-1 text-sm text-text-main focus:outline-none"
+      />
+
+      {/* 底行：右对齐提示 + 发送组合按钮 */}
+      <div className="flex items-center justify-end gap-2 mt-1">
+        <span className="text-[11px] text-text-sub">按 Ctrl+Enter 换行，按 Enter 发送</span>
+        <div className="relative flex">
+          <button
+            onClick={handleSend}
+            disabled={!text.trim()}
+            className="px-5 py-1.5 bg-send-btn text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 rounded-l-sm transition-opacity"
+          >
+            发送
+          </button>
+          <button
+            onClick={() => setShowQuick((v) => !v)}
+            title="快捷回复"
+            className="px-2 py-1.5 bg-primary-dark text-white text-xs hover:opacity-90 border-l border-white/25 rounded-r-sm transition-opacity"
+          >
+            ▼
+          </button>
+          {showQuick && (
+            <div className="absolute bottom-full right-0 mb-2 bg-panel rounded-md shadow-xl border border-line py-1 w-[220px] z-20">
+              {quickReplies.map((qr) => (
+                <button
+                  key={qr}
+                  onClick={() => {
+                    onSendText(qr);
+                    setShowQuick(false);
+                    textareaRef.current?.focus();
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-text-main hover:bg-bg-page transition-colors"
+                >
+                  快捷回复："{qr}"
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 隐藏的文件 input */}

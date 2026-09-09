@@ -33,7 +33,7 @@ export function AddFriendDialog({ open, onClose }: Props) {
       <div className="bg-white rounded-lg shadow-xl w-[420px] max-h-[500px] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-3 border-b">
-          <h3 className="text-base font-medium text-wechat-text">添加好友</h3>
+          <h3 className="text-base font-medium text-text-main">添加好友</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
 
@@ -46,13 +46,13 @@ export function AddFriendDialog({ open, onClose }: Props) {
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="输入用户名或昵称搜索"
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-wechat-green"
+              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary"
               autoFocus
             />
             <button
               onClick={handleSearch}
               disabled={!keyword.trim() || loading}
-              className="px-4 py-2 bg-wechat-green text-white rounded-md text-sm hover:bg-wechat-green-dark disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary-dark disabled:opacity-50"
             >
               搜索
             </button>
@@ -75,12 +75,12 @@ export function AddFriendDialog({ open, onClose }: Props) {
                   {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover rounded-full" /> : u.nickname.charAt(0).toUpperCase()}
                 </div>
                 <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium text-wechat-text">{u.nickname}</p>
+                  <p className="text-sm font-medium text-text-main">{u.nickname}</p>
                   <p className="text-xs text-gray-400">ID: {u.userName || u.userId}</p>
                 </div>
                 <button
                   onClick={() => handleAddFriend(u.userId)}
-                  className="px-3 py-1 text-xs bg-wechat-green text-white rounded hover:bg-wechat-green-dark"
+                  className="px-3 py-1 text-xs bg-primary text-white rounded hover:bg-primary-dark"
                 >
                   加好友
                 </button>

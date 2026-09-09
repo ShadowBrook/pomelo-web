@@ -58,6 +58,8 @@ export enum Cmd {
   GROUP_ACK_RESP = 0x0097,
   GROUP_MSG_READ_REQ = 0x0098,
   GROUP_MSG_READ_RESP = 0x0099,
+  GROUP_READ_STATE_REQ = 0x009A,
+  GROUP_READ_STATE_RESP = 0x009B,
 
   // 媒体上传 0x00A0-0x00A1
   CMD_UPLOAD_REQ = 0x00A0,
@@ -75,12 +77,25 @@ export enum MsgType {
   VIDEO = 4,
   FILE = 5,
   EMOJI = 6,
+  FORWARD = 8,
+  REPLY = 9,
 }
 
 // ACK 类型
 export enum AckType {
   RECEIVED = 0,
   SEEN = 1,
+}
+
+// 引用消息快照（客户端生成，服务端直存直透）
+export interface ReplySnippet {
+  messageId: string;
+  senderId: string;
+  msgType: number;
+  senderName?: string;
+  snippet: string;
+  thumb?: string;
+  thumbUrl?: string;
 }
 
 // 消息状态
@@ -100,6 +115,8 @@ export interface OutgoingMessage {
   retryCount: number;
   timer?: ReturnType<typeof setTimeout>;
   serverMessageId?: string;
+  /** 消息种类：c2c 走 C2CReq 补发，group 走 C2GReq 补发（重连/认证后重发时区分编码路径） */
+  kind?: 'c2c' | 'group';
 }
 
 // 接收消息（归一化）。C2C 消息用 recipientId，群消息用 groupId
@@ -232,6 +249,18 @@ export interface GroupMsgReadStatusResp {
   code: number;
   message: string;
   readers: GroupMsgReader[];
+}
+
+/** 群成员已读游标（一次拉取覆盖全群） */
+export interface MemberReadState {
+  userId: string;
+  lastReadSeq: number;
+}
+
+export interface GroupReadStateResp {
+  code: number;
+  message: string;
+  members: MemberReadState[];
 }
 
 export interface CreateGroupResp {
