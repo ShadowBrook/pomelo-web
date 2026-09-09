@@ -6,8 +6,13 @@ import { toast } from '@/stores/useToastStore';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { ChatWindowHeader } from '@/components/ChatWindowHeader';
+import type { ChatMessage } from '@/stores/useChatStore';
 import { DetailTabs, DetailTab } from '@/components/DetailTabs';
 import { ChatDetailPanel } from '@/components/ChatDetailPanel';
+import { ForwardDialog } from '@/components/ForwardDialog';
+import { buildForwardContent, buildReplySnippet } from '@/sdk/media';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { MsgType } from '@/sdk/types';
 
 interface ReadStatus {
   readers: Array<{ userId: string; nickname: string; avatar: string }>;
@@ -19,6 +24,28 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
   const [tab, setTab] = useState<DetailTab>('info');
   const [soundOn, setSoundOn] = useState(true);
   const [readStatus, setReadStatus] = useState<ReadStatus | null>(null);
+  const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const me = useAuthStore((st) => st.user);
+  const toggleSelect = useCallback((m: ChatMessage) => {
+    setSelectedIds((ids) => ids.includes(m.id) ? ids.filter((i) => i !== m.id) : [...ids, m.id]);
+  }, []);
+  const startSelect = useCallback((m: ChatMessage) => {
+    setSelecting(true);
+    setSelectedIds([m.id]);
+  }, []);
+  const exitSelect = useCallback(() => { setSelecting(false); setSelectedIds([]); }, []);
+  // 合并转发：按选中顺序构建 FORWARD 消息投递到当前会话
+  const forwardMerged = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    const byId = new Map((s.messages || []).map((m) => [m.id, m]));
+    const msgs = selectedIds.map((id) => byId.get(id)).filter((m): m is ChatMessage => !!m);
+    const content = buildForwardContent('', msgs, me?.nickname || me?.userName);
+    // 构建伪消息进入转发选择框，由用户挑选目标会话（forwardTo 按目标类型路由 C2C/群）
+    setForwardMsg({ msgType: MsgType.FORWARD, content } as ChatMessage);
+    exitSelect();
+  }, [selectedIds, s, exitSelect, me]);
   const friend = useFriendStore((st) => st.friends.find((f) => f.userId === peerId));
 
   // 点击群消息已读圈 → 查询已读用户列表
@@ -85,6 +112,15 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
       {/* 主体：左聊天区 + 右详情栏 */}
       <div className="flex-1 flex min-h-0">
         <div className="flex-1 flex flex-col min-w-0 bg-chat-bg">
+          {selecting && (
+            <div className="flex items-center justify-between px-4 py-1.5 bg-panel border-b border-line text-xs">
+              <span className="text-text-sub">已选 {selectedIds.length} 条</span>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 bg-primary text-white rounded disabled:opacity-50" disabled={selectedIds.length === 0} onClick={forwardMerged}>合并转发</button>
+                <button className="px-3 py-1 border border-line rounded" onClick={exitSelect}>取消</button>
+              </div>
+            </div>
+          )}
           <MessageList
             messages={s.messages}
             currentUserId={s.currentUserId}
@@ -94,10 +130,21 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
             onLoadMore={s.loadMoreHistory}
             isGroup={s.isGroup}
             onReadClick={handleReadClick}
+            onReply={s.setReplyTo}
+            onForward={setForwardMsg}
+            selecting={selecting}
+            selectedIds={new Set(selectedIds)}
+            onToggleSelect={toggleSelect}
+            onStartSelect={startSelect}
           />
           <MessageInput
             peerId={peerId}
             draft={s.draft}
+            replyPreview={s.replyTo ? {
+              senderName: s.replyTo.senderNickname || s.replyTo.senderUserName || s.replyTo.senderId,
+              snippet: buildReplySnippet(s.replyTo),
+            } : undefined}
+            onCancelReply={() => s.setReplyTo(null)}
             onSendText={s.sendText}
             onSendImage={s.sendImage}
             onSendFile={s.sendFile}
@@ -110,6 +157,15 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
         </div>
         <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} tab={tab} />
       </div>
+
+      {/* 转发目标选择弹窗 */}
+      {forwardMsg && (
+        <ForwardDialog
+          source={forwardMsg}
+          onForward={(target) => s.forwardTo(target, forwardMsg)}
+          onClose={() => setForwardMsg(null)}
+        />
+      )}
 
       {/* 群消息已读成员弹窗 */}
       {readStatus && (

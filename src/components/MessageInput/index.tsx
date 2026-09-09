@@ -3,7 +3,14 @@ import { toast } from '@/stores/useToastStore';
 
 const EmojiPicker = lazy(() => import('@/components/EmojiPicker'));
 
+interface ReplyPreview {
+  senderName: string;
+  snippet: string;
+}
+
 interface Props {
+  replyPreview?: ReplyPreview;
+  onCancelReply?: () => void;
   peerId: string;
   draft?: string;
   onSendText: (text: string) => void;
@@ -33,6 +40,8 @@ function ToolButton({ title, onClick, children }: { title: string; onClick: () =
 }
 
 export function MessageInput({
+  replyPreview,
+  onCancelReply,
   peerId,
   draft,
   onSendText,
@@ -257,6 +266,17 @@ export function MessageInput({
           </svg>
         </ToolButton>
       </div>
+
+      {/* 引用条 */}
+      {replyPreview && (
+        <div className="mb-1.5 flex items-center gap-2 bg-black/5 rounded px-2 py-1">
+          <div className="min-w-0 flex-1 text-xs">
+            <span className="text-primary">回复 {replyPreview.senderName}：</span>
+            <span className="text-text-sub">{replyPreview.snippet}</span>
+          </div>
+          <button className="text-text-sub hover:text-text-main text-sm leading-none px-1" title="取消引用" onClick={onCancelReply}>×</button>
+        </div>
+      )}
 
       {/* 录音提示条 */}
       {recording && (

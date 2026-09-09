@@ -6,7 +6,7 @@ describe('useChatStore 消息 ID 与服务端对齐', () => {
   beforeEach(() => useChatStore.getState().clearAll());
 
   it('onStatusChange 收到 serverMessageId 后，本地 id 应对齐为服务端 id（历史拉取去重依赖此对齐）', () => {
-    useChatStore.getState().sendText('peer-1', '???', () => 'client-msg-id');
+    useChatStore.getState().sendText('peer-1', '???', undefined, () => 'client-msg-id');
 
     useChatStore.getState().onStatusChange({
       id: 'client-msg-id',
@@ -22,7 +22,7 @@ describe('useChatStore 消息 ID 与服务端对齐', () => {
   });
 
   it('对齐后，后续以 client id 派发的状态事件（delivered/seen）仍能命中同一条消息', () => {
-    useChatStore.getState().sendText('peer-1', '???', () => 'client-msg-id');
+    useChatStore.getState().sendText('peer-1', '???', undefined, () => 'client-msg-id');
     useChatStore.getState().onStatusChange({
       id: 'client-msg-id',
       status: 'sent',
@@ -38,7 +38,7 @@ describe('useChatStore 消息 ID 与服务端对齐', () => {
   });
 
   it('对齐后模拟刷新：历史拉取返回服务端 id 的同内容消息，按 id 去重后不产生重复', () => {
-    useChatStore.getState().sendText('peer-1', '???', () => 'client-msg-id');
+    useChatStore.getState().sendText('peer-1', '???', undefined, () => 'client-msg-id');
     useChatStore.getState().onStatusChange({
       id: 'client-msg-id',
       status: 'sent',
@@ -85,5 +85,19 @@ describe('useChatStore 消息 ID 与服务端对齐', () => {
     expect(cleaned['peer-1'].filter((m) => m.seq === 10019)).toHaveLength(1);
     expect(cleaned['peer-1'].some((m) => m.id === '777')).toBe(true);
     expect(cleaned['peer-1'].some((m) => m.id === '888')).toBe(true);
+  });
+
+  it('sendRaw 转发消息乐观写入目标会话列表（发送方立即可见）', () => {
+    const content = JSON.stringify({ t: 'A 的聊天记录', n: 1, items: [] });
+    useChatStore.getState().sendRaw('target-peer', MsgType.FORWARD, content, () => 'fwd-1');
+
+    const msgs = useChatStore.getState().messages['target-peer'];
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0].id).toBe('fwd-1');
+    expect(msgs[0].msgType).toBe(MsgType.FORWARD);
+    expect(msgs[0].content).toBe(content);
+    expect(msgs[0].status).toBe('sending');
+    // 不影响其他会话
+    expect(useChatStore.getState().messages['peer-1']).toBeUndefined();
   });
 });

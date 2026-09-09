@@ -12,6 +12,12 @@ interface Props {
   hasMore?: boolean;
   isGroup?: boolean;
   onReadClick?: (messageId: string, seq: number) => void;
+  onReply?: (m: ChatMessage) => void;
+  onForward?: (m: ChatMessage) => void;
+  selecting?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (m: ChatMessage) => void;
+  onStartSelect?: (m: ChatMessage) => void;
 }
 
 function shouldShowTimeDivider(prev: ChatMessage | null, curr: ChatMessage): boolean {
@@ -28,6 +34,12 @@ export function MessageList({
   hasMore = false,
   isGroup,
   onReadClick,
+  onReply,
+  onForward,
+  selecting,
+  selectedIds,
+  onToggleSelect,
+  onStartSelect,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -95,7 +107,7 @@ export function MessageList({
             <div className={`mb-1 ${isSelf ? 'text-right pr-[52px]' : 'text-left pl-[52px]'}`}>
               {showTime && <span className="text-[11px] text-text-sub">{formatMsgTime(msg.timestamp)}</span>}
             </div>
-            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} />
+            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} onReply={onReply} onForward={onForward} selecting={selecting} selected={selectedIds?.has(msg.id)} onToggleSelect={onToggleSelect} onStartSelect={onStartSelect} />
           </div>
         );
       })}
