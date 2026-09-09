@@ -100,4 +100,20 @@ describe('useChatStore 消息 ID 与服务端对齐', () => {
     // 不影响其他会话
     expect(useChatStore.getState().messages['peer-1']).toBeUndefined();
   });
+
+  it('setGroupReadState 按群存储成员已读游标', () => {
+    const { setGroupReadState } = useChatStore.getState();
+    setGroupReadState('group-1', [
+      { userId: 'u1', lastReadSeq: 100 },
+      { userId: 'u2', lastReadSeq: 50 },
+    ]);
+    setGroupReadState('group-2', [{ userId: 'u1', lastReadSeq: 7 }]);
+
+    const states = useChatStore.getState().groupReadStates;
+    expect(states['group-1']['u1']).toBe(100);
+    expect(states['group-1']['u2']).toBe(50);
+    expect(states['group-2']['u1']).toBe(7);
+    // 群之间互不影响
+    expect(states['group-2']['u2']).toBeUndefined();
+  });
 });

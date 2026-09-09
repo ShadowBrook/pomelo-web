@@ -524,6 +524,12 @@ export namespace im {
             /** CMD_GROUP_MSG_READ_RESP value */
             CMD_GROUP_MSG_READ_RESP = 153,
 
+            /** CMD_GROUP_READ_STATE_REQ value */
+            CMD_GROUP_READ_STATE_REQ = 154,
+
+            /** CMD_GROUP_READ_STATE_RESP value */
+            CMD_GROUP_READ_STATE_RESP = 155,
+
             /** CMD_UPLOAD_REQ value */
             CMD_UPLOAD_REQ = 160,
 
@@ -4944,6 +4950,375 @@ export namespace im {
 
             /** Shape of a GetGroupMsgReadStatusResp. */
             type $Shape = im.group.GetGroupMsgReadStatusResp.$Properties;
+        }
+
+        /**
+         * Properties of a GetGroupReadStateReq.
+         * @deprecated Use im.group.GetGroupReadStateReq.$Properties instead.
+         */
+        interface IGetGroupReadStateReq extends im.group.GetGroupReadStateReq.$Properties {
+        }
+
+        /** Represents a GetGroupReadStateReq. */
+        class GetGroupReadStateReq {
+
+            /**
+             * Constructs a new GetGroupReadStateReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.GetGroupReadStateReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** GetGroupReadStateReq groupId. */
+            groupId: (number|Long);
+
+            /**
+             * Creates a new GetGroupReadStateReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns GetGroupReadStateReq instance
+             */
+            static create(properties: im.group.GetGroupReadStateReq.$Shape): im.group.GetGroupReadStateReq & im.group.GetGroupReadStateReq.$Shape;
+            static create(properties?: im.group.GetGroupReadStateReq.$Properties): im.group.GetGroupReadStateReq;
+
+            /**
+             * Encodes the specified GetGroupReadStateReq message. Does not implicitly {@link im.group.GetGroupReadStateReq.verify|verify} messages.
+             * @param message GetGroupReadStateReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.GetGroupReadStateReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified GetGroupReadStateReq message, length delimited. Does not implicitly {@link im.group.GetGroupReadStateReq.verify|verify} messages.
+             * @param message GetGroupReadStateReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.GetGroupReadStateReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a GetGroupReadStateReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.GetGroupReadStateReq & im.group.GetGroupReadStateReq.$Shape} GetGroupReadStateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.GetGroupReadStateReq & im.group.GetGroupReadStateReq.$Shape;
+
+            /**
+             * Decodes a GetGroupReadStateReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.GetGroupReadStateReq & im.group.GetGroupReadStateReq.$Shape} GetGroupReadStateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.GetGroupReadStateReq & im.group.GetGroupReadStateReq.$Shape;
+
+            /**
+             * Verifies a GetGroupReadStateReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a GetGroupReadStateReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns GetGroupReadStateReq
+             */
+            static fromObject(object: { [k: string]: any }): im.group.GetGroupReadStateReq;
+
+            /**
+             * Creates a plain object from a GetGroupReadStateReq message. Also converts values to other types if specified.
+             * @param message GetGroupReadStateReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.GetGroupReadStateReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this GetGroupReadStateReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for GetGroupReadStateReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace GetGroupReadStateReq {
+
+            /** Properties of a GetGroupReadStateReq. */
+            interface $Properties {
+
+                /** GetGroupReadStateReq groupId */
+                groupId?: (number|Long|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a GetGroupReadStateReq. */
+            type $Shape = im.group.GetGroupReadStateReq.$Properties;
+        }
+
+        /**
+         * Properties of a MemberReadState.
+         * @deprecated Use im.group.MemberReadState.$Properties instead.
+         */
+        interface IMemberReadState extends im.group.MemberReadState.$Properties {
+        }
+
+        /** Represents a MemberReadState. */
+        class MemberReadState {
+
+            /**
+             * Constructs a new MemberReadState.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.MemberReadState.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** MemberReadState userId. */
+            userId: (number|Long);
+
+            /** MemberReadState lastReadSeq. */
+            lastReadSeq: (number|Long);
+
+            /**
+             * Creates a new MemberReadState instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns MemberReadState instance
+             */
+            static create(properties: im.group.MemberReadState.$Shape): im.group.MemberReadState & im.group.MemberReadState.$Shape;
+            static create(properties?: im.group.MemberReadState.$Properties): im.group.MemberReadState;
+
+            /**
+             * Encodes the specified MemberReadState message. Does not implicitly {@link im.group.MemberReadState.verify|verify} messages.
+             * @param message MemberReadState message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.MemberReadState.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified MemberReadState message, length delimited. Does not implicitly {@link im.group.MemberReadState.verify|verify} messages.
+             * @param message MemberReadState message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.MemberReadState.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a MemberReadState message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.MemberReadState & im.group.MemberReadState.$Shape} MemberReadState
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.MemberReadState & im.group.MemberReadState.$Shape;
+
+            /**
+             * Decodes a MemberReadState message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.MemberReadState & im.group.MemberReadState.$Shape} MemberReadState
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.MemberReadState & im.group.MemberReadState.$Shape;
+
+            /**
+             * Verifies a MemberReadState message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a MemberReadState message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns MemberReadState
+             */
+            static fromObject(object: { [k: string]: any }): im.group.MemberReadState;
+
+            /**
+             * Creates a plain object from a MemberReadState message. Also converts values to other types if specified.
+             * @param message MemberReadState
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.MemberReadState, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this MemberReadState to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for MemberReadState
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace MemberReadState {
+
+            /** Properties of a MemberReadState. */
+            interface $Properties {
+
+                /** MemberReadState userId */
+                userId?: (number|Long|null);
+
+                /** MemberReadState lastReadSeq */
+                lastReadSeq?: (number|Long|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a MemberReadState. */
+            type $Shape = im.group.MemberReadState.$Properties;
+        }
+
+        /**
+         * Properties of a GetGroupReadStateResp.
+         * @deprecated Use im.group.GetGroupReadStateResp.$Properties instead.
+         */
+        interface IGetGroupReadStateResp extends im.group.GetGroupReadStateResp.$Properties {
+        }
+
+        /** Represents a GetGroupReadStateResp. */
+        class GetGroupReadStateResp {
+
+            /**
+             * Constructs a new GetGroupReadStateResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.GetGroupReadStateResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** GetGroupReadStateResp code. */
+            code: number;
+
+            /** GetGroupReadStateResp message. */
+            message: string;
+
+            /** GetGroupReadStateResp members. */
+            members: im.group.MemberReadState.$Properties[];
+
+            /**
+             * Creates a new GetGroupReadStateResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns GetGroupReadStateResp instance
+             */
+            static create(properties: im.group.GetGroupReadStateResp.$Shape): im.group.GetGroupReadStateResp & im.group.GetGroupReadStateResp.$Shape;
+            static create(properties?: im.group.GetGroupReadStateResp.$Properties): im.group.GetGroupReadStateResp;
+
+            /**
+             * Encodes the specified GetGroupReadStateResp message. Does not implicitly {@link im.group.GetGroupReadStateResp.verify|verify} messages.
+             * @param message GetGroupReadStateResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.GetGroupReadStateResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified GetGroupReadStateResp message, length delimited. Does not implicitly {@link im.group.GetGroupReadStateResp.verify|verify} messages.
+             * @param message GetGroupReadStateResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.GetGroupReadStateResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a GetGroupReadStateResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.GetGroupReadStateResp & im.group.GetGroupReadStateResp.$Shape} GetGroupReadStateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.GetGroupReadStateResp & im.group.GetGroupReadStateResp.$Shape;
+
+            /**
+             * Decodes a GetGroupReadStateResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.GetGroupReadStateResp & im.group.GetGroupReadStateResp.$Shape} GetGroupReadStateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.GetGroupReadStateResp & im.group.GetGroupReadStateResp.$Shape;
+
+            /**
+             * Verifies a GetGroupReadStateResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a GetGroupReadStateResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns GetGroupReadStateResp
+             */
+            static fromObject(object: { [k: string]: any }): im.group.GetGroupReadStateResp;
+
+            /**
+             * Creates a plain object from a GetGroupReadStateResp message. Also converts values to other types if specified.
+             * @param message GetGroupReadStateResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.GetGroupReadStateResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this GetGroupReadStateResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for GetGroupReadStateResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace GetGroupReadStateResp {
+
+            /** Properties of a GetGroupReadStateResp. */
+            interface $Properties {
+
+                /** GetGroupReadStateResp code */
+                code?: (number|null);
+
+                /** GetGroupReadStateResp message */
+                message?: (string|null);
+
+                /** GetGroupReadStateResp members */
+                members?: (im.group.MemberReadState.$Properties[]|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a GetGroupReadStateResp. */
+            type $Shape = im.group.GetGroupReadStateResp.$Properties;
         }
     }
 

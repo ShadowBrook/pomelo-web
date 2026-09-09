@@ -58,6 +58,8 @@ export enum Cmd {
   GROUP_ACK_RESP = 0x0097,
   GROUP_MSG_READ_REQ = 0x0098,
   GROUP_MSG_READ_RESP = 0x0099,
+  GROUP_READ_STATE_REQ = 0x009A,
+  GROUP_READ_STATE_RESP = 0x009B,
 
   // 媒体上传 0x00A0-0x00A1
   CMD_UPLOAD_REQ = 0x00A0,
@@ -247,6 +249,18 @@ export interface GroupMsgReadStatusResp {
   code: number;
   message: string;
   readers: GroupMsgReader[];
+}
+
+/** 群成员已读游标（一次拉取覆盖全群） */
+export interface MemberReadState {
+  userId: string;
+  lastReadSeq: number;
+}
+
+export interface GroupReadStateResp {
+  code: number;
+  message: string;
+  members: MemberReadState[];
 }
 
 export interface CreateGroupResp {

@@ -19,6 +19,7 @@ import {
   GroupOpResp,
   CreateGroupResp,
   GroupMsgReadStatusResp,
+  GroupReadStateResp,
   GroupMemberChangeNotify,
   UploadResp,
 } from './types';
@@ -535,6 +536,15 @@ export class IMClient {
       Cmd.GROUP_PULL_MSG_RESP,
       enc(im.pull.PullGroupMsgReq, { groupId, cursor, limit, isBackward: backward }),
       10000,
+    );
+  }
+
+  /** 拉取全群成员已读游标（一次请求，客户端本地计算各消息已读人数） */
+  getGroupReadState(groupId: string): Promise<GroupReadStateResp> {
+    return this._sendGroupOp<GroupReadStateResp>(
+      Cmd.GROUP_READ_STATE_REQ,
+      Cmd.GROUP_READ_STATE_RESP,
+      enc(im.group.GetGroupReadStateReq, { groupId }),
     );
   }
 
@@ -1358,6 +1368,18 @@ export class IMClient {
       case Cmd.GROUP_ACK_RESP: {
         const r = plain(im.group.GroupAckResp, body);
         this._resolveFriendOp(messageId, { code: r?.code ?? 0, message: r?.message ?? '' });
+        break;
+      }
+      case Cmd.GROUP_READ_STATE_RESP: {
+        const r = plain(im.group.GetGroupReadStateResp, body);
+        this._resolveFriendOp(messageId, {
+          code: r?.code ?? 0,
+          message: r?.message ?? '',
+          members: (r?.members || []).map((m: any) => ({
+            userId: String(m.userId ?? ''),
+            lastReadSeq: Number(m.lastReadSeq ?? 0),
+          })),
+        });
         break;
       }
       case Cmd.GROUP_MSG_READ_RESP: {

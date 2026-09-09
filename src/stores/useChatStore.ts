@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { IncomingMessage, StatusUpdate, MsgType, MessageStatus } from '@/sdk/types';
+import { IncomingMessage, StatusUpdate, MsgType, MessageStatus, MemberReadState } from '@/sdk/types';
 import { generateId } from '@/sdk/protocol';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
@@ -30,6 +30,8 @@ interface ChatState {
   messages: Record<string, ChatMessage[]>;
   loadingHistory: Record<string, boolean>;
   hasMoreHistory: Record<string, boolean>;
+  /** 群成员已读游标：groupId → userId → lastReadSeq（一次拉取全群，仅内存不持久化） */
+  groupReadStates: Record<string, Record<string, number>>;
 
   addMessage: (msg: ChatMessage) => void;
   sendText: (peerId: string, text: string, reply: ReplySnippet | undefined, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
@@ -45,6 +47,7 @@ interface ChatState {
     content: string,
     sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
   ) => void;
+  setGroupReadState: (groupId: string, members: MemberReadState[]) => void;
   onIncomingMessage: (msg: IncomingMessage) => void;
   onStatusChange: (update: StatusUpdate) => void;
   searchMessages: (keyword: string, peerId?: string) => ChatMessage[];
@@ -110,6 +113,7 @@ export const useChatStore = create<ChatState>()(
       messages: {},
       loadingHistory: {},
       hasMoreHistory: {},
+      groupReadStates: {},
 
       addMessage: (msg: ChatMessage) => {
         set((state) => {
@@ -217,6 +221,14 @@ export const useChatStore = create<ChatState>()(
             console.error('媒体消息发送失败:', e);
             markFailed();
           });
+      },
+
+      setGroupReadState: (groupId, members) => {
+        const next: Record<string, number> = {};
+        for (const m of members) {
+          next[m.userId] = m.lastReadSeq;
+        }
+        set((s) => ({ groupReadStates: { ...s.groupReadStates, [groupId]: next } }));
       },
 
       onIncomingMessage: (msg: IncomingMessage) => {
