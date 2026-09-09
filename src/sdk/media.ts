@@ -1,4 +1,4 @@
-import { MediaContent, MsgType } from './types';
+import { MediaContent, MsgType, ReplySnippet } from './types';
 
 /** 媒体类型判断（含图片/语音/视频/文件/自定义表情） */
 export function isMediaType(msgType: number): boolean {
@@ -132,6 +132,10 @@ export function mediaPreview(msgType: number, content: string): string {
       return '[表情]';
     case MsgType.VIDEO:
       return '[视频]';
+    case MsgType.REPLY:
+      return '[引用]';
+    case MsgType.FORWARD:
+      return '[聊天记录]';
     case MsgType.FILE: {
       const c = parseMediaContent(content);
       return c?.fileName ? `[文件] ${c.fileName}` : '[文件]';
@@ -143,6 +147,122 @@ export function mediaPreview(msgType: number, content: string): string {
     default:
       return content;
   }
+}
+
+/** 引用摘要生成（客户端为唯一可信源）：按 msgType 给出占位或截断文本 */
+export function buildReplySnippet(msg: { msgType: number; content: string }): string {
+  if (msg.msgType === MsgType.REPLY) {
+    const inner = unwrapReplyContent(msg.content);
+    return inner ? buildReplySnippet(inner.body) : '[引用]';
+  }
+  const c = parseMediaContent(msg.content);
+  switch (msg.msgType) {
+    case MsgType.IMAGE:
+      return '[图片]';
+    case MsgType.EMOJI:
+      return '[表情]';
+    case MsgType.VIDEO:
+      return '[视频]';
+    case MsgType.REPLY:
+      return '[引用]';
+    case MsgType.FORWARD:
+      return '[聊天记录]';
+    case MsgType.VOICE:
+      return c?.duration ? `[语音] ${Math.round(c.duration / 1000)}″` : '[语音]';
+    case MsgType.FILE:
+      return c?.fileName ? `[文件] ${c.fileName}` : '[文件]';
+    case MsgType.FORWARD:
+      return '[聊天记录]';
+    default: {
+      const t = (msg.content || '').replace(/\s+/g, ' ').trim();
+      return t.length <= 120 ? t : t.slice(0, 120) + '…';
+    }
+  }
+}
+
+/** 引用消息 content 构造：body 为原消息（msgType + content 原样），reply 为被引用消息快照 */
+export function wrapReplyContent(reply: {
+  messageId: string; senderId: string; msgType: number; senderName?: string; snippet: string; thumb?: string;
+}, body: { msgType: number; content: string }): string {
+  return JSON.stringify({ reply, body });
+}
+
+/** 解包引用消息 content；非引用/坏 JSON 返回 null */
+export function unwrapReplyContent(content: string): { reply: ReplySnippet; body: { msgType: number; content: string } } | null {
+  if (!content) return null;
+  try {
+    const o = JSON.parse(content);
+    if (!o || typeof o !== 'object' || !o.reply || !o.body) return null;
+    const reply: ReplySnippet = {
+      messageId: String(o.reply.messageId ?? ''),
+      senderId: String(o.reply.senderId ?? ''),
+      msgType: Number(o.reply.msgType ?? 0),
+      senderName: o.reply.senderName,
+      snippet: o.reply.snippet || '',
+      thumb: o.reply.thumb,
+      thumbUrl: o.reply.thumbUrl,
+    };
+    return { reply, body: { msgType: Number(o.body.msgType ?? 0), content: String(o.body.content ?? '') } };
+  } catch {
+    return null;
+  }
+}
+
+/** 合并转发 content 构建：items 为消息快照（媒体存 key，读侧嵌套签名） */
+export function buildForwardContent(
+  title: string,
+  msgs: Array<{ msgType: number; content: string; senderNickname?: string; senderUserName?: string; senderId: string; timestamp: number }>,
+  selfName?: string,
+): string {
+  const items = msgs.slice(0, 50).map((m) => {
+    const media = isMediaType(m.msgType) ? parseMediaContent(m.content) : null;
+    // 自己发出的消息 senderId 是本地占位 '__self__'，用当前用户展示名替换
+    const senderName = m.senderNickname || m.senderUserName
+      || (m.senderId === '__self__' ? (selfName || '我') : m.senderId);
+    const base: Record<string, unknown> = {
+      msgType: m.msgType,
+      senderName,
+      ts: m.timestamp,
+    };
+    if (media) {
+      const { url: _u, thumbUrl: _t, ...rest } = media;
+      base.media = rest;
+    } else {
+      base.text = (m.content || '').slice(0, 2000);
+    }
+    return base;
+  });
+  const names = Array.from(new Set(items.map((i) => String(i.senderName)))).slice(0, 3).join('、');
+  const t = title || `${names}${items.length > 3 ? ' 等' : ''}的聊天记录`;
+  return JSON.stringify({ t, n: items.length, items });
+}
+
+/**
+ * 判断消息 content 是否含有未签名的媒体 key（需要服务端签名刷新）。
+ * 覆盖：普通媒体、合并转发 items[].media、引用（递归 body + reply.thumb）。
+ */
+export function contentNeedsSignedUrl(msgType: number, content: string): boolean {
+  if (!content) return false;
+  if (isMediaType(msgType)) {
+    const c = parseMediaContent(content);
+    return !!c?.key && !c.url;
+  }
+  if (msgType === MsgType.FORWARD) {
+    try {
+      const items = JSON.parse(content)?.items || [];
+      return items.some((it: { media?: { key?: string; url?: string } }) =>
+        !!it?.media?.key && !it.media.url);
+    } catch {
+      return false;
+    }
+  }
+  if (msgType === MsgType.REPLY) {
+    const u = unwrapReplyContent(content);
+    if (!u) return false;
+    return contentNeedsSignedUrl(u.body.msgType, u.body.content)
+      || (!!u.reply.thumb && !u.reply.thumbUrl);
+  }
+  return false;
 }
 
 /** 字节数转人类可读大小 */

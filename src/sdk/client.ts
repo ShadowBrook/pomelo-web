@@ -748,17 +748,8 @@ export class IMClient {
 
     const isGroup = msg.kind === 'group';
     const bodyBytes = isGroup
-      ? enc(im.group.C2GReq, {
-          groupId: msg.recipientId,
-          messageId: msg.id,
-          message: { msgType: msg.msgType, content: utf8(msg.content) },
-        })
-      : enc(im.chat.C2CReq, {
-          senderId: this.userId,
-          recipientId: msg.recipientId,
-          messageId: msg.id,
-          message: { msgType: msg.msgType, content: utf8(msg.content) },
-        });
+      ? enc(im.group.C2GReq, { groupId: msg.recipientId, messageId: msg.id, message: { msgType: msg.msgType, content: utf8(msg.content) } })
+      : enc(im.chat.C2CReq, { senderId: this.userId, recipientId: msg.recipientId, messageId: msg.id, message: { msgType: msg.msgType, content: utf8(msg.content) } });
 
     // 将 userName / nickname 放入 varHeaders，供后端填充 Notify 的 senderNickname
     const buf = encode(isGroup ? Cmd.C2G_REQ : Cmd.C2C_REQ, msg.id, bodyBytes, this.userId, {
