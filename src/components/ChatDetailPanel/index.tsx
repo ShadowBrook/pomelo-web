@@ -7,12 +7,12 @@ import { toast } from '@/stores/useToastStore';
 import { getProfile } from '@/utils/api';
 import { getIMClient } from '@/hooks/useIMClient';
 import { GridAvatar } from '@/components/GridAvatar';
-import type { DetailTab } from '@/components/DetailTabs';
+import { InviteMemberDialog } from '@/components/InviteMemberDialog';
+import type { GroupMember } from '@/sdk/types';
 
 interface Props {
   peerId: string;
   isGroup: boolean;
-  tab: DetailTab;
 }
 
 /** 时间展示格式：YYYY-MM-DD HH:mm（同 GroupPanel 内 fmtDate 写法） */
@@ -43,22 +43,64 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function EmptyState({ text }: { text: string }) {
+/** 群成员行：头像/首字母 + 昵称 + 群主/管理员徽章；有权限时 hover 出现移除按钮 */
+function MemberRow({
+  member,
+  isSelf,
+  canRemove,
+  onKick,
+}: {
+  member: { userId: string; userName: string; nickname: string; avatar: string; role: number };
+  isSelf: boolean;
+  canRemove: boolean;
+  onKick: () => void;
+}) {
+  const name = member.nickname || member.userName || member.userId;
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-2 text-text-sub">
-      <span className="text-3xl opacity-40">🗂</span>
-      <span className="text-xs">{text}</span>
+    <div className="flex items-center gap-2 px-1 py-1 rounded hover:bg-bg-page">
+      {member.avatar ? (
+        <img src={member.avatar} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+      ) : (
+        <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[11px] flex-shrink-0">
+          {name.charAt(0).toUpperCase()}
+        </div>
+      )}
+      <span className="flex-1 min-w-0 text-xs text-text-main truncate">
+        {name}
+        {isSelf && <span className="ml-1 px-1 rounded-sm border border-danger text-danger text-[10px]">我</span>}
+      </span>
+      {member.role === 2 && (
+        <span className="flex-shrink-0 text-[10px] px-1 rounded-sm border border-warn text-warn">群主</span>
+      )}
+      {member.role === 1 && (
+        <span className="flex-shrink-0 text-[10px] px-1 rounded-sm border border-primary/60 text-primary">管理员</span>
+      )}
+      {canRemove && (
+        <button
+          onClick={onKick}
+          title="移出群聊"
+          className="w-5 h-5 flex-shrink-0 rounded flex items-center justify-center text-text-sub hover:text-danger hover:bg-danger/10"
+        >
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 12h14" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
 
-export function ChatDetailPanel({ peerId, isGroup, tab }: Props) {
+export function ChatDetailPanel({ peerId, isGroup }: Props) {
   const user = useAuthStore((s) => s.user);
   const friend = useFriendStore((s) => s.friends.find((f) => f.userId === peerId));
   const group = useGroupStore((s) => s.groups[peerId]);
   const members = useGroupStore((s) => s.groupMembers[peerId]);
   // 陌生人资料兜底（好友数据缺头像/昵称时也拉一次）
   const [profile, setProfile] = useState<{ nickname: string; avatar: string } | null>(null);
+  // 移除群成员的确认目标（null 表示无弹窗）
+  const [kickTarget, setKickTarget] = useState<GroupMember | null>(null);
+  const [kicking, setKicking] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   // 群成员懒加载兜底：成员列表只在 member-change 推送时刷新，
   // 打开群聊详情时没有就主动拉一次（群主/创建者昵称、群头像都依赖它）
@@ -103,144 +145,214 @@ export function ChatDetailPanel({ peerId, isGroup, tab }: Props) {
   // 其它说明：后端暂无数据源，预留（无数据时整节隐藏）
   const otherNote = '';
 
+  // 我的角色：2=群主 1=管理员 0=成员（不在群内为 -1）；仅群主/管理员可移除成员
+  const myRole = members?.find((m) => m.userId === user?.userId)?.role ?? -1;
+  const canRemove = (m: GroupMember) =>
+    myRole >= 1 && m.userId !== user?.userId && m.role !== 2 && myRole > m.role;
+
+  const confirmKick = async () => {
+    const target = kickTarget;
+    const client = getIMClient();
+    if (!target || !client) return;
+    setKicking(true);
+    try {
+      const res = await client.kickMember(peerId, target.userId);
+      if (res.code === 0) {
+        // 被移除者与其本人都会收到 KICKED 推送；本地先移除保证即时反馈
+        useGroupStore.getState().removeMember(peerId, target.userId);
+        toast('已移出群聊');
+        setKickTarget(null);
+      } else {
+        toast(res.message || '移除失败');
+      }
+    } catch {
+      toast('移除失败');
+    } finally {
+      setKicking(false);
+    }
+  };
+
   return (
-    <div className="w-[260px] flex-shrink-0 border-l border-line bg-panel flex flex-col min-h-0">
-      {tab === 'info' && (
-        <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          {/* 头部：头像块 + 名称在上 */}
-          <div className="px-4 pt-5 pb-4 border-b border-line">
-            {isGroup ? (
-              <div className="flex items-center gap-3">
-                <GridAvatar name={displayName} members={members} className="w-12 h-12" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-base font-medium text-text-main truncate">{displayName}</div>
-                  <div className="text-xs text-text-sub truncate">群ID: {peerId}</div>
-                </div>
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
+        {/* 头部：头像块 + 名称在上 */}
+        <div className="px-4 pt-5 pb-4 border-b border-line">
+          {isGroup ? (
+            <div className="flex items-center gap-3">
+              <GridAvatar name={displayName} members={members} className="w-12 h-12" />
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-medium text-text-main truncate">{displayName}</div>
+                <div className="text-xs text-text-sub truncate">群ID: {peerId}</div>
               </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                {displayAvatar ? (
-                  <img src={displayAvatar} alt={displayName} className="w-14 h-14 rounded-md object-cover flex-shrink-0" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {displayAvatar ? (
+                <img src={displayAvatar} alt={displayName} className="w-14 h-14 rounded-md object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-14 h-14 rounded-md bg-primary/15 text-primary flex items-center justify-center text-xl flex-shrink-0">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-base font-medium text-text-main truncate">{displayName}</span>
+                {!friend && <span className="text-[11px] px-1.5 rounded-sm bg-warn text-white flex-shrink-0">陌生人</span>}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 分节内容 */}
+        <div className="px-4 py-4 space-y-5 flex-1">
+          {isGroup ? (
+            <>
+              <section>
+                <SectionTitle text="基本信息" />
+                <InfoRow
+                  label="当前群主"
+                  value={
+                    <span className="inline-flex items-center">
+                      {ownerName}
+                      {isSelfOwner && selfBadge}
+                    </span>
+                  }
+                />
+                <InfoRow label="群内昵称" value={user?.nickname ?? '—'} />
+                <InfoRow label="群创建者" value={ownerName} />
+                <InfoRow label="建群时间" value={fmtDate(group?.createdAt)} />
+              </section>
+
+              <section>
+                <SectionTitle text="本群公告" />
+                {group?.description ? (
+                  <p className="text-xs text-text-main leading-6 break-all whitespace-pre-wrap">{group.description}</p>
                 ) : (
-                  <div className="w-14 h-14 rounded-md bg-primary/15 text-primary flex items-center justify-center text-xl flex-shrink-0">
-                    {displayName.charAt(0).toUpperCase()}
-                  </div>
+                  <button
+                    onClick={() => toast('功能开发中')}
+                    className="text-xs text-text-sub leading-6 text-left hover:text-primary"
+                  >
+                    还没有设置公告，群主可点击进行设置！
+                  </button>
                 )}
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-base font-medium text-text-main truncate">{displayName}</span>
-                  {!friend && <span className="text-[11px] px-1.5 rounded-sm bg-warn text-white flex-shrink-0">陌生人</span>}
-                </div>
-              </div>
-            )}
-          </div>
+              </section>
 
-          {/* 分节内容 */}
-          <div className="px-4 py-4 space-y-5 flex-1">
-            {isGroup ? (
-              <>
-                <section>
-                  <SectionTitle text="基本信息" />
-                  <InfoRow
-                    label="当前群主"
-                    value={
-                      <span className="inline-flex items-center">
-                        {ownerName}
-                        {isSelfOwner && selfBadge}
-                      </span>
-                    }
-                  />
-                  <InfoRow label="群内昵称" value={user?.nickname ?? '—'} />
-                  <InfoRow label="群创建者" value={ownerName} />
-                  <InfoRow label="建群时间" value={fmtDate(group?.createdAt)} />
-                </section>
-
-                <section>
-                  <SectionTitle text="本群公告" />
-                  {group?.description ? (
-                    <p className="text-xs text-text-main leading-6 break-all whitespace-pre-wrap">{group.description}</p>
-                  ) : (
-                    <button
-                      onClick={() => toast('功能开发中')}
-                      className="text-xs text-text-sub leading-6 text-left hover:text-primary"
-                    >
-                      还没有设置公告，群主可点击进行设置！
-                    </button>
-                  )}
-                </section>
-
-                <section>
-                  <SectionTitle text="群员信息" />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => toast('功能开发中')}
-                      className="px-3 py-1.5 text-xs rounded border border-primary/60 text-primary hover:bg-primary/5"
-                    >
-                      管理群员 ({memberTotal}人)
-                    </button>
-                    <button
-                      onClick={() => toast('功能开发中')}
-                      className="px-3 py-1.5 text-xs rounded bg-primary text-white hover:bg-primary-dark"
-                    >
-                      邀请入群
-                    </button>
-                  </div>
-                </section>
-              </>
-            ) : (
-              <>
-                <section>
-                  <SectionTitle text="设置备注" trailing="✏" />
-                  <InfoRow label="好友备注" value={unsetValue} />
-                  <InfoRow label="手机号码" value={unsetValue} />
-                  <InfoRow label="更多描述" value={unsetValue} />
-                </section>
-
-                <section>
-                  <SectionTitle text="基本信息" />
-                  <InfoRow label="ID号" value={peerId} />
-                  <InfoRow label="邮箱" value="—" />
-                  <InfoRow label="注册时间" value="—" />
-                  <InfoRow label="最近登陆" value="—" />
-                  <InfoRow label="最近 IP" value="—" />
-                  {friend && <InfoRow label="成为好友" value={fmtDate(friend.friendedAt)} />}
-                </section>
-
-                {otherNote ? (
-                  <section>
-                    <SectionTitle text="其它说明" />
-                    <p className="text-xs text-text-main leading-6 break-all whitespace-pre-wrap">{otherNote}</p>
-                  </section>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          {/* 底部操作：群=转让/解散；好友=左下红描边删除；陌生人=右下蓝底加好友 */}
-          <div className="mt-auto border-t border-line p-3">
-            {isGroup ? (
-              <div className="flex gap-2">
+              <section>
+                <SectionTitle text={`群员信息 (${memberTotal}人)`} />
+                {members ? (
+                  members.map((m) => (
+                    <MemberRow
+                      key={m.userId}
+                      member={m}
+                      isSelf={m.userId === user?.userId}
+                      canRemove={canRemove(m)}
+                      onKick={() => setKickTarget(m)}
+                    />
+                  ))
+                ) : (
+                  <div className="text-xs text-text-sub leading-6">加载中…</div>
+                )}
                 <button
-                  onClick={() => toast('功能开发中')}
-                  className="flex-1 py-1.5 text-xs rounded border border-accent/60 text-accent hover:bg-accent/5"
+                  onClick={() => setInviteOpen(true)}
+                  className="w-full flex items-center gap-2 px-1 py-1.5 mt-1 rounded border border-dashed border-line text-xs text-text-sub hover:text-primary hover:border-primary/50 transition-colors"
                 >
-                  ↻ 转让本群
+                  <span className="w-7 h-7 rounded-full border border-dashed border-current flex items-center justify-center text-sm leading-none flex-shrink-0">
+                    +
+                  </span>
+                  邀请好友入群
                 </button>
-                <button
-                  onClick={() => toast('功能开发中')}
-                  className="flex-1 py-1.5 text-xs rounded border border-danger/40 text-danger hover:bg-danger/5"
-                >
-                  ⃠ 解散本群
-                </button>
-              </div>
-            ) : (
-              user && <FooterAction peerId={peerId} isFriend={!!friend} />
-            )}
+              </section>
+            </>
+          ) : (
+            <>
+              <section>
+                <SectionTitle text="设置备注" trailing="✏" />
+                <InfoRow label="好友备注" value={unsetValue} />
+                <InfoRow label="手机号码" value={unsetValue} />
+                <InfoRow label="更多描述" value={unsetValue} />
+              </section>
+
+              <section>
+                <SectionTitle text="基本信息" />
+                <InfoRow label="ID号" value={peerId} />
+                <InfoRow label="邮箱" value="—" />
+                <InfoRow label="注册时间" value="—" />
+                <InfoRow label="最近登陆" value="—" />
+                <InfoRow label="最近 IP" value="—" />
+                {friend && <InfoRow label="成为好友" value={fmtDate(friend.friendedAt)} />}
+              </section>
+
+              {otherNote ? (
+                <section>
+                  <SectionTitle text="其它说明" />
+                  <p className="text-xs text-text-main leading-6 break-all whitespace-pre-wrap">{otherNote}</p>
+                </section>
+              ) : null}
+            </>
+          )}
+        </div>
+
+        {/* 底部操作：群=转让/解散；好友=左下红描边删除；陌生人=右下蓝底加好友 */}
+        <div className="mt-auto border-t border-line p-3">
+          {isGroup ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => toast('功能开发中')}
+                className="flex-1 py-1.5 text-xs rounded border border-accent/60 text-accent hover:bg-accent/5"
+              >
+                ↻ 转让本群
+              </button>
+              <button
+                onClick={() => toast('功能开发中')}
+                className="flex-1 py-1.5 text-xs rounded border border-danger/40 text-danger hover:bg-danger/5"
+              >
+                ⃠ 解散本群
+              </button>
+            </div>
+          ) : (
+            user && <FooterAction peerId={peerId} isFriend={!!friend} />
+          )}
+        </div>
+      </div>
+
+      {/* 移出群聊确认弹窗 */}
+      {kickTarget && (
+        <div
+          className="fixed inset-0 bg-black/20 z-[9999] flex items-center justify-center"
+          onClick={() => { if (!kicking) setKickTarget(null); }}
+        >
+          <div className="bg-panel rounded-lg shadow-xl w-[240px] p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-medium text-text-main mb-1">移出群聊</div>
+            <div className="text-xs text-text-sub mb-4 break-all">
+              确定将 {kickTarget.nickname || kickTarget.userName || kickTarget.userId} 移出该群？
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setKickTarget(null)}
+                disabled={kicking}
+                className="flex-1 py-1.5 text-xs rounded border border-line text-text-sub hover:text-text-main disabled:opacity-60"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmKick}
+                disabled={kicking}
+                className="flex-1 py-1.5 text-xs rounded bg-danger text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {kicking ? '移除中…' : '移除'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {tab === 'album' && <EmptyState text="暂无相册" />}
-      {tab === 'voice' && <EmptyState text="暂无语音介绍" />}
+      {/* 邀请好友入群弹窗 */}
+      {inviteOpen && (
+        <InviteMemberDialog
+          groupId={peerId}
+          memberIds={members?.map((m) => m.userId) ?? []}
+          onClose={() => setInviteOpen(false)}
+        />
+      )}
     </div>
   );
 }

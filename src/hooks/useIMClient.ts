@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useConnStore } from '@/stores/useConnStore';
+import { toast } from '@/stores/useToastStore';
 import { mediaPreview } from '@/sdk/media';
 
 // 模块级单例
@@ -247,7 +248,19 @@ export function useIMClient() {
       // LEFT/KICKED 移除成员；INVITED/JOINED 等刷新群成员列表
       if (notify.type === 'LEFT' || notify.type === 'KICKED') {
         useGroupStore.getState().removeMember(notify.groupId, notify.userId);
+        // 自己被移出群：整群从列表移除并打上只读标记（会话与历史消息保留）
+        if (notify.userId === userIdRef.current) {
+          useGroupStore.getState().removeGroup(notify.groupId);
+          useGroupStore.getState().markRemoved(notify.groupId);
+          toast('你已被移出该群');
+        }
       } else {
+        // 自己被重新邀请入群：恢复群列表（setGroups 会清掉移出标记）
+        if (notify.userId === userIdRef.current) {
+          client.getMyGroups()
+            .then((groups) => useGroupStore.getState().setGroups(groups))
+            .catch((err) => console.error('刷新群列表失败:', err));
+        }
         client.getGroupMembers(notify.groupId)
           .then((members) => useGroupStore.getState().setMembers(notify.groupId, members))
           .catch((err) => console.error('刷新群成员失败:', err));

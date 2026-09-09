@@ -8,7 +8,7 @@ import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { ChatWindowHeader } from '@/components/ChatWindowHeader';
 import type { ChatMessage } from '@/stores/useChatStore';
-import { DetailTabs, DetailTab } from '@/components/DetailTabs';
+import { DetailTabs, detailLabel } from '@/components/DetailTabs';
 import { ChatDetailPanel } from '@/components/ChatDetailPanel';
 import { ForwardDialog } from '@/components/ForwardDialog';
 import { buildForwardContent, buildReplySnippet } from '@/sdk/media';
@@ -24,14 +24,19 @@ interface ReadStatus {
 
 export function ChatWindowContent({ peerId }: { peerId: string }) {
   const s = useChatSession(peerId);
-  const [tab, setTab] = useState<DetailTab>('info');
+  const [detailOpen, setDetailOpen] = useState(true);
   const [soundOn, setSoundOn] = useState(true);
   const [readStatus, setReadStatus] = useState<ReadStatus | null>(null);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const me = useAuthStore((st) => st.user);
-  const readCounts = useGroupReadCounts(peerId, s.isGroup, s.messages, s.currentUserId);
+  // 自己被移出该群：详情栏改为提示，输入区禁用。
+  // 两条来源：实时 KICKED 推送打标记；或群列表已加载但里面没有这个群（刷新/离线期间被移除）。
+  const removedByPush = useGroupStore((st) => !!st.removedGroups[peerId]);
+  const missingFromMyGroups = useGroupStore((st) => st.groupsLoaded && !st.groups[peerId]);
+  const kicked = s.isGroup && (removedByPush || missingFromMyGroups);
+  const readCounts = useGroupReadCounts(peerId, s.isGroup && !kicked, s.messages, s.currentUserId);
   const groupStoreMemberCount = useGroupStore((st) => st.groups[peerId]?.memberCount);
   const groupReadState = useChatStore((st) => st.groupReadStates[peerId]);
   // 成员数优先用已读游标表的实际行数（更准），回退群列表快照
@@ -78,48 +83,43 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* 头部行：标题段(蓝) + 右端两行(上:窗控图标靠右 / 下:页签 260 对齐详情栏) */}
+      {/* 头部行：标题段(蓝) + 右上角窗控图标 */}
       <div className="h-16 flex items-stretch bg-titlebar-chat flex-shrink-0 select-none">
         <ChatWindowHeader peerId={peerId} />
         <div className="flex-1" />
-        <div className="flex h-full flex-col flex-shrink-0">
-          <div className="h-8 flex items-start justify-end gap-1 px-2 pt-1 flex-shrink-0">
-            <button
-              onClick={() => { setSoundOn((v) => !v); toast(soundOn ? '提示音已关' : '提示音已开'); }}
-              title={soundOn ? '关闭提示音' : '开启提示音'}
-              className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
-            >
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                {soundOn ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /> : <path d="M16 9l6 6M22 9l-6 6" />}
-              </svg>
-            </button>
-            <button
-              onClick={() => useWindowStore.getState().toggleFullscreen()}
-              title={useWindowStore.getState().fullscreen ? '还原' : '全屏'}
-              className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
-            >
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-              </svg>
-            </button>
-            <button
-              onClick={() => useWindowStore.getState().hideIM()}
-              title="关闭"
-              className="w-7 h-7 rounded text-white/85 hover:bg-danger flex items-center justify-center"
-            >
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex-1 min-h-0">
-            <DetailTabs isGroup={s.isGroup} isFriend={!!friend} tab={tab} onChange={setTab} />
-          </div>
+        <div className="h-full flex items-start justify-end gap-1 px-2 pt-1 flex-shrink-0">
+          <button
+            onClick={() => { setSoundOn((v) => !v); toast(soundOn ? '提示音已关' : '提示音已开'); }}
+            title={soundOn ? '关闭提示音' : '开启提示音'}
+            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              {soundOn ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /> : <path d="M16 9l6 6M22 9l-6 6" />}
+            </svg>
+          </button>
+          <button
+            onClick={() => useWindowStore.getState().toggleFullscreen()}
+            title={useWindowStore.getState().fullscreen ? '还原' : '全屏'}
+            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => useWindowStore.getState().hideIM()}
+            title="关闭"
+            className="w-7 h-7 rounded text-white/85 hover:bg-danger flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {/* 主体：左聊天区 + 右详情栏 */}
+      {/* 主体：左聊天区 + 右详情栏（详情栏头部条在面板顶部，不占蓝条） */}
       <div className="flex-1 flex min-h-0">
         <div className="flex-1 flex flex-col min-w-0 bg-chat-bg">
           {selecting && (
@@ -151,6 +151,7 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           />
           <MessageInput
             peerId={peerId}
+            disabled={kicked}
             draft={s.draft}
             replyPreview={s.replyTo ? {
               senderName: s.replyTo.senderNickname || s.replyTo.senderUserName || s.replyTo.senderId,
@@ -167,7 +168,29 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
             quickReplies={['正在处理紧急事情', '有事先离开一会儿']}
           />
         </div>
-        <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} tab={tab} />
+        {kicked ? (
+          <div className="w-[260px] flex-shrink-0 border-l border-line bg-panel flex flex-col items-center justify-center gap-2 px-6 text-center">
+            <span className="text-sm text-text-main">您已被移出群聊</span>
+            <span className="text-xs text-text-sub leading-5">群资料与成员列表已不可见，如需继续参与请让群主重新邀请你</span>
+          </div>
+        ) : detailOpen ? (
+          <div className="w-[260px] flex-shrink-0 border-l border-line bg-panel flex flex-col min-h-0">
+            <DetailTabs label={detailLabel(s.isGroup, !!friend)} onToggle={() => setDetailOpen(false)} />
+            <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} />
+          </div>
+        ) : (
+          <button
+            onClick={() => setDetailOpen(true)}
+            aria-expanded={false}
+            title={`展开${detailLabel(s.isGroup, !!friend)}`}
+            className="w-9 flex-shrink-0 border-l border-line bg-panel flex flex-col items-center gap-2 py-3 text-xs text-text-main hover:text-primary transition-colors"
+          >
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+            <span className="[writing-mode:vertical-rl] tracking-widest">{detailLabel(s.isGroup, !!friend)}</span>
+          </button>
+        )}
       </div>
 
       {/* 转发目标选择弹窗 */}

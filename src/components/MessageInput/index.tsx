@@ -12,6 +12,8 @@ interface Props {
   replyPreview?: ReplyPreview;
   onCancelReply?: () => void;
   peerId: string;
+  /** 只读会话（如已被移出群聊）：禁用输入与所有发送入口 */
+  disabled?: boolean;
   draft?: string;
   onSendText: (text: string) => void;
   onSendImage: (file: File) => void;
@@ -43,6 +45,7 @@ export function MessageInput({
   replyPreview,
   onCancelReply,
   peerId,
+  disabled = false,
   draft,
   onSendText,
   onSendImage,
@@ -88,6 +91,7 @@ export function MessageInput({
   }, [peerId, draft]);
 
   const handleSend = () => {
+    if (disabled) return;
     const trimmed = text.trim();
     if (!trimmed) return;
     onSendText(trimmed);
@@ -156,6 +160,7 @@ export function MessageInput({
   };
 
   const toggleRecord = async () => {
+    if (disabled) return;
     if (recording) {
       stopRecording();
       return;
@@ -195,8 +200,8 @@ export function MessageInput({
 
   return (
     <div className="bg-panel border-t border-line px-3 pt-2 pb-2">
-      {/* 工具栏：参考图 8 图标 + 麦克风（保留录音能力） */}
-      <div className="flex items-center gap-1 mb-1.5">
+      {/* 工具栏：参考图 8 图标 + 麦克风（保留录音能力）；只读会话整体 inert */}
+      <div className={`flex items-center gap-1 mb-1.5 ${disabled ? 'opacity-40' : ''}`} inert={disabled}>
         <div className="relative">
           <ToolButton title="表情" onClick={() => setShowEmoji((v) => !v)}>
             <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
@@ -292,9 +297,10 @@ export function MessageInput({
         value={text}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="输入聊天信息，按 Enter 键快速发送 ..."
+        disabled={disabled}
+        placeholder={disabled ? '你已被移出群聊，无法发送消息' : '输入聊天信息，按 Enter 键快速发送 ...'}
         rows={3}
-        className="w-full resize-none bg-transparent px-1 py-1 text-sm text-text-main focus:outline-none"
+        className="w-full resize-none bg-transparent px-1 py-1 text-sm text-text-main focus:outline-none disabled:cursor-not-allowed"
       />
 
       {/* 底行：右对齐提示 + 发送组合按钮 */}
@@ -303,7 +309,7 @@ export function MessageInput({
         <div className="relative flex">
           <button
             onClick={handleSend}
-            disabled={!text.trim()}
+            disabled={disabled || !text.trim()}
             className="px-5 py-1.5 bg-send-btn text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 rounded-l-sm transition-opacity"
           >
             发送

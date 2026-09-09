@@ -593,6 +593,15 @@ export class IMClient {
     );
   }
 
+  /** 移除群成员（群主/管理员）；被移除者会收到 KICKED 推送并退群 */
+  kickMember(groupId: string, userId: string): Promise<GroupOpResp> {
+    return this._sendGroupOp<GroupOpResp>(
+      Cmd.GROUP_KICK_REQ,
+      Cmd.GROUP_KICK_RESP,
+      enc(im.group.KickMemberReq, { groupId, userId }),
+    );
+  }
+
   getGroupInfo(groupId: string): Promise<GroupInfo> {
     return this._sendGroupOp<{ code: number; group: GroupInfo }>(
       Cmd.GROUP_GET_INFO_REQ,
@@ -1325,6 +1334,11 @@ export class IMClient {
       }
       case Cmd.GROUP_INVITE_RESP: {
         const r = plain(im.group.InviteToGroupResp, body);
+        this._resolveFriendOp(messageId, { code: r?.code ?? 0, message: r?.message ?? '' });
+        break;
+      }
+      case Cmd.GROUP_KICK_RESP: {
+        const r = plain(im.group.KickMemberResp, body);
         this._resolveFriendOp(messageId, { code: r?.code ?? 0, message: r?.message ?? '' });
         break;
       }
