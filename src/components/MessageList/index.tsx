@@ -12,6 +12,10 @@ interface Props {
   hasMore?: boolean;
   isGroup?: boolean;
   onReadClick?: (messageId: string, seq: number) => void;
+  /** 群聊已读人数（seq → 人数），透传给气泡 */
+  readCounts?: Record<number, number>;
+  /** 群成员总数（含自己），用于判断全部已读 */
+  groupMemberCount?: number;
   onReply?: (m: ChatMessage) => void;
   onForward?: (m: ChatMessage) => void;
   selecting?: boolean;
@@ -34,6 +38,8 @@ export function MessageList({
   hasMore = false,
   isGroup,
   onReadClick,
+  readCounts,
+  groupMemberCount,
   onReply,
   onForward,
   selecting,
@@ -107,7 +113,7 @@ export function MessageList({
             <div className={`mb-1 ${isSelf ? 'text-right pr-[52px]' : 'text-left pl-[52px]'}`}>
               {showTime && <span className="text-[11px] text-text-sub">{formatMsgTime(msg.timestamp)}</span>}
             </div>
-            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} onReply={onReply} onForward={onForward} selecting={selecting} selected={selectedIds?.has(msg.id)} onToggleSelect={onToggleSelect} onStartSelect={onStartSelect} />
+            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} readCount={readCounts?.[msg.seq ?? -1]} groupMemberCount={groupMemberCount} onReply={onReply} onForward={onForward} selecting={selecting} selected={selectedIds?.has(msg.id)} onToggleSelect={onToggleSelect} onStartSelect={onStartSelect} />
           </div>
         );
       })}

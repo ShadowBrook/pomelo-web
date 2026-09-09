@@ -196,6 +196,10 @@ interface Props {
   onRetry?: (messageId: string) => void;
   isGroup?: boolean;
   onReadClick?: (messageId: string, seq: number) => void;
+  /** 群聊已读人数（不含自己），>0 时圈内显示数字；达到全部已读时显示对勾 */
+  readCount?: number;
+  /** 群成员总数（含自己），用于判断全部已读 */
+  groupMemberCount?: number;
   onReply?: (m: ChatMessage) => void;
   onForward?: (m: ChatMessage) => void;
   selecting?: boolean;
@@ -289,12 +293,16 @@ function Body({ message }: { message: ChatMessage }) {
 }
 
 export const MessageBubble = React.memo(function MessageBubble({
-  message, isSelf, onRetry, isGroup, onReadClick, onReply, onForward, selecting, selected, onToggleSelect, onStartSelect,
+  message, isSelf, onRetry, isGroup, onReadClick, readCount, groupMemberCount, onReply, onForward, selecting, selected, onToggleSelect, onStartSelect,
 }: Props) {
   const avatar = useAuthStore((s) => s.user?.avatar);
   const selfChar = useAuthStore((s) => s.user?.nickname?.charAt(0).toUpperCase() || '我');
 
   const qos = isSelf && !isGroup && (message.status === 'pending' || message.status === 'sending' || message.status === 'failed');
+  // 全部已读：除自己外的成员都已读（成员数含自己）
+  const allRead = !!readCount && readCount > 0
+    && !!groupMemberCount && groupMemberCount > 1
+    && readCount >= groupMemberCount - 1;
 
   return (
     <div
@@ -337,11 +345,19 @@ export const MessageBubble = React.memo(function MessageBubble({
               )}
               {isGroup && message.seq && (
                 <span
-                  className="text-xs text-accent cursor-pointer hover:opacity-75"
-                  title="查看已读成员"
+                  className="cursor-pointer hover:opacity-75"
+                  title={allRead ? '全部已读，点击查看' : readCount && readCount > 0 ? `${readCount} 人已读，点击查看` : '查看已读成员'}
                   onClick={(e) => { e.stopPropagation(); onReadClick?.(message.id, message.seq!); }}
                 >
-                  ◯
+                  {allRead ? (
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-accent text-white text-[10px] leading-none">✓</span>
+                  ) : readCount && readCount > 0 ? (
+                    <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-accent text-white text-[9px] leading-none">
+                      {readCount}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-accent">◯</span>
+                  )}
                 </span>
               )}
             </div>

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useChatSession } from '@/hooks/useChatSession';
+import { useGroupReadCounts } from '@/hooks/useGroupReadCounts';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { toast } from '@/stores/useToastStore';
@@ -12,6 +13,8 @@ import { ChatDetailPanel } from '@/components/ChatDetailPanel';
 import { ForwardDialog } from '@/components/ForwardDialog';
 import { buildForwardContent, buildReplySnippet } from '@/sdk/media';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useGroupStore } from '@/stores/useGroupStore';
+import { useChatStore } from '@/stores/useChatStore';
 import { MsgType } from '@/sdk/types';
 
 interface ReadStatus {
@@ -28,6 +31,13 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const me = useAuthStore((st) => st.user);
+  const readCounts = useGroupReadCounts(peerId, s.isGroup, s.messages, s.currentUserId);
+  const groupStoreMemberCount = useGroupStore((st) => st.groups[peerId]?.memberCount);
+  const groupReadState = useChatStore((st) => st.groupReadStates[peerId]);
+  // 成员数优先用已读游标表的实际行数（更准），回退群列表快照
+  const groupMemberCount = s.isGroup
+    ? (groupReadState ? Object.keys(groupReadState).length : groupStoreMemberCount)
+    : undefined;
   const toggleSelect = useCallback((m: ChatMessage) => {
     setSelectedIds((ids) => ids.includes(m.id) ? ids.filter((i) => i !== m.id) : [...ids, m.id]);
   }, []);
@@ -130,6 +140,8 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
             onLoadMore={s.loadMoreHistory}
             isGroup={s.isGroup}
             onReadClick={handleReadClick}
+            readCounts={readCounts}
+            groupMemberCount={groupMemberCount}
             onReply={s.setReplyTo}
             onForward={setForwardMsg}
             selecting={selecting}
