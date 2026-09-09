@@ -5,7 +5,9 @@ import { generateId } from '@/sdk/protocol';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { buildMediaContent, captureVideoPoster, isMediaType, parseMediaContent } from '@/sdk/media';
+import { buildMediaContent, captureVideoPoster, contentNeedsSignedUrl, isMediaType } from '@/sdk/media';
+import { wrapReplyContent } from '@/sdk/media';
+import type { ReplySnippet } from '@/sdk/types';
 
 export interface ChatMessage {
   id: string;
@@ -30,10 +32,17 @@ interface ChatState {
   hasMoreHistory: Record<string, boolean>;
 
   addMessage: (msg: ChatMessage) => void;
-  sendText: (peerId: string, text: string, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
+  sendText: (peerId: string, text: string, reply: ReplySnippet | undefined, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
   sendMedia: (
     peerId: string,
-    params: { msgType: MsgType; file: File; duration?: number },
+    params: { msgType: MsgType; file: File; duration?: number; reply?: ReplySnippet },
+    sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
+  ) => void;
+  /** 发送已构建好的 content（转发等场景）：经 sendFn 投递并乐观写入目标会话列表 */
+  sendRaw: (
+    peerId: string,
+    msgType: MsgType,
+    content: string,
     sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string,
   ) => void;
   onIncomingMessage: (msg: IncomingMessage) => void;
@@ -116,11 +125,25 @@ export const useChatStore = create<ChatState>()(
         });
       },
 
-      sendText: (peerId, text, sendFn) => {
-        const msgId = sendFn({ recipientId: peerId, msgType: MsgType.TEXT, content: text });
+      sendText: (peerId, text, reply, sendFn) => {
+        // 引用时包装为 REPLY 类型消息（content = {reply: 快照, body: {msgType, content}}）
+        const msgType = reply ? MsgType.REPLY : MsgType.TEXT;
+        const content = reply ? wrapReplyContent(reply, { msgType: MsgType.TEXT, content: text }) : text;
+        const msgId = sendFn({ recipientId: peerId, msgType, content });
         const msg: ChatMessage = {
           id: msgId, senderId: '__self__', recipientId: peerId,
-          msgType: MsgType.TEXT, content: text, status: 'sending', timestamp: Date.now(),
+          msgType, content, status: 'sending', timestamp: Date.now(),
+        };
+        set((state) => ({
+          messages: { ...state.messages, [peerId]: [...(state.messages[peerId] || []), msg] },
+        }));
+      },
+
+      sendRaw: (peerId, msgType, content, sendFn) => {
+        const msgId = sendFn({ recipientId: peerId, msgType, content });
+        const msg: ChatMessage = {
+          id: msgId, senderId: '__self__', recipientId: peerId,
+          msgType, content, status: 'sending', timestamp: Date.now(),
         };
         set((state) => ({
           messages: { ...state.messages, [peerId]: [...(state.messages[peerId] || []), msg] },
@@ -128,7 +151,7 @@ export const useChatStore = create<ChatState>()(
       },
 
       sendMedia: (peerId, params, sendFn) => {
-        const { msgType, file } = params;
+        const { msgType, file, reply } = params;
         const client = getIMClient();
 
         // 本地预览 object URL；上传/发送失败也保留，让用户看到所选内容
@@ -185,8 +208,10 @@ export const useChatStore = create<ChatState>()(
             const content = buildMediaContent({
               key: resp.objectKey, fileName: file.name, size: file.size, duration, thumb,
             });
-            const msgId = sendFn({ recipientId: peerId, msgType, content });
-            appendMsg({ id: msgId, status: 'sending', content });
+            const finalType = reply ? MsgType.REPLY : msgType;
+            const finalContent = reply ? wrapReplyContent(reply, { msgType, content }) : content;
+            const msgId = sendFn({ recipientId: peerId, msgType: finalType, content: finalContent });
+            appendMsg({ id: msgId, status: 'sending', content: finalContent });
           })
           .catch((e) => {
             console.error('媒体消息发送失败:', e);
@@ -210,6 +235,7 @@ export const useChatStore = create<ChatState>()(
       },
 
       onStatusChange: (update: StatusUpdate) => {
+        let refreshPeer: string | null = null;
         set((state) => {
           const newMessages = { ...state.messages };
           for (const peerId of Object.keys(newMessages)) {
@@ -217,6 +243,10 @@ export const useChatStore = create<ChatState>()(
             const idx = msgs.findIndex((m) => m.id === update.id || m.clientMsgId === update.id);
             if (idx !== -1) {
               const cur = msgs[idx];
+              // 转发消息本地 content 不含签名 url：确认送达后拉最新一页刷新（见 openConversation）
+              if (update.status === 'sent' && cur.msgType === MsgType.FORWARD) {
+                refreshPeer = peerId;
+              }
               // 发送确认（sent）携带服务端雪花 ID：把本地生成的 id 改写为服务端 id，
               // 否则刷新后历史拉取按 id 去重匹配不上，自己的消息会重复展示
               const serverId = update.serverMessageId ?? cur.id;
@@ -236,6 +266,10 @@ export const useChatStore = create<ChatState>()(
           }
           return state;
         });
+        if (refreshPeer) {
+          const type = useGroupStore.getState().groups[refreshPeer] ? 'group' : 'c2c';
+          void get().openConversation(refreshPeer, type);
+        }
       },
 
       searchMessages: (keyword, peerId) => {
@@ -370,11 +404,23 @@ export const useChatStore = create<ChatState>()(
             const fresh: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
             set((s) => {
               const existing = s.messages[peerId] || [];
-              const existingIds = new Set(existing.map(m => m.id));
-              const added = fresh.filter(m => !existingIds.has(m.id));
-              if (added.length === 0) return s;
+              const idxById = new Map(existing.map((m, i) => [m.id, i]));
+              const merged = [...existing];
+              let changed = false;
+              for (const fm of fresh) {
+                const idx = idxById.get(fm.id);
+                if (idx === undefined) {
+                  merged.push(fm);
+                  changed = true;
+                } else if (contentNeedsSignedUrl(merged[idx].msgType, merged[idx].content)) {
+                  // 已存在但 content 缺签名 url（发送方本地副本）：仅刷新 content，保留本地状态
+                  merged[idx] = { ...merged[idx], content: fm.content };
+                  changed = true;
+                }
+              }
+              if (!changed) return s;
               return {
-                messages: { ...s.messages, [peerId]: [...existing, ...added].sort((a, b) => a.timestamp - b.timestamp) },
+                messages: { ...s.messages, [peerId]: merged.sort((a, b) => a.timestamp - b.timestamp) },
               };
             });
           } catch (e) {
@@ -409,9 +455,7 @@ export const useChatStore = create<ChatState>()(
         // 有缓存：若存在缺 url 的媒体消息（发送方自己发的，localUrl 未持久化），
         // 后台拉最新一页刷新 presigned url；其余情况直接返回。
         // 新消息已由实时推送(C2C_NOTIFY) + 重连离线同步(pullPending) 投递到 store。
-        const needUrlRefresh = cached.some(
-          (m) => isMediaType(m.msgType) && !parseMediaContent(m.content)?.url,
-        );
+        const needUrlRefresh = cached.some((m) => contentNeedsSignedUrl(m.msgType, m.content));
         if (!needUrlRefresh) return;
         try {
           const res = await client.pullHistory(peerId, 0);

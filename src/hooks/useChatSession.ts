@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useChatStore, ChatMessage } from '@/stores/useChatStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { getIMClient } from '@/hooks/useIMClient';
-import { MsgType } from '@/sdk/types';
+import { MsgType, ReplySnippet } from '@/sdk/types';
+import { buildReplySnippet, parseMediaContent } from '@/sdk/media';
 
 // 稳定空数组引用，避免 selector 每次返回新数组导致重渲染
 const EMPTY_MESSAGES: ChatMessage[] = [];
@@ -64,31 +65,58 @@ export function useChatSession(peerId: string) {
   }, [messages, isGroup, currentUserId, peerId]);
 
   // 发送路由：按会话类型走 C2C 或群聊
+  // 按「目标会话」判定单聊/群聊：转发时目标 ≠ 当前会话；
+  // 未打开过的群不在 conversations 里，用群列表兜底
   const sendFn = useCallback(
     (params: { recipientId: string; msgType: MsgType; content: string }) => {
       const client = getIMClient();
       if (!client) throw new Error('IMClient not connected');
-      const group = useConversationStore.getState().conversations[peerId]?.type === 'group';
+      const group = !!useGroupStore.getState().groups[params.recipientId]
+        || useConversationStore.getState().conversations[params.recipientId]?.type === 'group';
       return group
         ? client.sendGroupMessage(params.recipientId, params.msgType, params.content)
         : client.sendMessage(params);
     },
-    [peerId],
+    [],
   );
+
+  // 引用状态：气泡「引用」设置，发送成功后清空
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  // 待转发消息：由气泡「转发」设置，ForwardDialog 选择目标会话后投递
+  const [forwarding, setForwarding] = useState<ChatMessage | null>(null);
+
+  const buildReply = (m: ChatMessage): ReplySnippet => ({
+    messageId: m.id,
+    senderId: m.senderId,
+    msgType: m.msgType,
+    senderName: m.senderNickname || m.senderUserName || m.senderId,
+    snippet: buildReplySnippet(m),
+    thumb: parseMediaContent(m.content)?.thumb,
+  });
 
   const sendText = useCallback(
     (text: string) => {
-      useChatStore.getState().sendText(peerId, text, sendFn);
+      useChatStore.getState().sendText(peerId, text, replyTo ? buildReply(replyTo) : undefined, sendFn);
+      setReplyTo(null);
       useConversationStore.getState().updateDraft(peerId, '');
     },
-    [peerId, sendFn],
+    [peerId, sendFn, replyTo],
   );
 
   const sendMedia = useCallback(
     (opts: { msgType: MsgType; file: File; duration?: number }) => {
-      useChatStore.getState().sendMedia(peerId, opts, sendFn);
+      useChatStore.getState().sendMedia(peerId, { ...opts, reply: replyTo ? buildReply(replyTo) : undefined }, sendFn);
+      setReplyTo(null);
     },
-    [peerId, sendFn],
+    [peerId, sendFn, replyTo],
+  );
+
+  const forwardTo = useCallback(
+    (targetPeerId: string, m: ChatMessage) => {
+      // 经 store 投递：既发到目标会话，也乐观写入其消息列表（否则发送方本地看不到）
+      useChatStore.getState().sendRaw(targetPeerId, m.msgType, m.content, sendFn);
+    },
+    [sendFn],
   );
 
   const retrySend = useCallback(
@@ -129,6 +157,11 @@ export function useChatSession(peerId: string) {
     hasMore,
     loadMoreHistory,
     sendText,
+    replyTo,
+    setReplyTo,
+    forwarding,
+    setForwarding,
+    forwardTo,
     sendImage: (f: File) => sendMedia({ msgType: MsgType.IMAGE, file: f }),
     sendFile: (f: File) => {
       // 通用文件入口按 MIME 分流：视频/图片自动升级为对应媒体消息（对齐主流 IM 习惯），
