@@ -1139,7 +1139,9 @@ export const im = $root.im = (() => {
          * @property {number} MSG_TYPE_VIDEO=4 MSG_TYPE_VIDEO value
          * @property {number} MSG_TYPE_FILE=5 MSG_TYPE_FILE value
          * @property {number} MSG_TYPE_EMOJI=6 MSG_TYPE_EMOJI value
-         * @property {number} MSG_TYPE_SYSTEM=7 MSG_TYPE_SYSTEM value
+         * @property {number} MSG_TYPE_FORWARD=8 MSG_TYPE_FORWARD value
+         * @property {number} MSG_TYPE_REPLY=9 MSG_TYPE_REPLY value
+         * @property {number} MSG_TYPE_SYSTEM=99 MSG_TYPE_SYSTEM value
          */
         common.MsgType = (function() {
             const valuesById = $Object.create(null), values = $Object.create(valuesById);
@@ -1150,7 +1152,9 @@ export const im = $root.im = (() => {
             values[valuesById[4] = "MSG_TYPE_VIDEO"] = 4;
             values[valuesById[5] = "MSG_TYPE_FILE"] = 5;
             values[valuesById[6] = "MSG_TYPE_EMOJI"] = 6;
-            values[valuesById[7] = "MSG_TYPE_SYSTEM"] = 7;
+            values[valuesById[8] = "MSG_TYPE_FORWARD"] = 8;
+            values[valuesById[9] = "MSG_TYPE_REPLY"] = 9;
+            values[valuesById[99] = "MSG_TYPE_SYSTEM"] = 99;
             return values;
         })();
 
@@ -1518,9 +1522,17 @@ export const im = $root.im = (() => {
                     case 6:
                         message.msgType = 6;
                         break;
+                    case "MSG_TYPE_FORWARD":
+                    case 8:
+                        message.msgType = 8;
+                        break;
+                    case "MSG_TYPE_REPLY":
+                    case 9:
+                        message.msgType = 9;
+                        break;
                     case "MSG_TYPE_SYSTEM":
-                    case 7:
-                        message.msgType = 7;
+                    case 99:
+                        message.msgType = 99;
                         break;
                     default:
                         if (typeof object.msgType === "number" && (object.msgType | 0) === object.msgType)

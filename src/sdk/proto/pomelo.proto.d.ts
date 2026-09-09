@@ -558,8 +558,14 @@ export namespace im {
             /** MSG_TYPE_EMOJI value */
             MSG_TYPE_EMOJI = 6,
 
+            /** MSG_TYPE_FORWARD value */
+            MSG_TYPE_FORWARD = 8,
+
+            /** MSG_TYPE_REPLY value */
+            MSG_TYPE_REPLY = 9,
+
             /** MSG_TYPE_SYSTEM value */
-            MSG_TYPE_SYSTEM = 7
+            MSG_TYPE_SYSTEM = 99
         }
 
         /** AckType enum. */

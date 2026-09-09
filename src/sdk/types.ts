@@ -75,12 +75,25 @@ export enum MsgType {
   VIDEO = 4,
   FILE = 5,
   EMOJI = 6,
+  FORWARD = 8,
+  REPLY = 9,
 }
 
 // ACK 类型
 export enum AckType {
   RECEIVED = 0,
   SEEN = 1,
+}
+
+// 引用消息快照（客户端生成，服务端直存直透）
+export interface ReplySnippet {
+  messageId: string;
+  senderId: string;
+  msgType: number;
+  senderName?: string;
+  snippet: string;
+  thumb?: string;
+  thumbUrl?: string;
 }
 
 // 消息状态
