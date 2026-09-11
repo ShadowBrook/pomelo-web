@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
+import { existsSync, readFileSync } from 'node:fs'
 
 export default defineConfig(({ mode }) => {
   // 后端地址可由 .env.[mode] 的 VITE_API_TARGET 覆盖（默认 compose 的 TLS 端点）
@@ -12,6 +13,18 @@ export default defineConfig(({ mode }) => {
   // 由 Vite 代理到网关（wss + 自签名证书）。浏览器无需信任自签名证书。
   const wsTarget = env.VITE_WS_TARGET || 'wss://localhost:9001';
 
+  // LiveKit 信令同源代理：/lk -> 本机 livekit 容器（7880）。
+  // 手机等局域网设备经 https 页面连 wss://<dev-server>/lk，规避混合内容与自签名证书问题。
+  const livekitTarget = env.VITE_LIVEKIT_TARGET || 'http://localhost:7880';
+
+  // 开发自签 HTTPS：getUserMedia 在非安全上下文（http://局域网IP）不可用，
+  // 手机测试必须 https。复用 pomelo 仓 deploy.sh 生成的开发证书；不存在则回退 http。
+  const tlsDir = resolve(__dirname, '../pomelo/conf/tls');
+  const httpsConf =
+    existsSync(resolve(tlsDir, 'server.key')) && existsSync(resolve(tlsDir, 'server.crt'))
+      ? { key: readFileSync(resolve(tlsDir, 'server.key')), cert: readFileSync(resolve(tlsDir, 'server.crt')) }
+      : undefined;
+
   return {
     plugins: [react(), tailwindcss()],
     resolve: {
@@ -20,6 +33,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      // 监听所有网卡：局域网内手机可通过 https://<电脑IP>:5173 访问
+      host: true,
+      https: httpsConf,
       proxy: {
         '/api': {
           target: apiTarget,
@@ -27,12 +43,19 @@ export default defineConfig(({ mode }) => {
           // 自签名证书开发场景不校验
           secure: false,
         },
-        // WebSocket 同源代理：浏览器连 ws://<dev-server>/ws，Vite 转发到网关 wss 端点
+        // WebSocket 同源代理：浏览器连 ws(s)://<dev-server>/ws，Vite 转发到网关 wss 端点
         '/ws': {
           target: wsTarget,
           ws: true,
           changeOrigin: true,
           // 网关使用自签名证书
+          secure: false,
+        },
+        // LiveKit 信令同源代理（音视频通话）
+        '/lk': {
+          target: livekitTarget,
+          ws: true,
+          changeOrigin: true,
           secure: false,
         },
       },

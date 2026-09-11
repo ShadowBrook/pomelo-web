@@ -104,10 +104,10 @@ export function useIMClient() {
     setKickedReason(null);
 
     const client = new IMClient({
-      // 网关地址：优先 VITE_WS_URL；否则按页面协议派生（https 页面 → wss），
-      // 端口默认 9001（服务端 TLS 启用时自动走 wss）
+      // 网关地址：优先 VITE_WS_URL；否则按页面协议派生并走同源 /ws 代理
+      // （Vite 开发代理到网关 wss，浏览器免信任自签证书；局域网手机同样适用）
       url: import.meta.env.VITE_WS_URL
-        || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:9001`,
+        || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
       maxReconnectAttempts: 10,
       heartbeatInterval: 30000,
     });
