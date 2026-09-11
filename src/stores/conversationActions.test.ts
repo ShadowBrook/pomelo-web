@@ -53,7 +53,6 @@ describe('openMostRecentConversation', () => {
 
     expect(useWindowStore.getState().chatPeerId).toBe('newer');
     expect(useConversationStore.getState().activePeerId).toBe('newer');
-    expect(useWindowStore.getState().imVisible).toBe(true);
   });
 
   it('选中态与聊天窗必须指向同一个会话', () => {
@@ -65,10 +64,9 @@ describe('openMostRecentConversation', () => {
     expect(useConversationStore.getState().activePeerId).toBe(chatPeerId);
   });
 
-  it('无会话时只显示 IM 界面，不开聊天窗', () => {
+  it('无会话时不开聊天窗', () => {
     openMostRecentConversation();
 
-    expect(useWindowStore.getState().imVisible).toBe(true);
     expect(useWindowStore.getState().chatPeerId).toBeNull();
     expect(useConversationStore.getState().activePeerId).toBeNull();
   });

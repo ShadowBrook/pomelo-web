@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useChatSession } from '@/hooks/useChatSession';
 import { useGroupReadCounts } from '@/hooks/useGroupReadCounts';
+import { useBrowserFullscreen } from '@/hooks/useBrowserFullscreen';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { toast } from '@/stores/useToastStore';
@@ -24,6 +25,7 @@ interface ReadStatus {
 
 export function ChatWindowContent({ peerId }: { peerId: string }) {
   const s = useChatSession(peerId);
+  const { isFullscreen, toggle: toggleFullscreen } = useBrowserFullscreen();
   const [detailOpen, setDetailOpen] = useState(true);
   const [soundOn, setSoundOn] = useState(true);
   const [readStatus, setReadStatus] = useState<ReadStatus | null>(null);
@@ -99,8 +101,8 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
             </svg>
           </button>
           <button
-            onClick={() => useWindowStore.getState().toggleFullscreen()}
-            title={useWindowStore.getState().fullscreen ? '还原' : '全屏'}
+            onClick={toggleFullscreen}
+            title={isFullscreen ? '退出全屏' : '全屏（Esc 退出）'}
             className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -108,8 +110,8 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
             </svg>
           </button>
           <button
-            onClick={() => useWindowStore.getState().hideIM()}
-            title="关闭"
+            onClick={() => useWindowStore.getState().closeChat()}
+            title="关闭会话"
             className="w-7 h-7 rounded text-white/85 hover:bg-danger flex items-center justify-center"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
