@@ -18,11 +18,16 @@ export default defineConfig(({ mode }) => {
   const livekitTarget = env.VITE_LIVEKIT_TARGET || 'http://localhost:7880';
 
   // 开发自签 HTTPS：getUserMedia 在非安全上下文（http://局域网IP）不可用，
-  // 手机测试必须 https。复用 pomelo 仓 deploy.sh 生成的开发证书；不存在则回退 http。
+  // 手机测试必须 https。证书链：
+  //   1) 优先 mkcert 产物（conf/tls/dev-server.*，带 localhost/局域网 IP SAN；
+  //      其根 CA 可装进手机/电脑信任链，装完后所有证书警告永久消失，见 scripts 说明）
+  //   2) 回退 gen-dev-cert.sh 的自签名对（仅浏览器点豁免可用，fetch 类请求可能被拒）
   const tlsDir = resolve(__dirname, '../pomelo/conf/tls');
-  const httpsConf =
-    existsSync(resolve(tlsDir, 'server.key')) && existsSync(resolve(tlsDir, 'server.crt'))
-      ? { key: readFileSync(resolve(tlsDir, 'server.key')), cert: readFileSync(resolve(tlsDir, 'server.crt')) }
+  const pickTls = (name: string) => resolve(tlsDir, name);
+  const httpsConf = existsSync(pickTls('dev-server.crt')) && existsSync(pickTls('dev-server.key'))
+    ? { key: readFileSync(pickTls('dev-server.key')), cert: readFileSync(pickTls('dev-server.crt')) }
+    : existsSync(pickTls('server.key')) && existsSync(pickTls('server.crt'))
+      ? { key: readFileSync(pickTls('server.key')), cert: readFileSync(pickTls('server.crt')) }
       : undefined;
 
   return {
