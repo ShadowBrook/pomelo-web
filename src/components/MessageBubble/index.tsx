@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ChatMessage } from '@/stores/useChatStore';
 import { MsgType } from '@/sdk/types';
 import {
@@ -73,6 +73,134 @@ function VideoMessage({ url, thumbUrl, durationMs }: { url?: string; thumbUrl?: 
   );
 }
 
+const VOICE_BAR_COUNT = 14;
+
+/**
+ * 波形柱高度（0.25~1）。用 seed 做确定性伪随机，保证同一条消息每次渲染形状一致——
+ * 否则列表滚动/重渲染时波形会跳变。
+ */
+export function voiceBars(seed: string, count: number = VOICE_BAR_COUNT): number[] {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619) >>> 0;
+  }
+  const bars: number[] = [];
+  for (let i = 0; i < count; i++) {
+    hash = (Math.imul(hash, 1664525) + 1013904223) >>> 0;
+    bars.push(0.25 + ((hash >>> 8) % 1000) / 1000 * 0.75);
+  }
+  return bars;
+}
+
+/** 已播过的柱数；播到末尾时整条点亮 */
+export function filledBars(count: number, progress: number): number {
+  if (!(progress > 0)) {
+    return 0;
+  }
+  return progress >= 1 ? count : Math.floor(progress * count);
+}
+
+/**
+ * 语音消息：自绘紧凑播放条 —— 播放/暂停按钮 + 波形 + 时长。
+ * <p>
+ * 不用原生 `<audio controls>`：原生控件有约 300px 的固定最小宽度且不随 `max-width` 收缩，
+ * 气泡上限是会话宽度的 60%，会被顶格撑宽、控件还会溢出气泡内边距。
+ * 波形柱在播放中起伏、已播部分填充主色，用于标识"正在播放"与播放位置。
+ */
+function VoiceMessage({ url, durationMs, seed }: { url?: string; durationMs?: number; seed?: string }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const seconds = durationMs && durationMs > 0 ? Math.max(1, Math.round(durationMs / 1000)) : 0;
+  // 下限保证波形有可辨认的宽度，上限保证气泡不被撑宽
+  const width = Math.min(170, Math.max(108, 64 + seconds * 6));
+  const bars = useMemo(() => voiceBars(seed || String(durationMs ?? '')), [seed, durationMs]);
+  const filled = filledBars(bars.length, progress);
+
+  if (!url) {
+    // 无可播放地址（如本地 blob 预览已失效）：不渲染播放器，避免浏览器在控件里显示自带错误
+    return <span className="text-xs text-gray-400">[语音]{seconds > 0 ? ` ${seconds}″` : ''}</span>;
+  }
+
+  const toggle = () => {
+    const el = audioRef.current;
+    if (!el) {
+      return;
+    }
+    if (playing) {
+      el.pause();
+    } else {
+      el.play().catch(() => setFailed(true));
+    }
+  };
+
+  // 优先用音频元素解出的真实时长（元数据里的 duration 是录制端估算值）
+  const onTimeUpdate = () => {
+    const el = audioRef.current;
+    if (!el) {
+      return;
+    }
+    const total = el.duration && Number.isFinite(el.duration) ? el.duration : seconds;
+    setProgress(total > 0 ? Math.min(1, el.currentTime / total) : 0);
+  };
+
+  return (
+    <div className="flex items-center gap-2" style={{ width }}>
+      <button
+        type="button"
+        onClick={toggle}
+        className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center flex-shrink-0 hover:bg-primary/25"
+        title={playing ? '暂停' : '播放'}
+        aria-label={playing ? '暂停语音' : '播放语音'}
+      >
+        {playing ? (
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+            <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 ml-0.5" fill="currentColor">
+            <path d="M8 5.5v13l11-6.5z" />
+          </svg>
+        )}
+      </button>
+      {failed ? (
+        <span className="text-xs text-text-sub flex-1">播放失败</span>
+      ) : (
+        <div
+          className={`flex items-end gap-[2px] h-5 flex-1 min-w-0 ${playing ? 'voice-wave-playing' : ''}`}
+          data-testid="voice-wave"
+          data-filled={filled}
+          aria-hidden="true"
+        >
+          {bars.map((height, i) => (
+            <span
+              key={i}
+              className={`flex-1 rounded-full ${i < filled ? 'bg-primary' : 'bg-text-sub/30'}`}
+              style={{ height: `${Math.round(height * 100)}%`, animationDelay: `${i * 60}ms` }}
+            />
+          ))}
+        </div>
+      )}
+      <span className="text-xs text-text-sub flex-shrink-0">
+        {seconds > 0 ? `${seconds}″` : '语音'}
+      </span>
+      <audio
+        ref={audioRef}
+        src={url}
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onTimeUpdate={onTimeUpdate}
+        onError={() => { setFailed(true); setPlaying(false); }}
+        className="hidden"
+      />
+    </div>
+  );
+}
+
 /** 图片点开展开全屏预览，再次点击关闭 */
 function ImageMessage({ url }: { url: string }) {
   const [open, setOpen] = useState(false);
@@ -141,9 +269,7 @@ function ForwardItemBody({ it }: { it: ForwardItem }) {
         ? <img src={m.thumbUrl} alt="视频封面" className="max-h-[160px] rounded" />
         : <div className="text-text-sub">[视频]</div>;
     case MsgType.VOICE:
-      return m.url
-        ? <audio controls src={m.url} className="max-w-[200px]" />
-        : <div className="text-text-sub">[语音]</div>;
+      return <VoiceMessage url={m.url} durationMs={m.duration} seed={m.key} />;
     case MsgType.FILE:
       return m.url
         ? (
@@ -225,15 +351,9 @@ function renderInner(msgType: number, content: string, url?: string): React.Reac
         : <span className="text-2xl">[表情]</span>;
 
     case MsgType.VOICE: {
-      const duration = parseMediaContent(content)?.duration;
-      return (
-        <div className="flex items-center gap-2 min-w-[120px]">
-          <audio controls src={url || undefined} className="max-w-[200px]" />
-          {duration ? (
-            <span className="text-xs text-gray-500">{Math.round(duration / 1000)}″</span>
-          ) : null}
-        </div>
-      );
+      // seed 用对象 key（不是签名 url）：签名每次拉取都会变，会让波形跳变
+      const c = parseMediaContent(content);
+      return <VoiceMessage url={url} durationMs={c?.duration} seed={c?.key} />;
     }
 
     case MsgType.VIDEO: {

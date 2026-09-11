@@ -485,6 +485,12 @@ export namespace im {
             /** CMD_GROUP_INVITE_RESP value */
             CMD_GROUP_INVITE_RESP = 115,
 
+            /** CMD_GROUP_KICK_REQ value */
+            CMD_GROUP_KICK_REQ = 116,
+
+            /** CMD_GROUP_KICK_RESP value */
+            CMD_GROUP_KICK_RESP = 117,
+
             /** CMD_GROUP_GET_INFO_REQ value */
             CMD_GROUP_GET_INFO_REQ = 134,
 
@@ -3275,6 +3281,252 @@ export namespace im {
 
             /** Shape of an InviteToGroupResp. */
             type $Shape = im.group.InviteToGroupResp.$Properties;
+        }
+
+        /**
+         * Properties of a KickMemberReq.
+         * @deprecated Use im.group.KickMemberReq.$Properties instead.
+         */
+        interface IKickMemberReq extends im.group.KickMemberReq.$Properties {
+        }
+
+        /** Represents a KickMemberReq. */
+        class KickMemberReq {
+
+            /**
+             * Constructs a new KickMemberReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.KickMemberReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** KickMemberReq groupId. */
+            groupId: (number|Long);
+
+            /** KickMemberReq userId. */
+            userId: (number|Long);
+
+            /**
+             * Creates a new KickMemberReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns KickMemberReq instance
+             */
+            static create(properties: im.group.KickMemberReq.$Shape): im.group.KickMemberReq & im.group.KickMemberReq.$Shape;
+            static create(properties?: im.group.KickMemberReq.$Properties): im.group.KickMemberReq;
+
+            /**
+             * Encodes the specified KickMemberReq message. Does not implicitly {@link im.group.KickMemberReq.verify|verify} messages.
+             * @param message KickMemberReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.KickMemberReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified KickMemberReq message, length delimited. Does not implicitly {@link im.group.KickMemberReq.verify|verify} messages.
+             * @param message KickMemberReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.KickMemberReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a KickMemberReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.KickMemberReq & im.group.KickMemberReq.$Shape} KickMemberReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.KickMemberReq & im.group.KickMemberReq.$Shape;
+
+            /**
+             * Decodes a KickMemberReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.KickMemberReq & im.group.KickMemberReq.$Shape} KickMemberReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.KickMemberReq & im.group.KickMemberReq.$Shape;
+
+            /**
+             * Verifies a KickMemberReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a KickMemberReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns KickMemberReq
+             */
+            static fromObject(object: { [k: string]: any }): im.group.KickMemberReq;
+
+            /**
+             * Creates a plain object from a KickMemberReq message. Also converts values to other types if specified.
+             * @param message KickMemberReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.KickMemberReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this KickMemberReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for KickMemberReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace KickMemberReq {
+
+            /** Properties of a KickMemberReq. */
+            interface $Properties {
+
+                /** KickMemberReq groupId */
+                groupId?: (number|Long|null);
+
+                /** KickMemberReq userId */
+                userId?: (number|Long|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a KickMemberReq. */
+            type $Shape = im.group.KickMemberReq.$Properties;
+        }
+
+        /**
+         * Properties of a KickMemberResp.
+         * @deprecated Use im.group.KickMemberResp.$Properties instead.
+         */
+        interface IKickMemberResp extends im.group.KickMemberResp.$Properties {
+        }
+
+        /** Represents a KickMemberResp. */
+        class KickMemberResp {
+
+            /**
+             * Constructs a new KickMemberResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.KickMemberResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** KickMemberResp code. */
+            code: number;
+
+            /** KickMemberResp message. */
+            message: string;
+
+            /**
+             * Creates a new KickMemberResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns KickMemberResp instance
+             */
+            static create(properties: im.group.KickMemberResp.$Shape): im.group.KickMemberResp & im.group.KickMemberResp.$Shape;
+            static create(properties?: im.group.KickMemberResp.$Properties): im.group.KickMemberResp;
+
+            /**
+             * Encodes the specified KickMemberResp message. Does not implicitly {@link im.group.KickMemberResp.verify|verify} messages.
+             * @param message KickMemberResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.KickMemberResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified KickMemberResp message, length delimited. Does not implicitly {@link im.group.KickMemberResp.verify|verify} messages.
+             * @param message KickMemberResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.KickMemberResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a KickMemberResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.KickMemberResp & im.group.KickMemberResp.$Shape} KickMemberResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.KickMemberResp & im.group.KickMemberResp.$Shape;
+
+            /**
+             * Decodes a KickMemberResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.KickMemberResp & im.group.KickMemberResp.$Shape} KickMemberResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.KickMemberResp & im.group.KickMemberResp.$Shape;
+
+            /**
+             * Verifies a KickMemberResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a KickMemberResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns KickMemberResp
+             */
+            static fromObject(object: { [k: string]: any }): im.group.KickMemberResp;
+
+            /**
+             * Creates a plain object from a KickMemberResp message. Also converts values to other types if specified.
+             * @param message KickMemberResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.KickMemberResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this KickMemberResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for KickMemberResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace KickMemberResp {
+
+            /** Properties of a KickMemberResp. */
+            interface $Properties {
+
+                /** KickMemberResp code */
+                code?: (number|null);
+
+                /** KickMemberResp message */
+                message?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a KickMemberResp. */
+            type $Shape = im.group.KickMemberResp.$Properties;
         }
 
         /**

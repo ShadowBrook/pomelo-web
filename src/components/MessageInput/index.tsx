@@ -1,5 +1,6 @@
 import { useState, useRef, KeyboardEvent, useEffect, lazy, Suspense, ReactNode } from 'react';
 import { toast } from '@/stores/useToastStore';
+import { recordedVoiceMime, voiceExt } from '@/utils/voice';
 
 const EmojiPicker = lazy(() => import('@/components/EmojiPicker'));
 
@@ -12,6 +13,8 @@ interface Props {
   replyPreview?: ReplyPreview;
   onCancelReply?: () => void;
   peerId: string;
+  /** 只读会话（如已被移出群聊）：禁用输入与所有发送入口 */
+  disabled?: boolean;
   draft?: string;
   onSendText: (text: string) => void;
   onSendImage: (file: File) => void;
@@ -23,14 +26,6 @@ interface Props {
   quickReplies?: string[];
 }
 
-/** MediaRecorder MIME → 扩展名（Chrome 默认 webm，Safari 为 mp4/m4a） */
-function voiceExt(mime: string): string {
-  const base = (mime || '').split(';')[0].toLowerCase();
-  if (base.includes('mp4')) return 'm4a';
-  if (base.includes('ogg')) return 'ogg';
-  return 'webm';
-}
-
 function ToolButton({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) {
   return (
     <button onClick={onClick} title={title} className="p-1.5 text-text-sub hover:text-text-main transition-colors">
@@ -39,10 +34,40 @@ function ToolButton({ title, onClick, children }: { title: string; onClick: () =
   );
 }
 
+/** 录音波形柱高（固定形状即可：播放条要按消息稳定才需要种子伪随机） */
+const RECORD_WAVE_BARS = [0.35, 0.75, 0.45, 1, 0.5, 0.85, 0.4, 0.65, 0.95, 0.55];
+
+/**
+ * 录音中的提示条：红色波形 + 文案，代替原来的麦克风 emoji。
+ * 与播放态区分：录音态纯红色、节奏 0.75s、幅度 0.2~1；播放态蓝灰两色、1s、0.45~1。
+ */
+export function RecordingIndicator() {
+  return (
+    <div className="mb-2 text-xs text-danger flex items-center gap-2">
+      <span className="w-2 h-2 rounded-full bg-danger animate-pulse flex-shrink-0" />
+      <span
+        className="voice-wave-recording flex items-end gap-[2px] h-4 flex-shrink-0"
+        data-testid="recording-wave"
+        aria-hidden="true"
+      >
+        {RECORD_WAVE_BARS.map((height, i) => (
+          <span
+            key={i}
+            className="w-[3px] rounded-full bg-danger flex-shrink-0"
+            style={{ height: `${Math.round(height * 100)}%`, animationDelay: `${i * 70}ms` }}
+          />
+        ))}
+      </span>
+      录音中，点击停止并发送
+    </div>
+  );
+}
+
 export function MessageInput({
   replyPreview,
   onCancelReply,
   peerId,
+  disabled = false,
   draft,
   onSendText,
   onSendImage,
@@ -74,8 +99,10 @@ export function MessageInput({
   // 切换会话/卸载时停止录音，避免残留录音流
   useEffect(() => {
     return () => {
-      discardVoiceRef.current = true;
+      // 仅在确有录音在途时标记丢弃：StrictMode 会在挂载时多跑一次清理，
+      // 无条件置位会让本次挂载后的第一条录音被静默丢弃
       if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+        discardVoiceRef.current = true;
         recorderRef.current.stop();
       }
       streamRef.current?.getTracks().forEach(t => t.stop());
@@ -88,6 +115,7 @@ export function MessageInput({
   }, [peerId, draft]);
 
   const handleSend = () => {
+    if (disabled) return;
     const trimmed = text.trim();
     if (!trimmed) return;
     onSendText(trimmed);
@@ -156,6 +184,7 @@ export function MessageInput({
   };
 
   const toggleRecord = async () => {
+    if (disabled) return;
     if (recording) {
       stopRecording();
       return;
@@ -164,7 +193,6 @@ export function MessageInput({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       const recorder = new MediaRecorder(stream);
-      const mime = recorder.mimeType || 'audio/webm';
       chunksRef.current = [];
       recordStartRef.current = Date.now();
       recorder.ondataavailable = (e) => {
@@ -178,6 +206,9 @@ export function MessageInput({
         setRecording(false);
         discardVoiceRef.current = false;
         if (discard) return;
+        // 实际容器以数据块为准：start() 前 mimeType 为空，硬编码回退会把 Safari 的
+        // MP4/AAC 标成 audio/webm，导致 Safari 播放自己录的语音时报「错误」
+        const mime = recordedVoiceMime(chunksRef.current[0]?.type, recorder.mimeType);
         const blob = new Blob(chunksRef.current, { type: mime });
         if (blob.size > 0) {
           const file = new File([blob], `voice-${Date.now()}.${voiceExt(mime)}`, { type: mime });
@@ -195,8 +226,8 @@ export function MessageInput({
 
   return (
     <div className="bg-panel border-t border-line px-3 pt-2 pb-2">
-      {/* 工具栏：参考图 8 图标 + 麦克风（保留录音能力） */}
-      <div className="flex items-center gap-1 mb-1.5">
+      {/* 工具栏：参考图 8 图标 + 麦克风（保留录音能力）；只读会话整体 inert */}
+      <div className={`flex items-center gap-1 mb-1.5 ${disabled ? 'opacity-40' : ''}`} inert={disabled}>
         <div className="relative">
           <ToolButton title="表情" onClick={() => setShowEmoji((v) => !v)}>
             <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
@@ -279,12 +310,7 @@ export function MessageInput({
       )}
 
       {/* 录音提示条 */}
-      {recording && (
-        <div className="mb-2 text-xs text-red-500 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          录音中，点击 🎤 停止并发送
-        </div>
-      )}
+      {recording && <RecordingIndicator />}
 
       {/* 输入区域（无边框，白底透明输入） */}
       <textarea
@@ -292,9 +318,10 @@ export function MessageInput({
         value={text}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="输入聊天信息，按 Enter 键快速发送 ..."
+        disabled={disabled}
+        placeholder={disabled ? '你已被移出群聊，无法发送消息' : '输入聊天信息，按 Enter 键快速发送 ...'}
         rows={3}
-        className="w-full resize-none bg-transparent px-1 py-1 text-sm text-text-main focus:outline-none"
+        className="w-full resize-none bg-transparent px-1 py-1 text-sm text-text-main focus:outline-none disabled:cursor-not-allowed"
       />
 
       {/* 底行：右对齐提示 + 发送组合按钮 */}
@@ -303,7 +330,7 @@ export function MessageInput({
         <div className="relative flex">
           <button
             onClick={handleSend}
-            disabled={!text.trim()}
+            disabled={disabled || !text.trim()}
             className="px-5 py-1.5 bg-send-btn text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 rounded-l-sm transition-opacity"
           >
             发送

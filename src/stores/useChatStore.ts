@@ -255,8 +255,11 @@ export const useChatStore = create<ChatState>()(
             const idx = msgs.findIndex((m) => m.id === update.id || m.clientMsgId === update.id);
             if (idx !== -1) {
               const cur = msgs[idx];
-              // 转发消息本地 content 不含签名 url：确认送达后拉最新一页刷新（见 openConversation）
-              if (update.status === 'sent' && cur.msgType === MsgType.FORWARD) {
+              // 本地乐观副本的 content 只含对象 key，签名 url 由服务端读侧注入：
+              // 媒体消息（含转发）确认送达后拉最新一页补上 url，否则发送方自己的语音/视频
+              // 在本地 blob 预览失效（刷新页面、切走会话）后无可加载地址，原生播放器报错
+              if (update.status === 'sent'
+                && (cur.msgType === MsgType.FORWARD || contentNeedsSignedUrl(cur.msgType, cur.content))) {
                 refreshPeer = peerId;
               }
               // 发送确认（sent）携带服务端雪花 ID：把本地生成的 id 改写为服务端 id，
@@ -331,9 +334,16 @@ export const useChatStore = create<ChatState>()(
             set((s) => {
               const existing = s.messages[peerId] || [];
               const existingIds = new Set(existing.map(m => m.id));
+              // 本地副本缺签名 url 时用拉取结果补齐（服务端读侧已签名）
+              const signedById = new Map(historyMsgs.map(m => [m.id, m.content]));
+              const refreshed = existing.map(m => {
+                if (!contentNeedsSignedUrl(m.msgType, m.content)) return m;
+                const content = signedById.get(m.id);
+                return content ? { ...m, content } : m;
+              });
               // backward=true 返回 seq 降序，反转为正序后前置
               const newMsgs = historyMsgs.filter(m => !existingIds.has(m.id)).reverse();
-              const merged = [...newMsgs, ...existing].sort((a, b) => a.timestamp - b.timestamp);
+              const merged = [...newMsgs, ...refreshed].sort((a, b) => a.timestamp - b.timestamp);
               return {
                 messages: { ...s.messages, [peerId]: merged },
                 loadingHistory: { ...s.loadingHistory, [peerId]: false },
@@ -365,7 +375,14 @@ export const useChatStore = create<ChatState>()(
             const existing = s.messages[peerId] || [];
             const existingIds = new Set(existing.map(m => m.id));
             const newMsgs = historyMsgs.filter(m => !existingIds.has(m.id));
-            const merged = [...newMsgs, ...existing].sort((a, b) => a.timestamp - b.timestamp);
+            // 本地副本缺签名 url 时用拉取结果补齐（服务端读侧已签名）
+            const signedById = new Map(historyMsgs.map(m => [m.id, m.content]));
+            const refreshed = existing.map(m => {
+              if (!contentNeedsSignedUrl(m.msgType, m.content)) return m;
+              const content = signedById.get(m.id);
+              return content ? { ...m, content } : m;
+            });
+            const merged = [...newMsgs, ...refreshed].sort((a, b) => a.timestamp - b.timestamp);
             return {
               messages: { ...s.messages, [peerId]: merged },
               loadingHistory: { ...s.loadingHistory, [peerId]: false },

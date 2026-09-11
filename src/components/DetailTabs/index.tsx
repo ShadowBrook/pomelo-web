@@ -1,40 +1,26 @@
-export type DetailTab = 'info' | 'album' | 'voice';
-
-interface Props {
-  isGroup: boolean;
-  isFriend: boolean;
-  tab: DetailTab;
-  onChange: (t: DetailTab) => void;
+/** 详情栏标签文案：好友信息 / 对方信息 / 群组信息 */
+export function detailLabel(isGroup: boolean, isFriend: boolean) {
+  return isGroup ? '群组信息' : isFriend ? '好友信息' : '对方信息';
 }
 
-/** 详情栏页签：长在聊天窗头部蓝条右端（宽 260 对齐详情栏），白底激活页签样式 */
-export function DetailTabs({ isGroup, isFriend, tab, onChange }: Props) {
-  if (isGroup) {
-    return (
-      <div className="w-[260px] flex-shrink-0 flex items-end h-full">
-        <div className="h-8 px-4 flex items-center bg-panel rounded-t-md text-xs font-medium text-text-main">群组信息</div>
-      </div>
-    );
-  }
-  const infoLabel = isFriend ? '好友信息' : '对方信息';
-  const tabs: Array<{ key: DetailTab; label: string }> = [
-    { key: 'info', label: infoLabel },
-    { key: 'album', label: '对方相册' },
-    { key: 'voice', label: '语音介绍' },
-  ];
+interface Props {
+  label: string;
+  onToggle: () => void;
+}
+
+/** 详情栏头部条：贴在面板顶部（不再嵌在聊天窗蓝条里），点击整条可收起 */
+export function DetailTabs({ label, onToggle }: Props) {
   return (
-    <div className="w-[260px] flex-shrink-0 flex items-end h-full">
-      {tabs.map((t) => (
-        <button
-          key={t.key}
-          onClick={() => onChange(t.key)}
-          className={`h-8 px-3 flex items-center text-xs rounded-t-md transition-colors ${
-            tab === t.key ? 'bg-panel font-medium text-text-main' : 'text-white/85 hover:text-white'
-          }`}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
+    <button
+      onClick={onToggle}
+      aria-expanded
+      title={`收起${label}`}
+      className="h-8 flex-shrink-0 w-full flex items-center justify-between px-3 border-b border-line bg-panel text-xs font-medium text-text-main hover:text-primary transition-colors"
+    >
+      <span>{label}</span>
+      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </button>
   );
 }

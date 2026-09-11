@@ -1054,6 +1054,8 @@ export const im = $root.im = (() => {
          * @property {number} CMD_GROUP_CREATE_RESP=113 CMD_GROUP_CREATE_RESP value
          * @property {number} CMD_GROUP_INVITE_REQ=114 CMD_GROUP_INVITE_REQ value
          * @property {number} CMD_GROUP_INVITE_RESP=115 CMD_GROUP_INVITE_RESP value
+         * @property {number} CMD_GROUP_KICK_REQ=116 CMD_GROUP_KICK_REQ value
+         * @property {number} CMD_GROUP_KICK_RESP=117 CMD_GROUP_KICK_RESP value
          * @property {number} CMD_GROUP_GET_INFO_REQ=134 CMD_GROUP_GET_INFO_REQ value
          * @property {number} CMD_GROUP_GET_INFO_RESP=135 CMD_GROUP_GET_INFO_RESP value
          * @property {number} CMD_GROUP_GET_MEMBERS_REQ=136 CMD_GROUP_GET_MEMBERS_REQ value
@@ -1111,6 +1113,8 @@ export const im = $root.im = (() => {
             values[valuesById[113] = "CMD_GROUP_CREATE_RESP"] = 113;
             values[valuesById[114] = "CMD_GROUP_INVITE_REQ"] = 114;
             values[valuesById[115] = "CMD_GROUP_INVITE_RESP"] = 115;
+            values[valuesById[116] = "CMD_GROUP_KICK_REQ"] = 116;
+            values[valuesById[117] = "CMD_GROUP_KICK_RESP"] = 117;
             values[valuesById[134] = "CMD_GROUP_GET_INFO_REQ"] = 134;
             values[valuesById[135] = "CMD_GROUP_GET_INFO_RESP"] = 135;
             values[valuesById[136] = "CMD_GROUP_GET_MEMBERS_REQ"] = 136;
@@ -8965,6 +8969,648 @@ export const im = $root.im = (() => {
             return InviteToGroupResp;
         })();
 
+        group.KickMemberReq = (function() {
+
+            /**
+             * Properties of a KickMemberReq.
+             * @typedef {Object} im.group.KickMemberReq.$Properties
+             * @property {number|Long|null} [groupId] KickMemberReq groupId
+             * @property {number|Long|null} [userId] KickMemberReq userId
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a KickMemberReq.
+             * @memberof im.group
+             * @interface IKickMemberReq
+             * @augments im.group.KickMemberReq.$Properties
+             * @deprecated Use im.group.KickMemberReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a KickMemberReq.
+             * @typedef {im.group.KickMemberReq.$Properties} im.group.KickMemberReq.$Shape
+             */
+
+            /**
+             * Constructs a new KickMemberReq.
+             * @memberof im.group
+             * @classdesc Represents a KickMemberReq.
+             * @constructor
+             * @param {im.group.KickMemberReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const KickMemberReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * KickMemberReq groupId.
+             * @member {number|Long} groupId
+             * @memberof im.group.KickMemberReq
+             * @instance
+             */
+            KickMemberReq.prototype.groupId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * KickMemberReq userId.
+             * @member {number|Long} userId
+             * @memberof im.group.KickMemberReq
+             * @instance
+             */
+            KickMemberReq.prototype.userId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * Creates a new KickMemberReq instance using the specified properties.
+             * @function create
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {im.group.KickMemberReq.$Properties=} [properties] Properties to set
+             * @returns {im.group.KickMemberReq} KickMemberReq instance
+             * @type {{
+             *   (properties: im.group.KickMemberReq.$Shape): im.group.KickMemberReq & im.group.KickMemberReq.$Shape;
+             *   (properties?: im.group.KickMemberReq.$Properties): im.group.KickMemberReq;
+             * }}
+             */
+            KickMemberReq.create = function(properties) {
+                return new KickMemberReq(properties);
+            };
+
+            /**
+             * Encodes the specified KickMemberReq message. Does not implicitly {@link im.group.KickMemberReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {im.group.KickMemberReq.$Properties} message KickMemberReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            KickMemberReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId") && (typeof message.groupId === "object" ? message.groupId.low || message.groupId.high : message.groupId !== 0))
+                    writer.uint32(/* id 1, wireType 0 =*/8).int64(message.groupId);
+                if (message.userId != null && $Object.hasOwnProperty.call(message, "userId") && (typeof message.userId === "object" ? message.userId.low || message.userId.high : message.userId !== 0))
+                    writer.uint32(/* id 2, wireType 0 =*/16).int64(message.userId);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified KickMemberReq message, length delimited. Does not implicitly {@link im.group.KickMemberReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {im.group.KickMemberReq.$Properties} message KickMemberReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            KickMemberReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a KickMemberReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.KickMemberReq & im.group.KickMemberReq.$Shape} KickMemberReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            KickMemberReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.KickMemberReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.groupId = value;
+                            else
+                                delete message.groupId;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.userId = value;
+                            else
+                                delete message.userId;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a KickMemberReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.KickMemberReq & im.group.KickMemberReq.$Shape} KickMemberReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            KickMemberReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a KickMemberReq message.
+             * @function verify
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            KickMemberReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (!$util.isInteger(message.groupId) && !(message.groupId && $util.isInteger(message.groupId.low) && $util.isInteger(message.groupId.high)))
+                        return "groupId: integer|Long expected";
+                if (message.userId != null && $Object.hasOwnProperty.call(message, "userId"))
+                    if (!$util.isInteger(message.userId) && !(message.userId && $util.isInteger(message.userId.low) && $util.isInteger(message.userId.high)))
+                        return "userId: integer|Long expected";
+                return null;
+            };
+
+            /**
+             * Creates a KickMemberReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.KickMemberReq} KickMemberReq
+             */
+            KickMemberReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.KickMemberReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.KickMemberReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.KickMemberReq();
+                if (object.groupId != null)
+                    if (typeof object.groupId === "object" ? object.groupId.low || object.groupId.high : $Number(object.groupId) !== 0)
+                        if ($util.Long)
+                            message.groupId = $util.Long.fromValue(object.groupId, false);
+                        else if (typeof object.groupId === "string")
+                            message.groupId = $parseInt(object.groupId, 10);
+                        else if (typeof object.groupId === "number")
+                            message.groupId = object.groupId;
+                        else if (typeof object.groupId === "object")
+                            message.groupId = new $util.LongBits(object.groupId.low >>> 0, object.groupId.high >>> 0).toNumber();
+                if (object.userId != null)
+                    if (typeof object.userId === "object" ? object.userId.low || object.userId.high : $Number(object.userId) !== 0)
+                        if ($util.Long)
+                            message.userId = $util.Long.fromValue(object.userId, false);
+                        else if (typeof object.userId === "string")
+                            message.userId = $parseInt(object.userId, 10);
+                        else if (typeof object.userId === "number")
+                            message.userId = object.userId;
+                        else if (typeof object.userId === "object")
+                            message.userId = new $util.LongBits(object.userId.low >>> 0, object.userId.high >>> 0).toNumber();
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a KickMemberReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {im.group.KickMemberReq} message KickMemberReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            KickMemberReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.groupId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.groupId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.userId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.userId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                }
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.groupId = typeof message.groupId === "number" ? $BigInt(message.groupId) : $util.Long.fromBits(message.groupId.low >>> 0, message.groupId.high >>> 0, false).toBigInt();
+                    else if (typeof message.groupId === "number")
+                        object.groupId = options.longs === $String ? $String(message.groupId) : message.groupId;
+                    else
+                        object.groupId = options.longs === $String ? $util.Long.prototype.toString.call(message.groupId) : options.longs === $Number ? new $util.LongBits(message.groupId.low >>> 0, message.groupId.high >>> 0).toNumber() : message.groupId;
+                if (message.userId != null && $Object.hasOwnProperty.call(message, "userId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.userId = typeof message.userId === "number" ? $BigInt(message.userId) : $util.Long.fromBits(message.userId.low >>> 0, message.userId.high >>> 0, false).toBigInt();
+                    else if (typeof message.userId === "number")
+                        object.userId = options.longs === $String ? $String(message.userId) : message.userId;
+                    else
+                        object.userId = options.longs === $String ? $util.Long.prototype.toString.call(message.userId) : options.longs === $Number ? new $util.LongBits(message.userId.low >>> 0, message.userId.high >>> 0).toNumber() : message.userId;
+                return object;
+            };
+
+            /**
+             * Converts this KickMemberReq to JSON.
+             * @function toJSON
+             * @memberof im.group.KickMemberReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            KickMemberReq.prototype.toJSON = function() {
+                return KickMemberReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for KickMemberReq
+             * @function getTypeUrl
+             * @memberof im.group.KickMemberReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            KickMemberReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.KickMemberReq";
+            };
+
+            return KickMemberReq;
+        })();
+
+        group.KickMemberResp = (function() {
+
+            /**
+             * Properties of a KickMemberResp.
+             * @typedef {Object} im.group.KickMemberResp.$Properties
+             * @property {number|null} [code] KickMemberResp code
+             * @property {string|null} [message] KickMemberResp message
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a KickMemberResp.
+             * @memberof im.group
+             * @interface IKickMemberResp
+             * @augments im.group.KickMemberResp.$Properties
+             * @deprecated Use im.group.KickMemberResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a KickMemberResp.
+             * @typedef {im.group.KickMemberResp.$Properties} im.group.KickMemberResp.$Shape
+             */
+
+            /**
+             * Constructs a new KickMemberResp.
+             * @memberof im.group
+             * @classdesc Represents a KickMemberResp.
+             * @constructor
+             * @param {im.group.KickMemberResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const KickMemberResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * KickMemberResp code.
+             * @member {number} code
+             * @memberof im.group.KickMemberResp
+             * @instance
+             */
+            KickMemberResp.prototype.code = 0;
+
+            /**
+             * KickMemberResp message.
+             * @member {string} message
+             * @memberof im.group.KickMemberResp
+             * @instance
+             */
+            KickMemberResp.prototype.message = "";
+
+            /**
+             * Creates a new KickMemberResp instance using the specified properties.
+             * @function create
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {im.group.KickMemberResp.$Properties=} [properties] Properties to set
+             * @returns {im.group.KickMemberResp} KickMemberResp instance
+             * @type {{
+             *   (properties: im.group.KickMemberResp.$Shape): im.group.KickMemberResp & im.group.KickMemberResp.$Shape;
+             *   (properties?: im.group.KickMemberResp.$Properties): im.group.KickMemberResp;
+             * }}
+             */
+            KickMemberResp.create = function(properties) {
+                return new KickMemberResp(properties);
+            };
+
+            /**
+             * Encodes the specified KickMemberResp message. Does not implicitly {@link im.group.KickMemberResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {im.group.KickMemberResp.$Properties} message KickMemberResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            KickMemberResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified KickMemberResp message, length delimited. Does not implicitly {@link im.group.KickMemberResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {im.group.KickMemberResp.$Properties} message KickMemberResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            KickMemberResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a KickMemberResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.KickMemberResp & im.group.KickMemberResp.$Shape} KickMemberResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            KickMemberResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.KickMemberResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a KickMemberResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.KickMemberResp & im.group.KickMemberResp.$Shape} KickMemberResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            KickMemberResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a KickMemberResp message.
+             * @function verify
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            KickMemberResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a KickMemberResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.KickMemberResp} KickMemberResp
+             */
+            KickMemberResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.KickMemberResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.KickMemberResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.KickMemberResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a KickMemberResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {im.group.KickMemberResp} message KickMemberResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            KickMemberResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                return object;
+            };
+
+            /**
+             * Converts this KickMemberResp to JSON.
+             * @function toJSON
+             * @memberof im.group.KickMemberResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            KickMemberResp.prototype.toJSON = function() {
+                return KickMemberResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for KickMemberResp
+             * @function getTypeUrl
+             * @memberof im.group.KickMemberResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            KickMemberResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.KickMemberResp";
+            };
+
+            return KickMemberResp;
+        })();
+
         group.GetGroupInfoReq = (function() {
 
             /**
@@ -16123,6 +16769,14 @@ export const im = $root.im = (() => {
                     case "CMD_GROUP_INVITE_RESP":
                     case 115:
                         message.cmd = 115;
+                        break;
+                    case "CMD_GROUP_KICK_REQ":
+                    case 116:
+                        message.cmd = 116;
+                        break;
+                    case "CMD_GROUP_KICK_RESP":
+                    case 117:
+                        message.cmd = 117;
                         break;
                     case "CMD_GROUP_GET_INFO_REQ":
                     case 134:

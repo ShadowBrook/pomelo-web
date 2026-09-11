@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useIMClient } from '@/hooks/useIMClient';
 import { useChatStore } from '@/stores/useChatStore';
 import { useConversationStore } from '@/stores/useConversationStore';
+import { openMostRecentConversation } from '@/stores/conversationActions';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useWindowStore } from '@/stores/useWindowStore';
@@ -31,11 +32,7 @@ export default function ChatPage() {
 
   // 进入工作台：IM 界面可见 + 最近一个会话（参考 v9 登录即展示）
   useEffect(() => {
-    useWindowStore.getState().openIM();
-    const sorted = useConversationStore.getState().getSortedList();
-    if (sorted.length > 0) {
-      useWindowStore.getState().openChat(sorted[0]);
-    }
+    openMostRecentConversation();
   }, []);
 
   // 未读计数更新 title

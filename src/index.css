@@ -51,6 +51,51 @@ body {
   border-left: none;
 }
 
+/*
+ * 语音波形动画：柱高错开 animation-delay 后形成从左到右的流动感。
+ * 两种态刻意做出差异——播放态缓慢起伏（0.45~1，配合已播填充），
+ * 录音态节奏更快、幅度更大（0.2~1，纯红色），避免"在播"和"在录"看起来一样。
+ */
+@keyframes voice-wave {
+  0%,
+  100% {
+    transform: scaleY(0.45);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes voice-wave-recording {
+  0%,
+  100% {
+    transform: scaleY(0.2);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.voice-wave-playing > span,
+.voice-wave-recording > span {
+  transform-origin: bottom;
+}
+
+.voice-wave-playing > span {
+  animation: voice-wave 1s ease-in-out infinite;
+}
+
+.voice-wave-recording > span {
+  animation: voice-wave-recording 0.75s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-wave-playing > span,
+  .voice-wave-recording > span {
+    animation: none;
+  }
+}
+
 /* 会话选中态左上红色折角（参考 rb_main1） */
 .corner-red::before {
   content: '';
