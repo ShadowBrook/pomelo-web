@@ -67,6 +67,17 @@ export enum Cmd {
   CMD_UPLOAD_REQ = 0x00A0,
   CMD_UPLOAD_RESP = 0x00A1,
 
+  // 音视频通话 0x00B0-0x00B8（信令走 IM 通道，媒体直连 LiveKit SFU）
+  CALL_INVITE_REQ = 0x00B0,
+  CALL_INVITE_RESP = 0x00B1,
+  CALL_ACCEPT_REQ = 0x00B2,
+  CALL_ACCEPT_RESP = 0x00B3,
+  CALL_END_REQ = 0x00B4,
+  CALL_END_RESP = 0x00B5,
+  CALL_EVENT_PUSH = 0x00B6,
+  CALL_TOKEN_REQ = 0x00B7,
+  CALL_TOKEN_RESP = 0x00B8,
+
   // 通用错误响应
   CMD_ERROR = 0xFFFF,
 }
@@ -159,6 +170,62 @@ export interface IMClientEvents {
   // 群聊相关事件
   groupMessage: (msg: GroupMessage) => void;
   groupMemberChange: (notify: GroupMemberChangeNotify) => void;
+  // 音视频通话事件（S→C 的 CMD_CALL_EVENT_PUSH）
+  callEvent: (event: CallEvent) => void;
+}
+
+// ================================================================
+// 音视频通话（信令走 IM 通道，媒体直连 LiveKit SFU）
+// ================================================================
+
+/** 通话媒体类型（对应 proto CallMediaType） */
+export enum CallMediaType {
+  AUDIO = 0,
+  VIDEO = 1,
+}
+
+/** 通话结束原因（对应 proto CallEndReason，服务端按「角色×状态」裁定） */
+export const CallEndReason = {
+  UNKNOWN: 0,
+  CANCEL: 1,
+  REJECT: 2,
+  HANGUP: 3,
+  BUSY: 4,
+  TIMEOUT: 5,
+  PEER_DROP: 6,
+} as const;
+
+/** S→C 通话事件推送（CMD_CALL_EVENT_PUSH body） */
+export interface CallEvent {
+  callId: string;
+  /** 1=ringing(来电) 2=accepted(对方已接听) 3=ended(通话结束) */
+  event: 1 | 2 | 3;
+  mediaType: CallMediaType;
+  /** 对端信息：ringing 时=主叫，accepted/ended 时=操作方 */
+  peerId: string;
+  peerUserName: string;
+  peerNickname: string;
+  /** event=ended 时的结束原因 */
+  reason: number;
+  /** event=accepted 时携带主叫入会材料 */
+  room: string;
+  token: string;
+  wsUrl: string;
+}
+
+export interface CallInviteResp {
+  code: number;
+  message: string;
+  callId: string;
+}
+
+/** 接听响应 / 重连取材料响应（入会三件套相同） */
+export interface CallJoinInfo {
+  code: number;
+  message: string;
+  room: string;
+  token: string;
+  wsUrl: string;
 }
 
 // 好友相关类型

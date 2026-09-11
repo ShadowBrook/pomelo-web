@@ -22,6 +22,10 @@ import {
   GroupReadStateResp,
   GroupMemberChangeNotify,
   UploadResp,
+  CallEvent,
+  CallInviteResp,
+  CallJoinInfo,
+  CallMediaType,
 } from './types';
 
 // MessageContent.content 是 protobuf bytes 字段，发送时必须传 utf8 编码的字节（不能直接传字符串，字符串会被当 base64）
@@ -402,6 +406,54 @@ export class IMClient {
       Cmd.FRIEND_DELETE_RESP,
       enc(im.relation.FriendDeleteReq, { userId: this.userId, friendId }),
       'delete',
+    );
+  }
+
+  // ================================================================
+  // Call Operations（音视频通话信令；媒体直连 LiveKit，不经 IM 通道）
+  // ================================================================
+
+  /** 发起通话，成功返回 callId */
+  inviteCall(peerId: string, mediaType: CallMediaType): Promise<CallInviteResp> {
+    return this._sendFriendOp<CallInviteResp>(
+      Cmd.CALL_INVITE_REQ,
+      Cmd.CALL_INVITE_RESP,
+      enc(im.call.CallInviteReq, { peerId, mediaType }),
+      'call-invite',
+      10000,
+    );
+  }
+
+  /** 接听，返回入会三件套（room/token/wsUrl） */
+  acceptCall(callId: string): Promise<CallJoinInfo> {
+    return this._sendFriendOp<CallJoinInfo>(
+      Cmd.CALL_ACCEPT_REQ,
+      Cmd.CALL_ACCEPT_RESP,
+      enc(im.call.CallAcceptReq, { callId }),
+      'call-accept',
+      10000,
+    );
+  }
+
+  /** 结束通话（reason 由服务端按角色×状态裁定，客户端上报值仅参考） */
+  endCall(callId: string, reason: number): Promise<FriendOpResp> {
+    return this._sendFriendOp<FriendOpResp>(
+      Cmd.CALL_END_REQ,
+      Cmd.CALL_END_RESP,
+      enc(im.call.CallEndReq, { callId, reason }),
+      'call-end',
+      5000,
+    );
+  }
+
+  /** 断线重连：重新获取入会材料 */
+  requestCallToken(callId: string): Promise<CallJoinInfo> {
+    return this._sendFriendOp<CallJoinInfo>(
+      Cmd.CALL_TOKEN_REQ,
+      Cmd.CALL_TOKEN_RESP,
+      enc(im.call.CallTokenReq, { callId }),
+      'call-token',
+      10000,
     );
   }
 
@@ -1282,6 +1334,50 @@ export class IMClient {
         const n = plain(im.relation.FriendDeleteNotify, body);
         const notify: FriendDeleteNotify = { userId: n?.userId != null ? String(n.userId) : '' };
         this._emit('friendDeleted', notify);
+        break;
+      }
+
+      case Cmd.CALL_INVITE_RESP:
+      case Cmd.CALL_ACCEPT_RESP:
+      case Cmd.CALL_END_RESP:
+      case Cmd.CALL_TOKEN_RESP: {
+        const cls =
+          cmd === Cmd.CALL_INVITE_RESP
+            ? im.call.CallInviteResp
+            : cmd === Cmd.CALL_ACCEPT_RESP
+              ? im.call.CallAcceptResp
+              : cmd === Cmd.CALL_END_RESP
+                ? im.call.CallEndResp
+                : im.call.CallTokenResp;
+        const raw = plain(cls, body);
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          if (raw?.code === 0) {
+            pending.resolve(raw);
+          } else {
+            pending.reject(new Error(raw?.message || '通话操作失败'));
+          }
+        }
+        break;
+      }
+
+      case Cmd.CALL_EVENT_PUSH: {
+        const p = plain(im.call.CallEventPush, body);
+        const event: CallEvent = {
+          callId: p?.callId ?? '',
+          event: (p?.event ?? 0) as CallEvent['event'],
+          mediaType: p?.mediaType ?? 0,
+          peerId: p?.peerId != null ? String(p.peerId) : '',
+          peerUserName: p?.peerUserName || '',
+          peerNickname: p?.peerNickname || '',
+          reason: p?.reason ?? 0,
+          room: p?.room ?? '',
+          token: p?.token ?? '',
+          wsUrl: p?.wsUrl ?? '',
+        };
+        this._emit('callEvent', event);
         break;
       }
 

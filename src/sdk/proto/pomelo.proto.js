@@ -1073,6 +1073,15 @@ export const im = $root.im = (() => {
          * @property {number} CMD_GROUP_READ_STATE_RESP=155 CMD_GROUP_READ_STATE_RESP value
          * @property {number} CMD_UPLOAD_REQ=160 CMD_UPLOAD_REQ value
          * @property {number} CMD_UPLOAD_RESP=161 CMD_UPLOAD_RESP value
+         * @property {number} CMD_CALL_INVITE_REQ=176 CMD_CALL_INVITE_REQ value
+         * @property {number} CMD_CALL_INVITE_RESP=177 CMD_CALL_INVITE_RESP value
+         * @property {number} CMD_CALL_ACCEPT_REQ=178 CMD_CALL_ACCEPT_REQ value
+         * @property {number} CMD_CALL_ACCEPT_RESP=179 CMD_CALL_ACCEPT_RESP value
+         * @property {number} CMD_CALL_END_REQ=180 CMD_CALL_END_REQ value
+         * @property {number} CMD_CALL_END_RESP=181 CMD_CALL_END_RESP value
+         * @property {number} CMD_CALL_EVENT_PUSH=182 CMD_CALL_EVENT_PUSH value
+         * @property {number} CMD_CALL_TOKEN_REQ=183 CMD_CALL_TOKEN_REQ value
+         * @property {number} CMD_CALL_TOKEN_RESP=184 CMD_CALL_TOKEN_RESP value
          * @property {number} CMD_ERROR=65535 CMD_ERROR value
          */
         common.Cmd = (function() {
@@ -1132,6 +1141,15 @@ export const im = $root.im = (() => {
             values[valuesById[155] = "CMD_GROUP_READ_STATE_RESP"] = 155;
             values[valuesById[160] = "CMD_UPLOAD_REQ"] = 160;
             values[valuesById[161] = "CMD_UPLOAD_RESP"] = 161;
+            values[valuesById[176] = "CMD_CALL_INVITE_REQ"] = 176;
+            values[valuesById[177] = "CMD_CALL_INVITE_RESP"] = 177;
+            values[valuesById[178] = "CMD_CALL_ACCEPT_REQ"] = 178;
+            values[valuesById[179] = "CMD_CALL_ACCEPT_RESP"] = 179;
+            values[valuesById[180] = "CMD_CALL_END_REQ"] = 180;
+            values[valuesById[181] = "CMD_CALL_END_RESP"] = 181;
+            values[valuesById[182] = "CMD_CALL_EVENT_PUSH"] = 182;
+            values[valuesById[183] = "CMD_CALL_TOKEN_REQ"] = 183;
+            values[valuesById[184] = "CMD_CALL_TOKEN_RESP"] = 184;
             values[valuesById[65535] = "CMD_ERROR"] = 65535;
             return values;
         })();
@@ -3316,6 +3334,3292 @@ export const im = $root.im = (() => {
         })();
 
         return auth;
+    })();
+
+    im.call = (function() {
+
+        /**
+         * Namespace call.
+         * @memberof im
+         * @namespace
+         */
+        const call = {};
+
+        /**
+         * CallMediaType enum.
+         * @name im.call.CallMediaType
+         * @enum {number}
+         * @property {number} CALL_MEDIA_AUDIO=0 CALL_MEDIA_AUDIO value
+         * @property {number} CALL_MEDIA_VIDEO=1 CALL_MEDIA_VIDEO value
+         */
+        call.CallMediaType = (function() {
+            const valuesById = $Object.create(null), values = $Object.create(valuesById);
+            values[valuesById[0] = "CALL_MEDIA_AUDIO"] = 0;
+            values[valuesById[1] = "CALL_MEDIA_VIDEO"] = 1;
+            return values;
+        })();
+
+        /**
+         * CallEndReason enum.
+         * @name im.call.CallEndReason
+         * @enum {number}
+         * @property {number} END_REASON_UNKNOWN=0 END_REASON_UNKNOWN value
+         * @property {number} END_REASON_CANCEL=1 END_REASON_CANCEL value
+         * @property {number} END_REASON_REJECT=2 END_REASON_REJECT value
+         * @property {number} END_REASON_HANGUP=3 END_REASON_HANGUP value
+         * @property {number} END_REASON_BUSY=4 END_REASON_BUSY value
+         * @property {number} END_REASON_TIMEOUT=5 END_REASON_TIMEOUT value
+         * @property {number} END_REASON_PEER_DROP=6 END_REASON_PEER_DROP value
+         */
+        call.CallEndReason = (function() {
+            const valuesById = $Object.create(null), values = $Object.create(valuesById);
+            values[valuesById[0] = "END_REASON_UNKNOWN"] = 0;
+            values[valuesById[1] = "END_REASON_CANCEL"] = 1;
+            values[valuesById[2] = "END_REASON_REJECT"] = 2;
+            values[valuesById[3] = "END_REASON_HANGUP"] = 3;
+            values[valuesById[4] = "END_REASON_BUSY"] = 4;
+            values[valuesById[5] = "END_REASON_TIMEOUT"] = 5;
+            values[valuesById[6] = "END_REASON_PEER_DROP"] = 6;
+            return values;
+        })();
+
+        call.CallInviteReq = (function() {
+
+            /**
+             * Properties of a CallInviteReq.
+             * @typedef {Object} im.call.CallInviteReq.$Properties
+             * @property {number|Long|null} [peerId] CallInviteReq peerId
+             * @property {im.call.CallMediaType|null} [mediaType] CallInviteReq mediaType
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallInviteReq.
+             * @memberof im.call
+             * @interface ICallInviteReq
+             * @augments im.call.CallInviteReq.$Properties
+             * @deprecated Use im.call.CallInviteReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallInviteReq.
+             * @typedef {im.call.CallInviteReq.$Properties} im.call.CallInviteReq.$Shape
+             */
+
+            /**
+             * Constructs a new CallInviteReq.
+             * @memberof im.call
+             * @classdesc Represents a CallInviteReq.
+             * @constructor
+             * @param {im.call.CallInviteReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallInviteReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallInviteReq peerId.
+             * @member {number|Long} peerId
+             * @memberof im.call.CallInviteReq
+             * @instance
+             */
+            CallInviteReq.prototype.peerId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * CallInviteReq mediaType.
+             * @member {im.call.CallMediaType} mediaType
+             * @memberof im.call.CallInviteReq
+             * @instance
+             */
+            CallInviteReq.prototype.mediaType = 0;
+
+            /**
+             * Creates a new CallInviteReq instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {im.call.CallInviteReq.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallInviteReq} CallInviteReq instance
+             * @type {{
+             *   (properties: im.call.CallInviteReq.$Shape): im.call.CallInviteReq & im.call.CallInviteReq.$Shape;
+             *   (properties?: im.call.CallInviteReq.$Properties): im.call.CallInviteReq;
+             * }}
+             */
+            CallInviteReq.create = function(properties) {
+                return new CallInviteReq(properties);
+            };
+
+            /**
+             * Encodes the specified CallInviteReq message. Does not implicitly {@link im.call.CallInviteReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {im.call.CallInviteReq.$Properties} message CallInviteReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallInviteReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.peerId != null && $Object.hasOwnProperty.call(message, "peerId") && (typeof message.peerId === "object" ? message.peerId.low || message.peerId.high : message.peerId !== 0))
+                    writer.uint32(/* id 1, wireType 0 =*/8).int64(message.peerId);
+                if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType") && message.mediaType !== 0)
+                    writer.uint32(/* id 2, wireType 0 =*/16).int32(message.mediaType);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallInviteReq message, length delimited. Does not implicitly {@link im.call.CallInviteReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {im.call.CallInviteReq.$Properties} message CallInviteReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallInviteReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallInviteReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallInviteReq & im.call.CallInviteReq.$Shape} CallInviteReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallInviteReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallInviteReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.peerId = value;
+                            else
+                                delete message.peerId;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.mediaType = value;
+                            else
+                                delete message.mediaType;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallInviteReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallInviteReq & im.call.CallInviteReq.$Shape} CallInviteReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallInviteReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallInviteReq message.
+             * @function verify
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallInviteReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.peerId != null && $Object.hasOwnProperty.call(message, "peerId"))
+                    if (!$util.isInteger(message.peerId) && !(message.peerId && $util.isInteger(message.peerId.low) && $util.isInteger(message.peerId.high)))
+                        return "peerId: integer|Long expected";
+                if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType"))
+                    if (typeof message.mediaType !== "number" || (message.mediaType | 0) !== message.mediaType)
+                        return "mediaType: enum value expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallInviteReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallInviteReq} CallInviteReq
+             */
+            CallInviteReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallInviteReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallInviteReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallInviteReq();
+                if (object.peerId != null)
+                    if (typeof object.peerId === "object" ? object.peerId.low || object.peerId.high : $Number(object.peerId) !== 0)
+                        if ($util.Long)
+                            message.peerId = $util.Long.fromValue(object.peerId, false);
+                        else if (typeof object.peerId === "string")
+                            message.peerId = $parseInt(object.peerId, 10);
+                        else if (typeof object.peerId === "number")
+                            message.peerId = object.peerId;
+                        else if (typeof object.peerId === "object")
+                            message.peerId = new $util.LongBits(object.peerId.low >>> 0, object.peerId.high >>> 0).toNumber();
+                if (object.mediaType !== 0 && (typeof object.mediaType !== "string" || $root.im.call.CallMediaType[object.mediaType] !== 0))
+                    switch (object.mediaType) {
+                    case "CALL_MEDIA_AUDIO":
+                    case 0:
+                        message.mediaType = 0;
+                        break;
+                    case "CALL_MEDIA_VIDEO":
+                    case 1:
+                        message.mediaType = 1;
+                        break;
+                    default:
+                        if (typeof object.mediaType === "number" && (object.mediaType | 0) === object.mediaType)
+                            message.mediaType = object.mediaType;
+                    }
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallInviteReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {im.call.CallInviteReq} message CallInviteReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallInviteReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.peerId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.peerId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                    object.mediaType = options.enums === $String ? "CALL_MEDIA_AUDIO" : 0;
+                }
+                if (message.peerId != null && $Object.hasOwnProperty.call(message, "peerId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.peerId = typeof message.peerId === "number" ? $BigInt(message.peerId) : $util.Long.fromBits(message.peerId.low >>> 0, message.peerId.high >>> 0, false).toBigInt();
+                    else if (typeof message.peerId === "number")
+                        object.peerId = options.longs === $String ? $String(message.peerId) : message.peerId;
+                    else
+                        object.peerId = options.longs === $String ? $util.Long.prototype.toString.call(message.peerId) : options.longs === $Number ? new $util.LongBits(message.peerId.low >>> 0, message.peerId.high >>> 0).toNumber() : message.peerId;
+                if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType"))
+                    object.mediaType = options.enums === $String ? $root.im.call.CallMediaType[message.mediaType] === $undefined ? message.mediaType : $root.im.call.CallMediaType[message.mediaType] : message.mediaType;
+                return object;
+            };
+
+            /**
+             * Converts this CallInviteReq to JSON.
+             * @function toJSON
+             * @memberof im.call.CallInviteReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallInviteReq.prototype.toJSON = function() {
+                return CallInviteReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallInviteReq
+             * @function getTypeUrl
+             * @memberof im.call.CallInviteReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallInviteReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallInviteReq";
+            };
+
+            return CallInviteReq;
+        })();
+
+        call.CallInviteResp = (function() {
+
+            /**
+             * Properties of a CallInviteResp.
+             * @typedef {Object} im.call.CallInviteResp.$Properties
+             * @property {number|null} [code] CallInviteResp code
+             * @property {string|null} [message] CallInviteResp message
+             * @property {string|null} [callId] CallInviteResp callId
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallInviteResp.
+             * @memberof im.call
+             * @interface ICallInviteResp
+             * @augments im.call.CallInviteResp.$Properties
+             * @deprecated Use im.call.CallInviteResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallInviteResp.
+             * @typedef {im.call.CallInviteResp.$Properties} im.call.CallInviteResp.$Shape
+             */
+
+            /**
+             * Constructs a new CallInviteResp.
+             * @memberof im.call
+             * @classdesc Represents a CallInviteResp.
+             * @constructor
+             * @param {im.call.CallInviteResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallInviteResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallInviteResp code.
+             * @member {number} code
+             * @memberof im.call.CallInviteResp
+             * @instance
+             */
+            CallInviteResp.prototype.code = 0;
+
+            /**
+             * CallInviteResp message.
+             * @member {string} message
+             * @memberof im.call.CallInviteResp
+             * @instance
+             */
+            CallInviteResp.prototype.message = "";
+
+            /**
+             * CallInviteResp callId.
+             * @member {string} callId
+             * @memberof im.call.CallInviteResp
+             * @instance
+             */
+            CallInviteResp.prototype.callId = "";
+
+            /**
+             * Creates a new CallInviteResp instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {im.call.CallInviteResp.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallInviteResp} CallInviteResp instance
+             * @type {{
+             *   (properties: im.call.CallInviteResp.$Shape): im.call.CallInviteResp & im.call.CallInviteResp.$Shape;
+             *   (properties?: im.call.CallInviteResp.$Properties): im.call.CallInviteResp;
+             * }}
+             */
+            CallInviteResp.create = function(properties) {
+                return new CallInviteResp(properties);
+            };
+
+            /**
+             * Encodes the specified CallInviteResp message. Does not implicitly {@link im.call.CallInviteResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {im.call.CallInviteResp.$Properties} message CallInviteResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallInviteResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId") && message.callId !== "")
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.callId);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallInviteResp message, length delimited. Does not implicitly {@link im.call.CallInviteResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {im.call.CallInviteResp.$Properties} message CallInviteResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallInviteResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallInviteResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallInviteResp & im.call.CallInviteResp.$Shape} CallInviteResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallInviteResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallInviteResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    case 3: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.callId = value;
+                            else
+                                delete message.callId;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallInviteResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallInviteResp & im.call.CallInviteResp.$Shape} CallInviteResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallInviteResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallInviteResp message.
+             * @function verify
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallInviteResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    if (!$util.isString(message.callId))
+                        return "callId: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallInviteResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallInviteResp} CallInviteResp
+             */
+            CallInviteResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallInviteResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallInviteResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallInviteResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                if (object.callId != null)
+                    if (typeof object.callId !== "string" || object.callId.length)
+                        message.callId = $String(object.callId);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallInviteResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {im.call.CallInviteResp} message CallInviteResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallInviteResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                    object.callId = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    object.callId = message.callId;
+                return object;
+            };
+
+            /**
+             * Converts this CallInviteResp to JSON.
+             * @function toJSON
+             * @memberof im.call.CallInviteResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallInviteResp.prototype.toJSON = function() {
+                return CallInviteResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallInviteResp
+             * @function getTypeUrl
+             * @memberof im.call.CallInviteResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallInviteResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallInviteResp";
+            };
+
+            return CallInviteResp;
+        })();
+
+        call.CallAcceptReq = (function() {
+
+            /**
+             * Properties of a CallAcceptReq.
+             * @typedef {Object} im.call.CallAcceptReq.$Properties
+             * @property {string|null} [callId] CallAcceptReq callId
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallAcceptReq.
+             * @memberof im.call
+             * @interface ICallAcceptReq
+             * @augments im.call.CallAcceptReq.$Properties
+             * @deprecated Use im.call.CallAcceptReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallAcceptReq.
+             * @typedef {im.call.CallAcceptReq.$Properties} im.call.CallAcceptReq.$Shape
+             */
+
+            /**
+             * Constructs a new CallAcceptReq.
+             * @memberof im.call
+             * @classdesc Represents a CallAcceptReq.
+             * @constructor
+             * @param {im.call.CallAcceptReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallAcceptReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallAcceptReq callId.
+             * @member {string} callId
+             * @memberof im.call.CallAcceptReq
+             * @instance
+             */
+            CallAcceptReq.prototype.callId = "";
+
+            /**
+             * Creates a new CallAcceptReq instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {im.call.CallAcceptReq.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallAcceptReq} CallAcceptReq instance
+             * @type {{
+             *   (properties: im.call.CallAcceptReq.$Shape): im.call.CallAcceptReq & im.call.CallAcceptReq.$Shape;
+             *   (properties?: im.call.CallAcceptReq.$Properties): im.call.CallAcceptReq;
+             * }}
+             */
+            CallAcceptReq.create = function(properties) {
+                return new CallAcceptReq(properties);
+            };
+
+            /**
+             * Encodes the specified CallAcceptReq message. Does not implicitly {@link im.call.CallAcceptReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {im.call.CallAcceptReq.$Properties} message CallAcceptReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallAcceptReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId") && message.callId !== "")
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.callId);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallAcceptReq message, length delimited. Does not implicitly {@link im.call.CallAcceptReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {im.call.CallAcceptReq.$Properties} message CallAcceptReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallAcceptReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallAcceptReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallAcceptReq & im.call.CallAcceptReq.$Shape} CallAcceptReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallAcceptReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallAcceptReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.callId = value;
+                            else
+                                delete message.callId;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallAcceptReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallAcceptReq & im.call.CallAcceptReq.$Shape} CallAcceptReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallAcceptReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallAcceptReq message.
+             * @function verify
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallAcceptReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    if (!$util.isString(message.callId))
+                        return "callId: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallAcceptReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallAcceptReq} CallAcceptReq
+             */
+            CallAcceptReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallAcceptReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallAcceptReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallAcceptReq();
+                if (object.callId != null)
+                    if (typeof object.callId !== "string" || object.callId.length)
+                        message.callId = $String(object.callId);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallAcceptReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {im.call.CallAcceptReq} message CallAcceptReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallAcceptReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults)
+                    object.callId = "";
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    object.callId = message.callId;
+                return object;
+            };
+
+            /**
+             * Converts this CallAcceptReq to JSON.
+             * @function toJSON
+             * @memberof im.call.CallAcceptReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallAcceptReq.prototype.toJSON = function() {
+                return CallAcceptReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallAcceptReq
+             * @function getTypeUrl
+             * @memberof im.call.CallAcceptReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallAcceptReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallAcceptReq";
+            };
+
+            return CallAcceptReq;
+        })();
+
+        call.CallAcceptResp = (function() {
+
+            /**
+             * Properties of a CallAcceptResp.
+             * @typedef {Object} im.call.CallAcceptResp.$Properties
+             * @property {number|null} [code] CallAcceptResp code
+             * @property {string|null} [message] CallAcceptResp message
+             * @property {string|null} [room] CallAcceptResp room
+             * @property {string|null} [token] CallAcceptResp token
+             * @property {string|null} [wsUrl] CallAcceptResp wsUrl
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallAcceptResp.
+             * @memberof im.call
+             * @interface ICallAcceptResp
+             * @augments im.call.CallAcceptResp.$Properties
+             * @deprecated Use im.call.CallAcceptResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallAcceptResp.
+             * @typedef {im.call.CallAcceptResp.$Properties} im.call.CallAcceptResp.$Shape
+             */
+
+            /**
+             * Constructs a new CallAcceptResp.
+             * @memberof im.call
+             * @classdesc Represents a CallAcceptResp.
+             * @constructor
+             * @param {im.call.CallAcceptResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallAcceptResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallAcceptResp code.
+             * @member {number} code
+             * @memberof im.call.CallAcceptResp
+             * @instance
+             */
+            CallAcceptResp.prototype.code = 0;
+
+            /**
+             * CallAcceptResp message.
+             * @member {string} message
+             * @memberof im.call.CallAcceptResp
+             * @instance
+             */
+            CallAcceptResp.prototype.message = "";
+
+            /**
+             * CallAcceptResp room.
+             * @member {string} room
+             * @memberof im.call.CallAcceptResp
+             * @instance
+             */
+            CallAcceptResp.prototype.room = "";
+
+            /**
+             * CallAcceptResp token.
+             * @member {string} token
+             * @memberof im.call.CallAcceptResp
+             * @instance
+             */
+            CallAcceptResp.prototype.token = "";
+
+            /**
+             * CallAcceptResp wsUrl.
+             * @member {string} wsUrl
+             * @memberof im.call.CallAcceptResp
+             * @instance
+             */
+            CallAcceptResp.prototype.wsUrl = "";
+
+            /**
+             * Creates a new CallAcceptResp instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {im.call.CallAcceptResp.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallAcceptResp} CallAcceptResp instance
+             * @type {{
+             *   (properties: im.call.CallAcceptResp.$Shape): im.call.CallAcceptResp & im.call.CallAcceptResp.$Shape;
+             *   (properties?: im.call.CallAcceptResp.$Properties): im.call.CallAcceptResp;
+             * }}
+             */
+            CallAcceptResp.create = function(properties) {
+                return new CallAcceptResp(properties);
+            };
+
+            /**
+             * Encodes the specified CallAcceptResp message. Does not implicitly {@link im.call.CallAcceptResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {im.call.CallAcceptResp.$Properties} message CallAcceptResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallAcceptResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room") && message.room !== "")
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.room);
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token") && message.token !== "")
+                    writer.uint32(/* id 4, wireType 2 =*/34).string(message.token);
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl") && message.wsUrl !== "")
+                    writer.uint32(/* id 5, wireType 2 =*/42).string(message.wsUrl);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallAcceptResp message, length delimited. Does not implicitly {@link im.call.CallAcceptResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {im.call.CallAcceptResp.$Properties} message CallAcceptResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallAcceptResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallAcceptResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallAcceptResp & im.call.CallAcceptResp.$Shape} CallAcceptResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallAcceptResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallAcceptResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    case 3: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.room = value;
+                            else
+                                delete message.room;
+                            continue;
+                        }
+                    case 4: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.token = value;
+                            else
+                                delete message.token;
+                            continue;
+                        }
+                    case 5: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.wsUrl = value;
+                            else
+                                delete message.wsUrl;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallAcceptResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallAcceptResp & im.call.CallAcceptResp.$Shape} CallAcceptResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallAcceptResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallAcceptResp message.
+             * @function verify
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallAcceptResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room"))
+                    if (!$util.isString(message.room))
+                        return "room: string expected";
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token"))
+                    if (!$util.isString(message.token))
+                        return "token: string expected";
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl"))
+                    if (!$util.isString(message.wsUrl))
+                        return "wsUrl: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallAcceptResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallAcceptResp} CallAcceptResp
+             */
+            CallAcceptResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallAcceptResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallAcceptResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallAcceptResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                if (object.room != null)
+                    if (typeof object.room !== "string" || object.room.length)
+                        message.room = $String(object.room);
+                if (object.token != null)
+                    if (typeof object.token !== "string" || object.token.length)
+                        message.token = $String(object.token);
+                if (object.wsUrl != null)
+                    if (typeof object.wsUrl !== "string" || object.wsUrl.length)
+                        message.wsUrl = $String(object.wsUrl);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallAcceptResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {im.call.CallAcceptResp} message CallAcceptResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallAcceptResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                    object.room = "";
+                    object.token = "";
+                    object.wsUrl = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room"))
+                    object.room = message.room;
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token"))
+                    object.token = message.token;
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl"))
+                    object.wsUrl = message.wsUrl;
+                return object;
+            };
+
+            /**
+             * Converts this CallAcceptResp to JSON.
+             * @function toJSON
+             * @memberof im.call.CallAcceptResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallAcceptResp.prototype.toJSON = function() {
+                return CallAcceptResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallAcceptResp
+             * @function getTypeUrl
+             * @memberof im.call.CallAcceptResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallAcceptResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallAcceptResp";
+            };
+
+            return CallAcceptResp;
+        })();
+
+        call.CallEndReq = (function() {
+
+            /**
+             * Properties of a CallEndReq.
+             * @typedef {Object} im.call.CallEndReq.$Properties
+             * @property {string|null} [callId] CallEndReq callId
+             * @property {im.call.CallEndReason|null} [reason] CallEndReq reason
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallEndReq.
+             * @memberof im.call
+             * @interface ICallEndReq
+             * @augments im.call.CallEndReq.$Properties
+             * @deprecated Use im.call.CallEndReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallEndReq.
+             * @typedef {im.call.CallEndReq.$Properties} im.call.CallEndReq.$Shape
+             */
+
+            /**
+             * Constructs a new CallEndReq.
+             * @memberof im.call
+             * @classdesc Represents a CallEndReq.
+             * @constructor
+             * @param {im.call.CallEndReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallEndReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallEndReq callId.
+             * @member {string} callId
+             * @memberof im.call.CallEndReq
+             * @instance
+             */
+            CallEndReq.prototype.callId = "";
+
+            /**
+             * CallEndReq reason.
+             * @member {im.call.CallEndReason} reason
+             * @memberof im.call.CallEndReq
+             * @instance
+             */
+            CallEndReq.prototype.reason = 0;
+
+            /**
+             * Creates a new CallEndReq instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {im.call.CallEndReq.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallEndReq} CallEndReq instance
+             * @type {{
+             *   (properties: im.call.CallEndReq.$Shape): im.call.CallEndReq & im.call.CallEndReq.$Shape;
+             *   (properties?: im.call.CallEndReq.$Properties): im.call.CallEndReq;
+             * }}
+             */
+            CallEndReq.create = function(properties) {
+                return new CallEndReq(properties);
+            };
+
+            /**
+             * Encodes the specified CallEndReq message. Does not implicitly {@link im.call.CallEndReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {im.call.CallEndReq.$Properties} message CallEndReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallEndReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId") && message.callId !== "")
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.callId);
+                if (message.reason != null && $Object.hasOwnProperty.call(message, "reason") && message.reason !== 0)
+                    writer.uint32(/* id 2, wireType 0 =*/16).int32(message.reason);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallEndReq message, length delimited. Does not implicitly {@link im.call.CallEndReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {im.call.CallEndReq.$Properties} message CallEndReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallEndReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallEndReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallEndReq & im.call.CallEndReq.$Shape} CallEndReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallEndReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallEndReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.callId = value;
+                            else
+                                delete message.callId;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.reason = value;
+                            else
+                                delete message.reason;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallEndReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallEndReq & im.call.CallEndReq.$Shape} CallEndReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallEndReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallEndReq message.
+             * @function verify
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallEndReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    if (!$util.isString(message.callId))
+                        return "callId: string expected";
+                if (message.reason != null && $Object.hasOwnProperty.call(message, "reason"))
+                    if (typeof message.reason !== "number" || (message.reason | 0) !== message.reason)
+                        return "reason: enum value expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallEndReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallEndReq} CallEndReq
+             */
+            CallEndReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallEndReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallEndReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallEndReq();
+                if (object.callId != null)
+                    if (typeof object.callId !== "string" || object.callId.length)
+                        message.callId = $String(object.callId);
+                if (object.reason !== 0 && (typeof object.reason !== "string" || $root.im.call.CallEndReason[object.reason] !== 0))
+                    switch (object.reason) {
+                    case "END_REASON_UNKNOWN":
+                    case 0:
+                        message.reason = 0;
+                        break;
+                    case "END_REASON_CANCEL":
+                    case 1:
+                        message.reason = 1;
+                        break;
+                    case "END_REASON_REJECT":
+                    case 2:
+                        message.reason = 2;
+                        break;
+                    case "END_REASON_HANGUP":
+                    case 3:
+                        message.reason = 3;
+                        break;
+                    case "END_REASON_BUSY":
+                    case 4:
+                        message.reason = 4;
+                        break;
+                    case "END_REASON_TIMEOUT":
+                    case 5:
+                        message.reason = 5;
+                        break;
+                    case "END_REASON_PEER_DROP":
+                    case 6:
+                        message.reason = 6;
+                        break;
+                    default:
+                        if (typeof object.reason === "number" && (object.reason | 0) === object.reason)
+                            message.reason = object.reason;
+                    }
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallEndReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {im.call.CallEndReq} message CallEndReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallEndReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.callId = "";
+                    object.reason = options.enums === $String ? "END_REASON_UNKNOWN" : 0;
+                }
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    object.callId = message.callId;
+                if (message.reason != null && $Object.hasOwnProperty.call(message, "reason"))
+                    object.reason = options.enums === $String ? $root.im.call.CallEndReason[message.reason] === $undefined ? message.reason : $root.im.call.CallEndReason[message.reason] : message.reason;
+                return object;
+            };
+
+            /**
+             * Converts this CallEndReq to JSON.
+             * @function toJSON
+             * @memberof im.call.CallEndReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallEndReq.prototype.toJSON = function() {
+                return CallEndReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallEndReq
+             * @function getTypeUrl
+             * @memberof im.call.CallEndReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallEndReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallEndReq";
+            };
+
+            return CallEndReq;
+        })();
+
+        call.CallEndResp = (function() {
+
+            /**
+             * Properties of a CallEndResp.
+             * @typedef {Object} im.call.CallEndResp.$Properties
+             * @property {number|null} [code] CallEndResp code
+             * @property {string|null} [message] CallEndResp message
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallEndResp.
+             * @memberof im.call
+             * @interface ICallEndResp
+             * @augments im.call.CallEndResp.$Properties
+             * @deprecated Use im.call.CallEndResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallEndResp.
+             * @typedef {im.call.CallEndResp.$Properties} im.call.CallEndResp.$Shape
+             */
+
+            /**
+             * Constructs a new CallEndResp.
+             * @memberof im.call
+             * @classdesc Represents a CallEndResp.
+             * @constructor
+             * @param {im.call.CallEndResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallEndResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallEndResp code.
+             * @member {number} code
+             * @memberof im.call.CallEndResp
+             * @instance
+             */
+            CallEndResp.prototype.code = 0;
+
+            /**
+             * CallEndResp message.
+             * @member {string} message
+             * @memberof im.call.CallEndResp
+             * @instance
+             */
+            CallEndResp.prototype.message = "";
+
+            /**
+             * Creates a new CallEndResp instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {im.call.CallEndResp.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallEndResp} CallEndResp instance
+             * @type {{
+             *   (properties: im.call.CallEndResp.$Shape): im.call.CallEndResp & im.call.CallEndResp.$Shape;
+             *   (properties?: im.call.CallEndResp.$Properties): im.call.CallEndResp;
+             * }}
+             */
+            CallEndResp.create = function(properties) {
+                return new CallEndResp(properties);
+            };
+
+            /**
+             * Encodes the specified CallEndResp message. Does not implicitly {@link im.call.CallEndResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {im.call.CallEndResp.$Properties} message CallEndResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallEndResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallEndResp message, length delimited. Does not implicitly {@link im.call.CallEndResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {im.call.CallEndResp.$Properties} message CallEndResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallEndResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallEndResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallEndResp & im.call.CallEndResp.$Shape} CallEndResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallEndResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallEndResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallEndResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallEndResp & im.call.CallEndResp.$Shape} CallEndResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallEndResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallEndResp message.
+             * @function verify
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallEndResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallEndResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallEndResp} CallEndResp
+             */
+            CallEndResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallEndResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallEndResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallEndResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallEndResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {im.call.CallEndResp} message CallEndResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallEndResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                return object;
+            };
+
+            /**
+             * Converts this CallEndResp to JSON.
+             * @function toJSON
+             * @memberof im.call.CallEndResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallEndResp.prototype.toJSON = function() {
+                return CallEndResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallEndResp
+             * @function getTypeUrl
+             * @memberof im.call.CallEndResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallEndResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallEndResp";
+            };
+
+            return CallEndResp;
+        })();
+
+        call.CallEventPush = (function() {
+
+            /**
+             * Properties of a CallEventPush.
+             * @typedef {Object} im.call.CallEventPush.$Properties
+             * @property {string|null} [callId] CallEventPush callId
+             * @property {number|null} [event] CallEventPush event
+             * @property {im.call.CallMediaType|null} [mediaType] CallEventPush mediaType
+             * @property {number|Long|null} [peerId] CallEventPush peerId
+             * @property {string|null} [peerUserName] CallEventPush peerUserName
+             * @property {string|null} [peerNickname] CallEventPush peerNickname
+             * @property {im.call.CallEndReason|null} [reason] CallEventPush reason
+             * @property {string|null} [room] CallEventPush room
+             * @property {string|null} [token] CallEventPush token
+             * @property {string|null} [wsUrl] CallEventPush wsUrl
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallEventPush.
+             * @memberof im.call
+             * @interface ICallEventPush
+             * @augments im.call.CallEventPush.$Properties
+             * @deprecated Use im.call.CallEventPush.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallEventPush.
+             * @typedef {im.call.CallEventPush.$Properties} im.call.CallEventPush.$Shape
+             */
+
+            /**
+             * Constructs a new CallEventPush.
+             * @memberof im.call
+             * @classdesc Represents a CallEventPush.
+             * @constructor
+             * @param {im.call.CallEventPush.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallEventPush = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallEventPush callId.
+             * @member {string} callId
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.callId = "";
+
+            /**
+             * CallEventPush event.
+             * @member {number} event
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.event = 0;
+
+            /**
+             * CallEventPush mediaType.
+             * @member {im.call.CallMediaType} mediaType
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.mediaType = 0;
+
+            /**
+             * CallEventPush peerId.
+             * @member {number|Long} peerId
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.peerId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * CallEventPush peerUserName.
+             * @member {string} peerUserName
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.peerUserName = "";
+
+            /**
+             * CallEventPush peerNickname.
+             * @member {string} peerNickname
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.peerNickname = "";
+
+            /**
+             * CallEventPush reason.
+             * @member {im.call.CallEndReason} reason
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.reason = 0;
+
+            /**
+             * CallEventPush room.
+             * @member {string} room
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.room = "";
+
+            /**
+             * CallEventPush token.
+             * @member {string} token
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.token = "";
+
+            /**
+             * CallEventPush wsUrl.
+             * @member {string} wsUrl
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.wsUrl = "";
+
+            /**
+             * Creates a new CallEventPush instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {im.call.CallEventPush.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallEventPush} CallEventPush instance
+             * @type {{
+             *   (properties: im.call.CallEventPush.$Shape): im.call.CallEventPush & im.call.CallEventPush.$Shape;
+             *   (properties?: im.call.CallEventPush.$Properties): im.call.CallEventPush;
+             * }}
+             */
+            CallEventPush.create = function(properties) {
+                return new CallEventPush(properties);
+            };
+
+            /**
+             * Encodes the specified CallEventPush message. Does not implicitly {@link im.call.CallEventPush.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {im.call.CallEventPush.$Properties} message CallEventPush message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallEventPush.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId") && message.callId !== "")
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.callId);
+                if (message.event != null && $Object.hasOwnProperty.call(message, "event") && message.event !== 0)
+                    writer.uint32(/* id 2, wireType 0 =*/16).int32(message.event);
+                if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType") && message.mediaType !== 0)
+                    writer.uint32(/* id 3, wireType 0 =*/24).int32(message.mediaType);
+                if (message.peerId != null && $Object.hasOwnProperty.call(message, "peerId") && (typeof message.peerId === "object" ? message.peerId.low || message.peerId.high : message.peerId !== 0))
+                    writer.uint32(/* id 4, wireType 0 =*/32).int64(message.peerId);
+                if (message.peerUserName != null && $Object.hasOwnProperty.call(message, "peerUserName") && message.peerUserName !== "")
+                    writer.uint32(/* id 5, wireType 2 =*/42).string(message.peerUserName);
+                if (message.peerNickname != null && $Object.hasOwnProperty.call(message, "peerNickname") && message.peerNickname !== "")
+                    writer.uint32(/* id 6, wireType 2 =*/50).string(message.peerNickname);
+                if (message.reason != null && $Object.hasOwnProperty.call(message, "reason") && message.reason !== 0)
+                    writer.uint32(/* id 7, wireType 0 =*/56).int32(message.reason);
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room") && message.room !== "")
+                    writer.uint32(/* id 8, wireType 2 =*/66).string(message.room);
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token") && message.token !== "")
+                    writer.uint32(/* id 9, wireType 2 =*/74).string(message.token);
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl") && message.wsUrl !== "")
+                    writer.uint32(/* id 10, wireType 2 =*/82).string(message.wsUrl);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallEventPush message, length delimited. Does not implicitly {@link im.call.CallEventPush.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {im.call.CallEventPush.$Properties} message CallEventPush message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallEventPush.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallEventPush message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallEventPush & im.call.CallEventPush.$Shape} CallEventPush
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallEventPush.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallEventPush();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.callId = value;
+                            else
+                                delete message.callId;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.event = value;
+                            else
+                                delete message.event;
+                            continue;
+                        }
+                    case 3: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.mediaType = value;
+                            else
+                                delete message.mediaType;
+                            continue;
+                        }
+                    case 4: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.peerId = value;
+                            else
+                                delete message.peerId;
+                            continue;
+                        }
+                    case 5: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.peerUserName = value;
+                            else
+                                delete message.peerUserName;
+                            continue;
+                        }
+                    case 6: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.peerNickname = value;
+                            else
+                                delete message.peerNickname;
+                            continue;
+                        }
+                    case 7: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.reason = value;
+                            else
+                                delete message.reason;
+                            continue;
+                        }
+                    case 8: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.room = value;
+                            else
+                                delete message.room;
+                            continue;
+                        }
+                    case 9: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.token = value;
+                            else
+                                delete message.token;
+                            continue;
+                        }
+                    case 10: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.wsUrl = value;
+                            else
+                                delete message.wsUrl;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallEventPush message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallEventPush & im.call.CallEventPush.$Shape} CallEventPush
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallEventPush.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallEventPush message.
+             * @function verify
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallEventPush.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    if (!$util.isString(message.callId))
+                        return "callId: string expected";
+                if (message.event != null && $Object.hasOwnProperty.call(message, "event"))
+                    if (!$util.isInteger(message.event))
+                        return "event: integer expected";
+                if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType"))
+                    if (typeof message.mediaType !== "number" || (message.mediaType | 0) !== message.mediaType)
+                        return "mediaType: enum value expected";
+                if (message.peerId != null && $Object.hasOwnProperty.call(message, "peerId"))
+                    if (!$util.isInteger(message.peerId) && !(message.peerId && $util.isInteger(message.peerId.low) && $util.isInteger(message.peerId.high)))
+                        return "peerId: integer|Long expected";
+                if (message.peerUserName != null && $Object.hasOwnProperty.call(message, "peerUserName"))
+                    if (!$util.isString(message.peerUserName))
+                        return "peerUserName: string expected";
+                if (message.peerNickname != null && $Object.hasOwnProperty.call(message, "peerNickname"))
+                    if (!$util.isString(message.peerNickname))
+                        return "peerNickname: string expected";
+                if (message.reason != null && $Object.hasOwnProperty.call(message, "reason"))
+                    if (typeof message.reason !== "number" || (message.reason | 0) !== message.reason)
+                        return "reason: enum value expected";
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room"))
+                    if (!$util.isString(message.room))
+                        return "room: string expected";
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token"))
+                    if (!$util.isString(message.token))
+                        return "token: string expected";
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl"))
+                    if (!$util.isString(message.wsUrl))
+                        return "wsUrl: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallEventPush message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallEventPush} CallEventPush
+             */
+            CallEventPush.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallEventPush)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallEventPush: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallEventPush();
+                if (object.callId != null)
+                    if (typeof object.callId !== "string" || object.callId.length)
+                        message.callId = $String(object.callId);
+                if (object.event != null)
+                    if ($Number(object.event) !== 0)
+                        message.event = object.event | 0;
+                if (object.mediaType !== 0 && (typeof object.mediaType !== "string" || $root.im.call.CallMediaType[object.mediaType] !== 0))
+                    switch (object.mediaType) {
+                    case "CALL_MEDIA_AUDIO":
+                    case 0:
+                        message.mediaType = 0;
+                        break;
+                    case "CALL_MEDIA_VIDEO":
+                    case 1:
+                        message.mediaType = 1;
+                        break;
+                    default:
+                        if (typeof object.mediaType === "number" && (object.mediaType | 0) === object.mediaType)
+                            message.mediaType = object.mediaType;
+                    }
+                if (object.peerId != null)
+                    if (typeof object.peerId === "object" ? object.peerId.low || object.peerId.high : $Number(object.peerId) !== 0)
+                        if ($util.Long)
+                            message.peerId = $util.Long.fromValue(object.peerId, false);
+                        else if (typeof object.peerId === "string")
+                            message.peerId = $parseInt(object.peerId, 10);
+                        else if (typeof object.peerId === "number")
+                            message.peerId = object.peerId;
+                        else if (typeof object.peerId === "object")
+                            message.peerId = new $util.LongBits(object.peerId.low >>> 0, object.peerId.high >>> 0).toNumber();
+                if (object.peerUserName != null)
+                    if (typeof object.peerUserName !== "string" || object.peerUserName.length)
+                        message.peerUserName = $String(object.peerUserName);
+                if (object.peerNickname != null)
+                    if (typeof object.peerNickname !== "string" || object.peerNickname.length)
+                        message.peerNickname = $String(object.peerNickname);
+                if (object.reason !== 0 && (typeof object.reason !== "string" || $root.im.call.CallEndReason[object.reason] !== 0))
+                    switch (object.reason) {
+                    case "END_REASON_UNKNOWN":
+                    case 0:
+                        message.reason = 0;
+                        break;
+                    case "END_REASON_CANCEL":
+                    case 1:
+                        message.reason = 1;
+                        break;
+                    case "END_REASON_REJECT":
+                    case 2:
+                        message.reason = 2;
+                        break;
+                    case "END_REASON_HANGUP":
+                    case 3:
+                        message.reason = 3;
+                        break;
+                    case "END_REASON_BUSY":
+                    case 4:
+                        message.reason = 4;
+                        break;
+                    case "END_REASON_TIMEOUT":
+                    case 5:
+                        message.reason = 5;
+                        break;
+                    case "END_REASON_PEER_DROP":
+                    case 6:
+                        message.reason = 6;
+                        break;
+                    default:
+                        if (typeof object.reason === "number" && (object.reason | 0) === object.reason)
+                            message.reason = object.reason;
+                    }
+                if (object.room != null)
+                    if (typeof object.room !== "string" || object.room.length)
+                        message.room = $String(object.room);
+                if (object.token != null)
+                    if (typeof object.token !== "string" || object.token.length)
+                        message.token = $String(object.token);
+                if (object.wsUrl != null)
+                    if (typeof object.wsUrl !== "string" || object.wsUrl.length)
+                        message.wsUrl = $String(object.wsUrl);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallEventPush message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {im.call.CallEventPush} message CallEventPush
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallEventPush.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.callId = "";
+                    object.event = 0;
+                    object.mediaType = options.enums === $String ? "CALL_MEDIA_AUDIO" : 0;
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.peerId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.peerId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                    object.peerUserName = "";
+                    object.peerNickname = "";
+                    object.reason = options.enums === $String ? "END_REASON_UNKNOWN" : 0;
+                    object.room = "";
+                    object.token = "";
+                    object.wsUrl = "";
+                }
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    object.callId = message.callId;
+                if (message.event != null && $Object.hasOwnProperty.call(message, "event"))
+                    object.event = message.event;
+                if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType"))
+                    object.mediaType = options.enums === $String ? $root.im.call.CallMediaType[message.mediaType] === $undefined ? message.mediaType : $root.im.call.CallMediaType[message.mediaType] : message.mediaType;
+                if (message.peerId != null && $Object.hasOwnProperty.call(message, "peerId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.peerId = typeof message.peerId === "number" ? $BigInt(message.peerId) : $util.Long.fromBits(message.peerId.low >>> 0, message.peerId.high >>> 0, false).toBigInt();
+                    else if (typeof message.peerId === "number")
+                        object.peerId = options.longs === $String ? $String(message.peerId) : message.peerId;
+                    else
+                        object.peerId = options.longs === $String ? $util.Long.prototype.toString.call(message.peerId) : options.longs === $Number ? new $util.LongBits(message.peerId.low >>> 0, message.peerId.high >>> 0).toNumber() : message.peerId;
+                if (message.peerUserName != null && $Object.hasOwnProperty.call(message, "peerUserName"))
+                    object.peerUserName = message.peerUserName;
+                if (message.peerNickname != null && $Object.hasOwnProperty.call(message, "peerNickname"))
+                    object.peerNickname = message.peerNickname;
+                if (message.reason != null && $Object.hasOwnProperty.call(message, "reason"))
+                    object.reason = options.enums === $String ? $root.im.call.CallEndReason[message.reason] === $undefined ? message.reason : $root.im.call.CallEndReason[message.reason] : message.reason;
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room"))
+                    object.room = message.room;
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token"))
+                    object.token = message.token;
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl"))
+                    object.wsUrl = message.wsUrl;
+                return object;
+            };
+
+            /**
+             * Converts this CallEventPush to JSON.
+             * @function toJSON
+             * @memberof im.call.CallEventPush
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallEventPush.prototype.toJSON = function() {
+                return CallEventPush.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallEventPush
+             * @function getTypeUrl
+             * @memberof im.call.CallEventPush
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallEventPush.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallEventPush";
+            };
+
+            return CallEventPush;
+        })();
+
+        call.CallTokenReq = (function() {
+
+            /**
+             * Properties of a CallTokenReq.
+             * @typedef {Object} im.call.CallTokenReq.$Properties
+             * @property {string|null} [callId] CallTokenReq callId
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallTokenReq.
+             * @memberof im.call
+             * @interface ICallTokenReq
+             * @augments im.call.CallTokenReq.$Properties
+             * @deprecated Use im.call.CallTokenReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallTokenReq.
+             * @typedef {im.call.CallTokenReq.$Properties} im.call.CallTokenReq.$Shape
+             */
+
+            /**
+             * Constructs a new CallTokenReq.
+             * @memberof im.call
+             * @classdesc Represents a CallTokenReq.
+             * @constructor
+             * @param {im.call.CallTokenReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallTokenReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallTokenReq callId.
+             * @member {string} callId
+             * @memberof im.call.CallTokenReq
+             * @instance
+             */
+            CallTokenReq.prototype.callId = "";
+
+            /**
+             * Creates a new CallTokenReq instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {im.call.CallTokenReq.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallTokenReq} CallTokenReq instance
+             * @type {{
+             *   (properties: im.call.CallTokenReq.$Shape): im.call.CallTokenReq & im.call.CallTokenReq.$Shape;
+             *   (properties?: im.call.CallTokenReq.$Properties): im.call.CallTokenReq;
+             * }}
+             */
+            CallTokenReq.create = function(properties) {
+                return new CallTokenReq(properties);
+            };
+
+            /**
+             * Encodes the specified CallTokenReq message. Does not implicitly {@link im.call.CallTokenReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {im.call.CallTokenReq.$Properties} message CallTokenReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallTokenReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId") && message.callId !== "")
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.callId);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallTokenReq message, length delimited. Does not implicitly {@link im.call.CallTokenReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {im.call.CallTokenReq.$Properties} message CallTokenReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallTokenReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallTokenReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallTokenReq & im.call.CallTokenReq.$Shape} CallTokenReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallTokenReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallTokenReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.callId = value;
+                            else
+                                delete message.callId;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallTokenReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallTokenReq & im.call.CallTokenReq.$Shape} CallTokenReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallTokenReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallTokenReq message.
+             * @function verify
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallTokenReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    if (!$util.isString(message.callId))
+                        return "callId: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallTokenReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallTokenReq} CallTokenReq
+             */
+            CallTokenReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallTokenReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallTokenReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallTokenReq();
+                if (object.callId != null)
+                    if (typeof object.callId !== "string" || object.callId.length)
+                        message.callId = $String(object.callId);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallTokenReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {im.call.CallTokenReq} message CallTokenReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallTokenReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults)
+                    object.callId = "";
+                if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
+                    object.callId = message.callId;
+                return object;
+            };
+
+            /**
+             * Converts this CallTokenReq to JSON.
+             * @function toJSON
+             * @memberof im.call.CallTokenReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallTokenReq.prototype.toJSON = function() {
+                return CallTokenReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallTokenReq
+             * @function getTypeUrl
+             * @memberof im.call.CallTokenReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallTokenReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallTokenReq";
+            };
+
+            return CallTokenReq;
+        })();
+
+        call.CallTokenResp = (function() {
+
+            /**
+             * Properties of a CallTokenResp.
+             * @typedef {Object} im.call.CallTokenResp.$Properties
+             * @property {number|null} [code] CallTokenResp code
+             * @property {string|null} [message] CallTokenResp message
+             * @property {string|null} [room] CallTokenResp room
+             * @property {string|null} [token] CallTokenResp token
+             * @property {string|null} [wsUrl] CallTokenResp wsUrl
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a CallTokenResp.
+             * @memberof im.call
+             * @interface ICallTokenResp
+             * @augments im.call.CallTokenResp.$Properties
+             * @deprecated Use im.call.CallTokenResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a CallTokenResp.
+             * @typedef {im.call.CallTokenResp.$Properties} im.call.CallTokenResp.$Shape
+             */
+
+            /**
+             * Constructs a new CallTokenResp.
+             * @memberof im.call
+             * @classdesc Represents a CallTokenResp.
+             * @constructor
+             * @param {im.call.CallTokenResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const CallTokenResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * CallTokenResp code.
+             * @member {number} code
+             * @memberof im.call.CallTokenResp
+             * @instance
+             */
+            CallTokenResp.prototype.code = 0;
+
+            /**
+             * CallTokenResp message.
+             * @member {string} message
+             * @memberof im.call.CallTokenResp
+             * @instance
+             */
+            CallTokenResp.prototype.message = "";
+
+            /**
+             * CallTokenResp room.
+             * @member {string} room
+             * @memberof im.call.CallTokenResp
+             * @instance
+             */
+            CallTokenResp.prototype.room = "";
+
+            /**
+             * CallTokenResp token.
+             * @member {string} token
+             * @memberof im.call.CallTokenResp
+             * @instance
+             */
+            CallTokenResp.prototype.token = "";
+
+            /**
+             * CallTokenResp wsUrl.
+             * @member {string} wsUrl
+             * @memberof im.call.CallTokenResp
+             * @instance
+             */
+            CallTokenResp.prototype.wsUrl = "";
+
+            /**
+             * Creates a new CallTokenResp instance using the specified properties.
+             * @function create
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {im.call.CallTokenResp.$Properties=} [properties] Properties to set
+             * @returns {im.call.CallTokenResp} CallTokenResp instance
+             * @type {{
+             *   (properties: im.call.CallTokenResp.$Shape): im.call.CallTokenResp & im.call.CallTokenResp.$Shape;
+             *   (properties?: im.call.CallTokenResp.$Properties): im.call.CallTokenResp;
+             * }}
+             */
+            CallTokenResp.create = function(properties) {
+                return new CallTokenResp(properties);
+            };
+
+            /**
+             * Encodes the specified CallTokenResp message. Does not implicitly {@link im.call.CallTokenResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {im.call.CallTokenResp.$Properties} message CallTokenResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallTokenResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room") && message.room !== "")
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.room);
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token") && message.token !== "")
+                    writer.uint32(/* id 4, wireType 2 =*/34).string(message.token);
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl") && message.wsUrl !== "")
+                    writer.uint32(/* id 5, wireType 2 =*/42).string(message.wsUrl);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified CallTokenResp message, length delimited. Does not implicitly {@link im.call.CallTokenResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {im.call.CallTokenResp.$Properties} message CallTokenResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            CallTokenResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a CallTokenResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.call.CallTokenResp & im.call.CallTokenResp.$Shape} CallTokenResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallTokenResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.call.CallTokenResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    case 3: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.room = value;
+                            else
+                                delete message.room;
+                            continue;
+                        }
+                    case 4: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.token = value;
+                            else
+                                delete message.token;
+                            continue;
+                        }
+                    case 5: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.wsUrl = value;
+                            else
+                                delete message.wsUrl;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a CallTokenResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.call.CallTokenResp & im.call.CallTokenResp.$Shape} CallTokenResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            CallTokenResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a CallTokenResp message.
+             * @function verify
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            CallTokenResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room"))
+                    if (!$util.isString(message.room))
+                        return "room: string expected";
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token"))
+                    if (!$util.isString(message.token))
+                        return "token: string expected";
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl"))
+                    if (!$util.isString(message.wsUrl))
+                        return "wsUrl: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a CallTokenResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.call.CallTokenResp} CallTokenResp
+             */
+            CallTokenResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.call.CallTokenResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.call.CallTokenResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.call.CallTokenResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                if (object.room != null)
+                    if (typeof object.room !== "string" || object.room.length)
+                        message.room = $String(object.room);
+                if (object.token != null)
+                    if (typeof object.token !== "string" || object.token.length)
+                        message.token = $String(object.token);
+                if (object.wsUrl != null)
+                    if (typeof object.wsUrl !== "string" || object.wsUrl.length)
+                        message.wsUrl = $String(object.wsUrl);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a CallTokenResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {im.call.CallTokenResp} message CallTokenResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            CallTokenResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                    object.room = "";
+                    object.token = "";
+                    object.wsUrl = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                if (message.room != null && $Object.hasOwnProperty.call(message, "room"))
+                    object.room = message.room;
+                if (message.token != null && $Object.hasOwnProperty.call(message, "token"))
+                    object.token = message.token;
+                if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl"))
+                    object.wsUrl = message.wsUrl;
+                return object;
+            };
+
+            /**
+             * Converts this CallTokenResp to JSON.
+             * @function toJSON
+             * @memberof im.call.CallTokenResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            CallTokenResp.prototype.toJSON = function() {
+                return CallTokenResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for CallTokenResp
+             * @function getTypeUrl
+             * @memberof im.call.CallTokenResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            CallTokenResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.call.CallTokenResp";
+            };
+
+            return CallTokenResp;
+        })();
+
+        return call;
     })();
 
     im.chat = (function() {
@@ -16845,6 +20149,42 @@ export const im = $root.im = (() => {
                     case "CMD_UPLOAD_RESP":
                     case 161:
                         message.cmd = 161;
+                        break;
+                    case "CMD_CALL_INVITE_REQ":
+                    case 176:
+                        message.cmd = 176;
+                        break;
+                    case "CMD_CALL_INVITE_RESP":
+                    case 177:
+                        message.cmd = 177;
+                        break;
+                    case "CMD_CALL_ACCEPT_REQ":
+                    case 178:
+                        message.cmd = 178;
+                        break;
+                    case "CMD_CALL_ACCEPT_RESP":
+                    case 179:
+                        message.cmd = 179;
+                        break;
+                    case "CMD_CALL_END_REQ":
+                    case 180:
+                        message.cmd = 180;
+                        break;
+                    case "CMD_CALL_END_RESP":
+                    case 181:
+                        message.cmd = 181;
+                        break;
+                    case "CMD_CALL_EVENT_PUSH":
+                    case 182:
+                        message.cmd = 182;
+                        break;
+                    case "CMD_CALL_TOKEN_REQ":
+                    case 183:
+                        message.cmd = 183;
+                        break;
+                    case "CMD_CALL_TOKEN_RESP":
+                    case 184:
+                        message.cmd = 184;
                         break;
                     case "CMD_ERROR":
                     case 65535:
