@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useConversationStore } from '@/stores/useConversationStore';
+import { openConversation } from '@/stores/conversationActions';
 import { useChatStore } from '@/stores/useChatStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
@@ -50,7 +51,6 @@ function IconGroup({ active }: { active: boolean }) {
 export function MainPanel() {
   const connState = useConnStore((s) => s.state);
   const activePeerId = useConversationStore((s) => s.activePeerId);
-  const openChat = useWindowStore((s) => s.openChat);
   const { totalUnread } = useUnreadCount();
   const pendingRequests = useFriendStore((s) => s.pendingRequests);
   const pendingCount = useFriendStore((s) => s.pendingRequests.length);
@@ -70,13 +70,9 @@ export function MainPanel() {
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
-  const handleSelectConversation = useCallback(
-    (peerId: string) => {
-      useConversationStore.getState().setActivePeer(peerId);
-      openChat(peerId);
-    },
-    [openChat],
-  );
+  const handleSelectConversation = useCallback((peerId: string) => {
+    openConversation(peerId);
+  }, []);
 
   const handleDeleteConversation = useCallback((peerId: string) => {
     useConversationStore.getState().removeConversation(peerId);
@@ -84,7 +80,9 @@ export function MainPanel() {
     const ws = useWindowStore.getState();
     if (ws.chatPeerId === peerId) {
       const next = useConversationStore.getState().getSortedList()[0];
-      if (next) ws.openChat(next);
+      // 切换目标会话必须走 openConversation：removeConversation 已把 activePeerId 置空，
+      // 只调 openChat 会让新会话在列表里没有高亮
+      if (next) openConversation(next);
       else ws.closeChat();
     }
   }, []);
@@ -92,21 +90,19 @@ export function MainPanel() {
   const handleChatWithFriend = useCallback(
     (peerId: string, nickname: string, avatar: string) => {
       useConversationStore.getState().createConversation(peerId, nickname, avatar, 'c2c');
-      useConversationStore.getState().setActivePeer(peerId);
-      openChat(peerId);
+      openConversation(peerId);
       setTab('chats');
     },
-    [openChat],
+    [],
   );
 
   const handleSelectGroup = useCallback(
     (groupId: string, name: string) => {
       useConversationStore.getState().createConversation(groupId, name, '', 'group');
-      useConversationStore.getState().setActivePeer(groupId);
-      openChat(groupId);
+      openConversation(groupId);
       setTab('chats');
     },
-    [openChat],
+    [],
   );
 
   return (
@@ -261,8 +257,7 @@ export function MainPanel() {
         onClose={() => setShowCreateGroup(false)}
         onGroupCreated={(groupId, name) => {
           useConversationStore.getState().createConversation(groupId, name, '', 'group');
-          useConversationStore.getState().setActivePeer(groupId);
-          openChat(groupId);
+          openConversation(groupId);
           setTab('chats');
           setShowCreateGroup(false);
         }}
