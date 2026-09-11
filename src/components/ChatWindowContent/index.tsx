@@ -3,6 +3,9 @@ import { useChatSession } from '@/hooks/useChatSession';
 import { useGroupReadCounts } from '@/hooks/useGroupReadCounts';
 import { useBrowserFullscreen } from '@/hooks/useBrowserFullscreen';
 import { useWindowStore } from '@/stores/useWindowStore';
+import { useCallStore } from '@/stores/useCallStore';
+import { useConversationStore } from '@/stores/useConversationStore';
+import { CallMediaType } from '@/sdk/types';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { toast } from '@/stores/useToastStore';
 import { MessageList } from '@/components/MessageList';
@@ -27,6 +30,14 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
   const s = useChatSession(peerId);
   const { isFullscreen, toggle: toggleFullscreen } = useBrowserFullscreen();
   const [detailOpen, setDetailOpen] = useState(true);
+
+  // 通话入口：对端展示名（昵称 > 用户名 > ID）
+  const startCall = (mediaType: CallMediaType) => {
+    const conv = useConversationStore.getState().conversations[peerId];
+    const name = conv?.nickname || s.conversation?.nickname || peerId;
+    void useCallStore.getState().startCall(peerId, name, mediaType);
+  };
+
   const [soundOn, setSoundOn] = useState(true);
   const [readStatus, setReadStatus] = useState<ReadStatus | null>(null);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
@@ -90,6 +101,29 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
         <ChatWindowHeader peerId={peerId} />
         <div className="flex-1" />
         <div className="h-full flex items-start justify-end gap-1 px-2 pt-1 flex-shrink-0">
+          {/* 通话入口：仅单聊（群通话不在本期） */}
+          {!s.isGroup && (
+            <>
+              <button
+                onClick={() => void startCall(CallMediaType.AUDIO)}
+                title="语音通话"
+                className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => void startCall(CallMediaType.VIDEO)}
+                title="视频通话"
+                className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM16 10l5-3v10l-5-3" />
+                </svg>
+              </button>
+            </>
+          )}
           <button
             onClick={() => { setSoundOn((v) => !v); toast(soundOn ? '提示音已关' : '提示音已开'); }}
             title={soundOn ? '关闭提示音' : '开启提示音'}

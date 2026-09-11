@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useConnStore } from '@/stores/useConnStore';
+import { useCallStore } from '@/stores/useCallStore';
 import { toast } from '@/stores/useToastStore';
 import { mediaPreview } from '@/sdk/media';
 
@@ -265,6 +266,11 @@ export function useIMClient() {
           .then((members) => useGroupStore.getState().setMembers(notify.groupId, members))
           .catch((err) => console.error('刷新群成员失败:', err));
       }
+    });
+
+    // 音视频通话事件（振铃/接通/结束）→ 通话状态机
+    client.on('callEvent', (event) => {
+      void useCallStore.getState().onCallEvent(event);
     });
 
     // 发起连接

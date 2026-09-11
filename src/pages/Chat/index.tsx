@@ -10,6 +10,7 @@ import { useWindowStore } from '@/stores/useWindowStore';
 import { useConnStore } from '@/stores/useConnStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { IMShell } from '@/components/IMShell';
+import { CallOverlay } from '@/components/CallOverlay';
 import { ToastHost } from '@/components/ToastHost';
 
 export default function ChatPage() {
@@ -92,6 +93,9 @@ export default function ChatPage() {
 
       {/* 聊天界面填满整个视口 */}
       <IMShell />
+
+      {/* 音视频通话浮层（来电/呼出/通话中） */}
+      <CallOverlay />
 
       <ToastHost />
     </div>
