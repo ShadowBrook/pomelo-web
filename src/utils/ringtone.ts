@@ -64,3 +64,11 @@ export function startOutgoingRing(): void {
 export function stopRing(): void {
   stopLoop();
 }
+
+/**
+ * 在用户手势上下文里解锁音频播放（iOS 对 AudioContext/媒体元素的自动播放限制）。
+ * 接听/拨打按钮的 onClick 里调用，后续远端语音的 attach 播放才能出声。
+ */
+export function ensureAudioUnlocked(): void {
+  ensureCtx();
+}

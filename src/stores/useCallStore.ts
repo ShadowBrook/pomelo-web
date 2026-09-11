@@ -4,7 +4,7 @@ import { CallEndReason, CallEvent, CallMediaType } from '@/sdk/types';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { toast } from '@/stores/useToastStore';
-import { startIncomingRing, startOutgoingRing, stopRing } from '@/utils/ringtone';
+import { startIncomingRing, startOutgoingRing, stopRing, ensureAudioUnlocked } from '@/utils/ringtone';
 
 export type CallPhase = 'idle' | 'outgoing' | 'incoming' | 'active';
 
@@ -41,6 +41,8 @@ interface CallState {
 
 /** LiveKit Room 实例不进响应式状态（非序列化对象），模块级持有 */
 let livekitRoom: import('livekit-client').Room | null = null;
+/** 远端语音的播放元素（attach 产物，持引用防 GC；换轨时移除旧元素） */
+let remoteAudioEl: HTMLAudioElement | null = null;
 
 function idle(): Pick<
   CallState,
@@ -81,6 +83,7 @@ export const useCallStore = create<CallState>()(() => ({
 
   /** 主叫入口（聊天窗头部按钮） */
   startCall: async (peerId, peerName, mediaType) => {
+    ensureAudioUnlocked();
     const client = getIMClient();
     if (!client) {
       toast('连接未就绪，请稍后再试');
@@ -161,6 +164,7 @@ export const useCallStore = create<CallState>()(() => ({
     const s = useCallStore.getState();
     if (s.phase !== 'incoming' || !s.callId) return;
     stopRing();
+    ensureAudioUnlocked();
     try {
       const client = getIMClient();
       if (!client) throw new Error('连接未就绪');
@@ -243,7 +247,7 @@ export const useCallStore = create<CallState>()(() => ({
 // ------------------------------------------------------------------
 
 async function joinLiveKit(): Promise<void> {
-  const { room, token, wsUrl } = useCallStore.getState();
+  const { room, token, wsUrl, mediaType } = useCallStore.getState();
   if (!room || !token || !wsUrl) return;
   try {
     const { Room, RoomEvent, Track } = await import('livekit-client');
@@ -255,8 +259,12 @@ async function joinLiveKit(): Promise<void> {
       if (track.kind === 'video') {
         useCallStore.setState({ remoteVideoTrack: track.mediaStreamTrack });
       } else if (track.kind === 'audio') {
-        // 远端语音：attach() 自建 <audio> 播放，不进状态
-        track.attach();
+        // 远端语音：attach 产出 <audio> 并播放；持引用防 GC，换轨时移除旧元素
+        remoteAudioEl?.remove();
+        const el = track.attach();
+        el.autoplay = true;
+        el.play?.().catch(() => { /* 自动播放被拦时保持静默，用户点界面任意处即解锁 */ });
+        remoteAudioEl = el;
       }
     });
     lk.on(RoomEvent.TrackUnsubscribed, (track) => {
@@ -283,6 +291,24 @@ async function joinLiveKit(): Promise<void> {
     });
 
     await lk.connect(wsUrl, token);
+
+    // 关键：发布本端媒体。livekit-client 不会自动推流，不调 enable 则整通无声/无画面
+    try {
+      await lk.localParticipant.setMicrophoneEnabled(true);
+      useCallStore.setState({ micOn: true });
+    } catch {
+      useCallStore.setState({ micOn: false });
+      toast('麦克风不可用，请检查浏览器权限');
+    }
+    if (mediaType === CallMediaType.VIDEO) {
+      try {
+        await lk.localParticipant.setCameraEnabled(true);
+        useCallStore.setState({ camOn: true });
+      } catch {
+        useCallStore.setState({ camOn: false });
+        toast('摄像头不可用，请检查浏览器权限');
+      }
+    }
   } catch (e) {
     toast(e instanceof Error ? `通话连接失败: ${e.message}` : '通话连接失败');
     // 进房失败即整通结束（对端会经服务端超时/信令收尾）
@@ -295,11 +321,17 @@ async function leaveLiveKit(): Promise<void> {
   livekitRoom = null;
   if (lk) {
     try {
+      // 先停本端轨道（关掉系统摄像头/麦克风指示灯），再断开
+      lk.localParticipant.trackPublications.forEach((pub) => {
+        pub.track?.mediaStreamTrack?.stop();
+      });
       await lk.disconnect();
     } catch {
       // 断开失败无需处理
     }
   }
+  remoteAudioEl?.remove();
+  remoteAudioEl = null;
 }
 
 /** 通话结束后更新会话列表预览（本地生成，Phase 1 决议：通话记录不走消息通道） */

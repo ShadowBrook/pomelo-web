@@ -14,19 +14,27 @@ vi.mock('@/hooks/useIMClient', () => ({
   getIMClient: () => fakeClient,
 }));
 
-// LiveKit 打桩：joinLiveKit 的动态 import 命中本桩，connect 立即成功
-const connectSpy = vi.hoisted(() => vi.fn());
+// LiveKit 打桩：joinLiveKit 的动态 import 命中本桩，connect 立即成功；
+// 实例收集到 roomInstances 供断言“是否真的发布了本端媒体”
+const roomInstances = vi.hoisted(() => [] as Array<{
+  localParticipant: { setMicrophoneEnabled: ReturnType<typeof vi.fn>; setCameraEnabled: ReturnType<typeof vi.fn> };
+}>);
 vi.mock('livekit-client', () => {
   class Room {
-    on() {}
-    async connect(url: string, token: string) {
-      await connectSpy(url, token);
-    }
-    async disconnect() {}
+    handlers: Record<string, (arg?: unknown) => void> = {};
     localParticipant = {
       setMicrophoneEnabled: vi.fn(),
       setCameraEnabled: vi.fn(),
+      trackPublications: new Map(),
     };
+    constructor() {
+      roomInstances.push(this);
+    }
+    on(_event: string, handler: (arg?: unknown) => void) {
+      this.handlers[_event] = handler;
+    }
+    async connect(_url: string, _token: string) {}
+    async disconnect() {}
   }
   return {
     Room,
@@ -135,7 +143,8 @@ describe('useCallStore', () => {
     const s = useCallStore.getState();
     expect(s.phase).toBe('active');
     expect(s.connectedAt).not.toBeNull();
-    expect(connectSpy).toHaveBeenCalledWith('ws://lk:7880', 'tk-caller');
+    const room = roomInstances[roomInstances.length - 1];
+    expect(room.localParticipant.setMicrophoneEnabled).toHaveBeenCalledWith(true);
   });
 
   it('被叫：accept → 请求接听并进入 active', async () => {
@@ -146,7 +155,20 @@ describe('useCallStore', () => {
 
     expect(fakeClient.acceptCall).toHaveBeenCalledWith('call-1');
     expect(useCallStore.getState().phase).toBe('active');
-    expect(connectSpy).toHaveBeenCalledWith('ws://lk:7880', 'tk-callee');
+    const room = roomInstances[roomInstances.length - 1];
+    expect(room.localParticipant.setMicrophoneEnabled).toHaveBeenCalledWith(true);
+    expect(room.localParticipant.setCameraEnabled).not.toHaveBeenCalled();
+  });
+
+  it('视频通话：接通后除麦克风外还要发布摄像头', async () => {
+    useCallStore.setState({ phase: 'incoming', callId: 'call-1', peerId: '200', peerName: '老 Y', mediaType: CallMediaType.VIDEO });
+    fakeClient.acceptCall.mockResolvedValue({ code: 0, message: 'success', room: 'call-1-abc', token: 'tk-callee', wsUrl: 'ws://lk:7880' });
+
+    await useCallStore.getState().accept();
+
+    const room = roomInstances[roomInstances.length - 1];
+    expect(room.localParticipant.setMicrophoneEnabled).toHaveBeenCalledWith(true);
+    expect(room.localParticipant.setCameraEnabled).toHaveBeenCalledWith(true);
   });
 
   it('被叫：reject → 发送 END(REJECT) 并回 idle', async () => {
