@@ -56,12 +56,14 @@ export default defineConfig(({ mode }) => {
           // 网关使用自签名证书
           secure: false,
         },
-        // LiveKit 信令同源代理（音视频通话）
+        // LiveKit 信令同源代理（音视频通话）：剥掉 /lk 前缀——
+        // LiveKit 只识别 /rtc、/twirp 等路径，带前缀会 404（v1 RTC path not found）
         '/lk': {
           target: livekitTarget,
           ws: true,
           changeOrigin: true,
           secure: false,
+          rewrite: (path: string) => path.replace(/^\/lk/, ''),
         },
       },
     },
