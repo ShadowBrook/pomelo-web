@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useCallStore } from './useCallStore';
-import { useConversationStore } from './useConversationStore';
 import { useFriendStore } from './useFriendStore';
 import { CallEndReason, CallMediaType, type CallEvent } from '@/sdk/types';
 
@@ -49,23 +48,6 @@ vi.mock('livekit-client', () => {
   };
 });
 
-function seedConversation(peerId: string) {
-  useConversationStore.setState((s) => ({
-    conversations: {
-      ...s.conversations,
-      [peerId]: {
-        peerId,
-        type: 'c2c' as const,
-        nickname: peerId,
-        avatar: '',
-        lastMessage: '',
-        lastMessageTime: 0,
-        unreadCount: 0,
-      },
-    },
-  }));
-}
-
 function pushEvent(partial: Partial<CallEvent>): CallEvent {
   return {
     callId: 'call-1',
@@ -90,7 +72,6 @@ describe('useCallStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useCallStore.getState().reset();
-    useConversationStore.getState().clearAll();
     useFriendStore.setState({ friends: [{ userId: '200', userName: 'yz', nickname: '老 Y', avatar: 'http://a/200.png', online: true, friendedAt: 0 }] });
   });
 
@@ -181,7 +162,6 @@ describe('useCallStore', () => {
   });
 
   it('通话中用户主动挂断 → 发送 END(HANGUP) 并更新会话预览（含时长）', async () => {
-    seedConversation('200');
     useCallStore.setState({ phase: 'outgoing', callId: 'call-1', peerId: '200', peerName: '老 Y' });
     await useCallStore.getState().onCallEvent(pushEvent({ event: 2, room: 'r', token: 't', wsUrl: 'ws://lk' }));
     // 用户点挂断
@@ -189,19 +169,15 @@ describe('useCallStore', () => {
 
     expect(fakeClient.endCall).toHaveBeenCalledWith('call-1', CallEndReason.HANGUP);
     expect(useCallStore.getState().phase).toBe('idle');
-    const conv = useConversationStore.getState().conversations['200'];
-    expect(conv.lastMessage).toMatch(/^\[语音通话\] \d+:\d{2}$/);
   });
 
   it('对端先挂断：ended 推送直接收尾，不再回发 END（服务端已知）', async () => {
-    seedConversation('200');
     useCallStore.setState({ phase: 'outgoing', callId: 'call-1', peerId: '200', peerName: '老 Y' });
     await useCallStore.getState().onCallEvent(pushEvent({ event: 2, room: 'r', token: 't', wsUrl: 'ws://lk' }));
     await useCallStore.getState().onCallEvent(pushEvent({ event: 3, reason: CallEndReason.HANGUP, room: 'r', token: 't', wsUrl: 'ws://lk' }));
 
     expect(useCallStore.getState().phase).toBe('idle');
     expect(fakeClient.endCall).not.toHaveBeenCalled();
-    expect(useConversationStore.getState().conversations['200'].lastMessage).toMatch(/^\[语音通话\] \d+:\d{2}$/);
   });
 
   it('ended：callId 不匹配的过期事件被忽略', async () => {
@@ -212,12 +188,11 @@ describe('useCallStore', () => {
     expect(fakeClient.endCall).not.toHaveBeenCalled();
   });
 
-  it('振铃阶段取消：预览标记未接听时不产生通话时长', async () => {
-    seedConversation('200');
+  it('振铃阶段取消：静默回落到 idle（记录由服务端系统消息负责）', async () => {
     useCallStore.setState({ phase: 'outgoing', callId: 'call-1', peerId: '200', peerName: '老 Y', mediaType: CallMediaType.AUDIO });
     await useCallStore.getState().onCallEvent(pushEvent({ event: 3, reason: CallEndReason.CANCEL }));
 
-    const conv = useConversationStore.getState().conversations['200'];
-    expect(conv.lastMessage).toBe('[语音通话]');
+    expect(useCallStore.getState().phase).toBe('idle');
+    expect(useCallStore.getState().callId).toBeNull();
   });
 });

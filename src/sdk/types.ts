@@ -92,6 +92,8 @@ export enum MsgType {
   EMOJI = 6,
   FORWARD = 8,
   REPLY = 9,
+  // 系统消息（如音视频通话记录，居中灰条渲染）
+  SYSTEM = 99,
 }
 
 // ACK 类型

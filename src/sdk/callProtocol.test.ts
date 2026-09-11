@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { encode, decode } from './protocol';
-import { enc, plain, im } from './pbcodec';
-import { Cmd, CallMediaType } from './types';
+import { enc, plain, im, text } from './pbcodec';
+import { Cmd, CallMediaType, MsgType } from './types';
+import { formatCallRecord } from './media';
 
 /**
  * 通话信令协议回路：0xB0~0xB8 命令经 wire 编解码后，body 能被 im.call.* 正确解析。
@@ -76,5 +77,34 @@ describe('通话信令 wire 回路', () => {
     expect(resp.code).toBe(0);
     expect(resp.room).toBe('call-1-abcd');
     expect(resp.wsUrl).toBe('ws://localhost:7880');
+  });
+});
+
+describe('通话记录文本', () => {
+  it('接通：媒体类型 + 时长', () => {
+    expect(formatCallRecord(JSON.stringify({
+      kind: 'call', mediaType: 0, answered: true, durationMs: 204000,
+    }))).toBe('语音通话 3:24');
+    expect(formatCallRecord(JSON.stringify({
+      kind: 'call', mediaType: 1, answered: true, durationMs: 65000,
+    }))).toBe('视频通话 1:05');
+  });
+
+  it('未接通：标注未接听', () => {
+    expect(formatCallRecord(JSON.stringify({
+      kind: 'call', mediaType: 1, answered: false, durationMs: 0, reason: 5,
+    }))).toBe('视频通话 未接听');
+  });
+
+  it('非通话内容原样返回', () => {
+    expect(formatCallRecord('普通文本')).toBe('普通文本');
+    expect(formatCallRecord(JSON.stringify({ kind: 'other' }))).toBe('{"kind":"other"}');
+  });
+
+  it('SYSTEM 消息经 wire 回路后仍可格式化', () => {
+    const content = JSON.stringify({ kind: 'call', mediaType: 1, answered: true, durationMs: 65000 });
+    const frame = encode(MsgType.SYSTEM, 'sys-1', new TextEncoder().encode(content), '100');
+    const msg = decode(frame);
+    expect(formatCallRecord(text(msg.body ?? new Uint8Array(0)))).toBe('视频通话 1:05');
   });
 });

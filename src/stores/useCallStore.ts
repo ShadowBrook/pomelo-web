@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { getIMClient } from '@/hooks/useIMClient';
 import { CallEndReason, CallEvent, CallMediaType } from '@/sdk/types';
-import { useConversationStore } from '@/stores/useConversationStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { toast } from '@/stores/useToastStore';
 import { startIncomingRing, startOutgoingRing, stopRing, ensureAudioUnlocked } from '@/utils/ringtone';
@@ -153,7 +152,7 @@ export const useCallStore = create<CallState>()(() => ({
       const endedText = displayEndText(event.reason);
       stopRing();
       await leaveLiveKit();
-      updateConversationPreview(s, event.reason);
+      // 会话窗口/列表的通话记录由服务端系统消息（MSG_TYPE_SYSTEM）驱动，本地不再自行生成
       useCallStore.setState(idle());
       // 通话有实质时长才提示；振铃阶段的取消/超时静默回落
       if (s.connectedAt) {
@@ -203,7 +202,6 @@ export const useCallStore = create<CallState>()(() => ({
     const s = useCallStore.getState();
     stopRing();
     await leaveLiveKit();
-    updateConversationPreview(s, CallEndReason.HANGUP);
     useCallStore.setState(idle());
     if (s.callId) {
       try {
@@ -352,27 +350,3 @@ async function leaveLiveKit(): Promise<void> {
   remoteAudioEl = null;
 }
 
-/** 通话结束后更新会话列表预览（本地生成，Phase 1 决议：通话记录不走消息通道） */
-function updateConversationPreview(s: CallState, reason: number): void {
-  if (!s.peerId) return;
-  const label = s.mediaType === CallMediaType.VIDEO ? '[视频通话]' : '[语音通话]';
-  let suffix = '';
-  if (s.connectedAt) {
-    const total = Math.max(1, Math.round((Date.now() - s.connectedAt) / 1000));
-    const m = Math.floor(total / 60);
-    const sec = total % 60;
-    suffix = ` ${m}:${String(sec).padStart(2, '0')}`;
-  } else if (reason === CallEndReason.TIMEOUT) {
-    suffix = ' 未接听';
-  }
-  useConversationStore.setState((state) => {
-    const conv = state.conversations[s.peerId];
-    if (!conv) return state;
-    return {
-      conversations: {
-        ...state.conversations,
-        [s.peerId]: { ...conv, lastMessage: `${label}${suffix}`, lastMessageTime: Date.now() },
-      },
-    };
-  });
-}

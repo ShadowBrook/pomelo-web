@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ChatMessage } from '@/stores/useChatStore';
+import { MsgType } from '@/sdk/types';
+import { formatCallRecord } from '@/sdk/media';
 import { MessageBubble } from '@/components/MessageBubble';
 import { formatMsgTime } from '@/utils/imTime';
 
@@ -107,6 +109,24 @@ export function MessageList({
         const showTime = shouldShowTimeDivider(prev, msg);
         // '__self__' 是 sendText 里的占位，实际比较时需匹配当前用户
         const isSelf = msg.senderId === currentUserId || msg.senderId === '__self__';
+
+        // 系统消息（如音视频通话记录）：居中灰条，无头像无气泡
+        if (msg.msgType === MsgType.SYSTEM) {
+          return (
+            <div key={msg.id}>
+              {showTime && (
+                <div className="text-center mb-1">
+                  <span className="text-[11px] text-text-sub">{formatMsgTime(msg.timestamp)}</span>
+                </div>
+              )}
+              <div className="text-center my-1.5">
+                <span className="text-[11px] text-text-sub bg-black/10 px-2 py-0.5 rounded">
+                  {formatCallRecord(msg.content)}
+                </span>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div key={msg.id}>

@@ -136,6 +136,8 @@ export function mediaPreview(msgType: number, content: string): string {
       return '[引用]';
     case MsgType.FORWARD:
       return '[聊天记录]';
+    case MsgType.SYSTEM:
+      return formatCallRecord(content);
     case MsgType.FILE: {
       const c = parseMediaContent(content);
       return c?.fileName ? `[文件] ${c.fileName}` : '[文件]';
@@ -146,6 +148,28 @@ export function mediaPreview(msgType: number, content: string): string {
     }
     default:
       return content;
+  }
+}
+
+/**
+ * 通话记录系统消息（MSG_TYPE_SYSTEM）→ 展示文本。
+ * content: {"kind":"call","mediaType":0|1,"answered":bool,"durationMs":n,...}
+ */
+export function formatCallRecord(content: string): string {
+  try {
+    const c = JSON.parse(content);
+    if (c?.kind !== 'call') return content;
+    const media = Number(c.mediaType) === 1 ? '视频通话' : '语音通话';
+    const durationMs = Number(c.durationMs);
+    if (c.answered && durationMs > 0) {
+      const total = Math.round(durationMs / 1000);
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      return `${media} ${m}:${String(s).padStart(2, '0')}`;
+    }
+    return `${media} 未接听`;
+  } catch {
+    return content;
   }
 }
 
