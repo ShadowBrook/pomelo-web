@@ -24,6 +24,8 @@ interface CallState {
   connectedAt: number | null;
   micOn: boolean;
   camOn: boolean;
+  /** 本端媒体发布失败的持久提示（toast 太易错过；挂到浮层上直到重拨） */
+  micError: string | null;
   /** 远端/本地摄像头 track（视频通话预览用，组件负责挂到 <video>） */
   remoteVideoTrack: MediaStreamTrack | null;
   localVideoTrack: MediaStreamTrack | null;
@@ -46,24 +48,25 @@ let remoteAudioEl: HTMLAudioElement | null = null;
 
 function idle(): Pick<
   CallState,
-  'phase' | 'callId' | 'peerId' | 'peerName' | 'peerAvatar' | 'mediaType' | 'room' | 'token' | 'wsUrl' | 'connectedAt' | 'micOn' | 'camOn' | 'remoteVideoTrack' | 'localVideoTrack'
+  'phase' | 'callId' | 'peerId' | 'peerName' | 'peerAvatar' | 'mediaType' | 'room' | 'token' | 'wsUrl' | 'connectedAt' | 'micOn' | 'camOn' | 'micError' | 'remoteVideoTrack' | 'localVideoTrack'
 > {
-  return {
-    phase: 'idle',
-    callId: null,
-    peerId: '',
-    peerName: '',
-    peerAvatar: '',
-    mediaType: CallMediaType.AUDIO,
-    room: '',
-    token: '',
-    wsUrl: '',
-    connectedAt: null,
-    micOn: true,
-    camOn: true,
-    remoteVideoTrack: null,
-    localVideoTrack: null,
-  };
+    return {
+      phase: 'idle',
+      callId: null,
+      peerId: '',
+      peerName: '',
+      peerAvatar: '',
+      mediaType: CallMediaType.AUDIO,
+      room: '',
+      token: '',
+      wsUrl: '',
+      connectedAt: null,
+      micOn: true,
+      camOn: true,
+      micError: null,
+      remoteVideoTrack: null,
+      localVideoTrack: null,
+    };
 }
 
 function displayEndText(reason: number): string {
@@ -256,6 +259,7 @@ async function joinLiveKit(): Promise<void> {
     livekitRoom = lk;
 
     lk.on(RoomEvent.TrackSubscribed, (track) => {
+      console.info('[Call] 订阅到远端轨:', track.source, track.kind);
       if (track.kind === 'video') {
         useCallStore.setState({ remoteVideoTrack: track.mediaStreamTrack });
       } else if (track.kind === 'audio') {
@@ -295,18 +299,32 @@ async function joinLiveKit(): Promise<void> {
     // 关键：发布本端媒体。livekit-client 不会自动推流，不调 enable 则整通无声/无画面
     try {
       await lk.localParticipant.setMicrophoneEnabled(true);
-      useCallStore.setState({ micOn: true });
-    } catch {
-      useCallStore.setState({ micOn: false });
-      toast('麦克风不可用，请检查浏览器权限');
+      useCallStore.setState({ micOn: true, micError: null });
+      console.info('[Call] 本端麦克风已发布');
+    } catch (err) {
+      const name = (err as DOMException)?.name;
+      const msg =
+        name === 'NotAllowedError' ? '麦克风权限被拒绝：点击地址栏左侧的锁/摄像头图标允许，然后重新拨打'
+        : name === 'NotFoundError' ? '未检测到麦克风设备'
+        : name === 'NotReadableError' ? '麦克风被其他应用占用'
+        : `麦克风不可用：${err instanceof Error ? err.message : String(err)}`;
+      useCallStore.setState({ micOn: false, micError: msg });
+      console.warn('[Call] 麦克风发布失败:', name, err);
     }
     if (mediaType === CallMediaType.VIDEO) {
       try {
         await lk.localParticipant.setCameraEnabled(true);
         useCallStore.setState({ camOn: true });
-      } catch {
+        console.info('[Call] 本端摄像头已发布');
+      } catch (err) {
+        const name = (err as DOMException)?.name;
+        const msg =
+          name === 'NotAllowedError' ? '摄像头权限被拒绝：点击地址栏左侧的图标允许后重拨'
+          : name === 'NotFoundError' ? '未检测到摄像头设备'
+          : `摄像头不可用：${err instanceof Error ? err.message : String(err)}`;
         useCallStore.setState({ camOn: false });
-        toast('摄像头不可用，请检查浏览器权限');
+        console.warn('[Call] 摄像头发布失败:', name, err);
+        toast(msg);
       }
     }
   } catch (e) {

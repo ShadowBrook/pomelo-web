@@ -68,6 +68,12 @@ export function CallOverlay() {
 
       {s.phase === 'active' && (
         <div className="h-full relative bg-black">
+          {/* 麦克风发布失败的持久提示（权限类问题 toast 一闪就没了，必须钉在界面上） */}
+          {s.micError && (
+            <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10 bg-warn/90 text-white text-xs px-3 py-1.5 rounded shadow-lg max-w-[80%] text-center">
+              ⚠ {s.micError}
+            </div>
+          )}
           {/* 远端视频（视频通话）；语音通话用头像占位 */}
           {s.mediaType === CallMediaType.VIDEO ? (
             <>
