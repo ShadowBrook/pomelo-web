@@ -385,3 +385,14 @@ export interface MediaContent {
   url?: string; // 服务端注入的 presigned GET URL
   thumbUrl?: string; // 服务端注入的缩略图 URL
 }
+
+// 通话记录系统消息 content 的字符串化 JSON 结构（服务端 CallService 落库，双方各一份）
+export interface CallRecordContent {
+  kind: 'call';
+  mediaType?: number; // 0 语音 1 视频
+  answered?: boolean;
+  durationMs?: number;
+  reason?: number;
+  callId?: string;
+  outgoing?: boolean; // 相对收件人的方向：发起方那份为 true（气泡落边依据）
+}

@@ -7,6 +7,8 @@ import {
   getMediaThumbUrl,
   formatBytes,
   formatDuration,
+  formatCallRecord,
+  parseCallRecord,
   unwrapReplyContent,
 } from '@/sdk/media';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -334,11 +336,34 @@ interface Props {
   onStartSelect?: (m: ChatMessage) => void;
 }
 
+/** 通话记录图标：语音 = 听筒，视频 = 摄像机 */
+function CallRecordIcon({ video }: { video: boolean }) {
+  return video ? (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="currentColor" aria-hidden="true">
+      <path d="M4 6.5h9.5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zm13.5 3.7 4.5-2.7v9l-4.5-2.7v-3.6z" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="currentColor" aria-hidden="true">
+      <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.85 21 3 13.15 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z" />
+    </svg>
+  );
+}
+
 /** 按类型渲染消息正文（引用解包后递归复用） */
 function renderInner(msgType: number, content: string, url?: string): React.ReactNode {
   switch (msgType) {
     case MsgType.TEXT:
       return <p className="whitespace-pre-wrap">{content}</p>;
+
+    case MsgType.SYSTEM: {
+      // 通话记录：气泡文案带类型图标；左右侧由 MessageList 按服务端 outgoing 标记决定
+      return (
+        <span className="flex items-center gap-1.5">
+          <CallRecordIcon video={parseCallRecord(content)?.mediaType === 1} />
+          {formatCallRecord(content)}
+        </span>
+      );
+    }
 
     case MsgType.IMAGE:
       return url
@@ -488,8 +513,8 @@ export const MessageBubble = React.memo(function MessageBubble({
             <Body message={message} />
           </div>
         </div>
-        {/* hover 操作：引用 / 转发 / 多选（多选模式下隐藏） */}
-        {!selecting && (
+        {/* hover 操作：引用 / 转发 / 多选（多选模式与通话记录等系统消息下隐藏） */}
+        {!selecting && message.msgType !== MsgType.SYSTEM && (
           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-text-sub px-1 mt-0.5">
             <span className="cursor-pointer hover:text-primary" onClick={(e) => { e.stopPropagation(); onReply?.(message); }}>引用</span>
             <span className="cursor-pointer hover:text-primary" onClick={(e) => { e.stopPropagation(); onForward?.(message); }}>转发</span>

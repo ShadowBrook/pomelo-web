@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { encode, decode } from './protocol';
 import { enc, plain, im, text } from './pbcodec';
 import { Cmd, CallMediaType, MsgType } from './types';
-import { formatCallRecord } from './media';
+import { formatCallRecord, callRecordIsSelf } from './media';
 
 /**
  * 通话信令协议回路：0xB0~0xB8 命令经 wire 编解码后，body 能被 im.call.* 正确解析。
@@ -106,5 +106,18 @@ describe('通话记录文本', () => {
     const frame = encode(MsgType.SYSTEM, 'sys-1', new TextEncoder().encode(content), '100');
     const msg = decode(frame);
     expect(formatCallRecord(text(msg.body ?? new Uint8Array(0)))).toBe('视频通话 1:05');
+  });
+});
+
+describe('通话记录气泡方向', () => {
+  it('outgoing 标记即气泡侧：发起方 true、接听方 false', () => {
+    expect(callRecordIsSelf(JSON.stringify({ kind: 'call', outgoing: true }))).toBe(true);
+    expect(callRecordIsSelf(JSON.stringify({ kind: 'call', outgoing: false }))).toBe(false);
+  });
+
+  it('旧数据无标记或非通话记录 → null（回退按 senderId 判断）', () => {
+    expect(callRecordIsSelf(JSON.stringify({ kind: 'call', answered: true }))).toBeNull();
+    expect(callRecordIsSelf('普通文本')).toBeNull();
+    expect(callRecordIsSelf('{"kind":"other"}')).toBeNull();
   });
 });
