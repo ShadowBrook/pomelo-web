@@ -267,29 +267,8 @@ export function MessageInput({
             <rect x="2.5" y="5" width="13" height="14" rx="2" /><path d="M15.5 10.5L21 7v10l-5.5-3.5z" />
           </svg>
         </ToolButton>
-        <ToolButton title="个人名片" onClick={() => toast('功能开发中')}>
-          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
-            <circle cx="12" cy="8" r="3.5" /><path d="M5 20c.9-3.2 3.7-5 7-5s6.1 1.8 7 5" />
-          </svg>
-        </ToolButton>
-        <ToolButton title="群名片" onClick={() => toast('功能开发中')}>
-          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
-            <circle cx="9" cy="8.5" r="3" /><circle cx="16.5" cy="9.5" r="2.4" />
-            <path d="M3.5 19.5c.7-2.8 2.9-4.5 5.5-4.5s4.8 1.7 5.5 4.5M15 15.3c1.9.2 3.4 1.5 4 3.7" />
-          </svg>
-        </ToolButton>
-        <ToolButton title="位置" onClick={() => toast('功能开发中')}>
-          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
-            <path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" /><circle cx="12" cy="10" r="2.6" />
-          </svg>
-        </ToolButton>
         <ToolButton title="@" onClick={() => toast('功能开发中')}>
           <span className="text-[15px] leading-none font-medium">@</span>
-        </ToolButton>
-        <ToolButton title="清屏" onClick={() => toast('功能开发中')}>
-          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7">
-            <path d="M4 20h16M9 15l9-9a2.1 2.1 0 0 0-3-3l-9 9v3h3z" />
-          </svg>
         </ToolButton>
         <ToolButton title={recording ? '停止录音' : '语音输入'} onClick={toggleRecord}>
           <svg viewBox="0 0 24 24" className={`w-[18px] h-[18px] ${recording ? 'text-danger animate-pulse' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.7">
