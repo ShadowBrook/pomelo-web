@@ -229,7 +229,7 @@ export const useCallStore = create<CallState>()(() => ({
     if (!livekitRoom) return;
     const next = !s.camOn;
     try {
-      await livekitRoom.localParticipant.setCameraEnabled(next);
+      await livekitRoom.localParticipant.setCameraEnabled(next, CAM_CAPTURE, CAM_PUBLISH);
       useCallStore.setState({ camOn: next });
     } catch (e) {
       toast(e instanceof Error ? e.message : '摄像头操作失败');
@@ -246,6 +246,14 @@ export const useCallStore = create<CallState>()(() => ({
 // ------------------------------------------------------------------
 // LiveKit 房间
 // ------------------------------------------------------------------
+
+/**
+ * 摄像头采集/编码参数：480p + 500kbps 上限。
+ * 弱带宽部署（如 3Mbps 云主机）下 SFU 双向约 1.2Mbps/路，两路并发视频也能跑；
+ * toggleCam 恢复推流时必须复用同一组参数，否则画质回退到默认 720p。
+ */
+const CAM_CAPTURE = { resolution: { width: 640, height: 480, frameRate: 24 } };
+const CAM_PUBLISH = { videoEncoding: { maxBitrate: 500_000, maxFramerate: 24 } };
 
 async function joinLiveKit(): Promise<void> {
   const { room, token, wsUrl, mediaType } = useCallStore.getState();
@@ -286,9 +294,16 @@ async function joinLiveKit(): Promise<void> {
       }
     });
     lk.on(RoomEvent.Disconnected, () => {
-      // 对方关闭房间/网络崩溃：由服务端 ended 推送走正常收尾，这里只做兜底清引用
-      if (livekitRoom === lk) {
-        livekitRoom = null;
+      // 本端主动挂断（hangup/收尾）会先清引用，命中不了这个分支；
+      // 走到这里说明是媒体面意外掉线（对端崩溃/断网）：主动请服务端收尾，
+      // 否则会话要等 2h 上限定时器才结束，期间双方一直“忙线”
+      if (livekitRoom !== lk) {
+        return;
+      }
+      livekitRoom = null;
+      const s = useCallStore.getState();
+      if (s.phase === 'active' && s.callId) {
+        void getIMClient()?.endCall(s.callId, CallEndReason.HANGUP).catch(() => { /* 服务端有定时器兜底 */ });
       }
     });
 
@@ -311,7 +326,7 @@ async function joinLiveKit(): Promise<void> {
     }
     if (mediaType === CallMediaType.VIDEO) {
       try {
-        await lk.localParticipant.setCameraEnabled(true);
+        await lk.localParticipant.setCameraEnabled(true, CAM_CAPTURE, CAM_PUBLISH);
         useCallStore.setState({ camOn: true });
         console.info('[Call] 本端摄像头已发布');
       } catch (err) {

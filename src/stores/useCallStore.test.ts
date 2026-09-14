@@ -141,7 +141,7 @@ describe('useCallStore', () => {
     expect(room.localParticipant.setCameraEnabled).not.toHaveBeenCalled();
   });
 
-  it('视频通话：接通后除麦克风外还要发布摄像头', async () => {
+  it('视频通话：接通后发布摄像头，且采集/编码压到 480p/500kbps', async () => {
     useCallStore.setState({ phase: 'incoming', callId: 'call-1', peerId: '200', peerName: '老 Y', mediaType: CallMediaType.VIDEO });
     fakeClient.acceptCall.mockResolvedValue({ code: 0, message: 'success', room: 'call-1-abc', token: 'tk-callee', wsUrl: 'ws://lk:7880' });
 
@@ -149,7 +149,36 @@ describe('useCallStore', () => {
 
     const room = roomInstances[roomInstances.length - 1];
     expect(room.localParticipant.setMicrophoneEnabled).toHaveBeenCalledWith(true);
-    expect(room.localParticipant.setCameraEnabled).toHaveBeenCalledWith(true);
+    expect(room.localParticipant.setCameraEnabled).toHaveBeenCalledWith(
+      true,
+      { resolution: { width: 640, height: 480, frameRate: 24 } },
+      { videoEncoding: { maxBitrate: 500_000, maxFramerate: 24 } },
+    );
+  });
+
+  it('媒体面意外掉线：主动发 END 让服务端立即收尾（不等 2h 上限）', async () => {
+    fakeClient.endCall.mockResolvedValue({ code: 0, message: 'success' });
+    useCallStore.setState({ phase: 'outgoing', callId: 'call-1', peerId: '200', peerName: '老 Y' });
+    await useCallStore.getState().onCallEvent(pushEvent({ event: 2, room: 'r', token: 't', wsUrl: 'ws://lk' }));
+
+    const room = roomInstances[roomInstances.length - 1] as unknown as { handlers: Record<string, () => void> };
+    room.handlers.Disconnected();
+
+    expect(fakeClient.endCall).toHaveBeenCalledWith('call-1', CallEndReason.HANGUP);
+  });
+
+  it('本端主动挂断触发的断连：不重复发 END', async () => {
+    useCallStore.setState({ phase: 'outgoing', callId: 'call-1', peerId: '200', peerName: '老 Y' });
+    await useCallStore.getState().onCallEvent(pushEvent({ event: 2, room: 'r', token: 't', wsUrl: 'ws://lk' }));
+    await useCallStore.getState().hangup();
+    expect(fakeClient.endCall).toHaveBeenCalledTimes(1);
+
+    // hangup 已清 room 引用，迟到的 Disconnected 不应再发
+    const room = roomInstances[roomInstances.length - 1] as unknown as { handlers: Record<string, () => void> };
+    room.handlers.Disconnected();
+
+    expect(fakeClient.endCall).toHaveBeenCalledTimes(1);
+    expect(useCallStore.getState().phase).toBe('idle');
   });
 
   it('被叫：reject → 发送 END(REJECT) 并回 idle', async () => {
