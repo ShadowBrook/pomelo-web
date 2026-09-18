@@ -213,6 +213,8 @@ export interface CallEvent {
   room: string;
   token: string;
   wsUrl: string;
+  /** 振铃时的参与方总数（含主叫）：>2 即群聊通话 */
+  participantCount: number;
 }
 
 export interface CallInviteResp {
@@ -395,4 +397,5 @@ export interface CallRecordContent {
   reason?: number;
   callId?: string;
   outgoing?: boolean; // 相对收件人的方向：发起方那份为 true（气泡落边依据）
+  participants?: number; // 参与方总数（含主叫）：>2 为群聊通话
 }

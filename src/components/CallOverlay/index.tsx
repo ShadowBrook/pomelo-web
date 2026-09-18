@@ -4,6 +4,8 @@ import { CallMediaType } from '@/sdk/types';
 
 /**
  * 音视频通话浮层：来电 / 呼出 / 通话中三态，全屏覆盖。
+ * 群聊通话（isGroupCall）走多人网格布局：视频为宫格（无画面回落头像），
+ * 语音为头像阵列；1:1 保持原来的全屏远端 + 本端画中画。
  * LiveKit 房间生命周期在 useCallStore，本组件只负责呈现与操作入口。
  */
 export function CallOverlay() {
@@ -36,7 +38,9 @@ export function CallOverlay() {
           <RingingAvatar name={s.peerName} avatar={s.peerAvatar} />
           <div className="text-center">
             <div className="text-xl text-white font-medium">{s.peerName}</div>
-            <div className="text-sm text-white/60 mt-1">邀请你{mediaLabel}…</div>
+            <div className="text-sm text-white/60 mt-1">
+              {s.isGroupCall ? `邀请你参与群聊通话（${s.participantCount} 人）…` : `邀请你${mediaLabel}…`}
+            </div>
           </div>
           <div className="flex gap-16 mt-6">
             <CallButton label="拒绝" tone="danger" onClick={() => void useCallStore.getState().reject()}>
@@ -55,7 +59,7 @@ export function CallOverlay() {
           <div className="text-center">
             <div className="text-xl text-white font-medium">{s.peerName}</div>
             <div className="text-sm text-white/60 mt-1">
-              正在等待对方接受{mediaLabel}…
+              {s.isGroupCall ? '正在等待其他成员加入…' : `正在等待对方接受${mediaLabel}…`}
             </div>
           </div>
           <div className="mt-6">
@@ -74,8 +78,10 @@ export function CallOverlay() {
               ⚠ {s.micError}
             </div>
           )}
-          {/* 远端视频（视频通话）；语音通话用头像占位 */}
-          {s.mediaType === CallMediaType.VIDEO ? (
+          {/* 群聊通话：多人网格；1:1：全屏远端 + 本端画中画 / 头像 */}
+          {s.isGroupCall ? (
+            <GroupCallGrid mediaType={s.mediaType} />
+          ) : s.mediaType === CallMediaType.VIDEO ? (
             <>
               <RemoteVideo />
               {s.localVideoTrack && (
@@ -93,7 +99,9 @@ export function CallOverlay() {
 
           {/* 顶部：对端 + 时长 */}
           <div className="absolute top-4 left-0 right-0 flex flex-col items-center gap-1 pointer-events-none">
-            <span className="text-white/90 text-sm">{s.peerName}</span>
+            <span className="text-white/90 text-sm">
+              {s.isGroupCall ? `群聊通话 · ${Math.max(s.participantCount, s.participants.length + 1)} 人` : s.peerName}
+            </span>
             <span className="text-white/60 text-xs tabular-nums">{durationText()}</span>
           </div>
 
@@ -132,6 +140,101 @@ export function CallOverlay() {
         </div>
       )}
     </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// 群聊通话网格
+// ------------------------------------------------------------------
+
+/** 多人网格：视频为宫格（无画面回落头像），语音为头像阵列。含本端一席。 */
+function GroupCallGrid({ mediaType }: { mediaType: CallMediaType }) {
+  const participants = useCallStore((st) => st.participants);
+  const names = useCallStore((st) => st.participantNames);
+  const myName = '我';
+  const tiles = [
+    ...participants.map((p) => ({ key: p.id, name: names[p.id] || p.name, video: p.video, self: false })),
+    { key: '__self__', name: myName, video: null as MediaStreamTrack | null, self: true },
+  ];
+  const cols = tiles.length <= 4 ? 2 : 3;
+
+  if (mediaType !== CallMediaType.VIDEO) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center px-8 pb-28">
+        <div className={`grid gap-6 ${cols === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {tiles.map((t) => (
+            <AvatarTile key={t.key} name={t.name} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute inset-0 pb-28 p-2">
+      <div className={`h-full grid gap-2 ${cols === 2 ? 'grid-cols-2' : 'grid-cols-3'} grid-rows-[repeat(auto-fit,minmax(0,1fr))]`}>
+        {tiles.map((t) =>
+          t.self ? (
+            <VideoTile key={t.key} name={t.name} localVideo self={t.self} />
+          ) : (
+            <VideoTile key={t.key} name={t.name} track={t.video} />
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** 头像席位（语音通话 / 无画面回落） */
+function AvatarTile({ name }: { name: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="w-16 h-16 rounded-full bg-primary/40 flex items-center justify-center text-white text-2xl font-bold">
+        {name.charAt(0).toUpperCase()}
+      </div>
+      <span className="text-white/80 text-xs max-w-full truncate">{name}</span>
+    </div>
+  );
+}
+
+function VideoTile({ name, track, localVideo = false, self = false }: {
+  name: string;
+  track?: MediaStreamTrack | null;
+  localVideo?: boolean;
+  self?: boolean;
+}) {
+  const localTrack = useCallStore((st) => st.localVideoTrack);
+  const effective = localVideo ? localTrack : (track ?? null);
+  return (
+    <div className={`relative rounded-lg overflow-hidden bg-[#1c2229] ${self ? 'ring-1 ring-primary/60' : ''}`}>
+      {effective ? (
+        <PeerVideo track={effective} muted={self} />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <AvatarTile name={name} />
+        </div>
+      )}
+      <span className="absolute left-2 bottom-2 px-1.5 py-0.5 rounded bg-black/50 text-white/90 text-xs max-w-[80%] truncate">
+        {name}
+      </span>
+    </div>
+  );
+}
+
+/** srcObject 需命令式挂载，走 ref effect 而非 JSX 属性 */
+function PeerVideo({ track, muted = false }: { track: MediaStreamTrack; muted?: boolean }) {
+  return (
+    <video
+      autoPlay
+      playsInline
+      muted={muted}
+      className="w-full h-full object-cover"
+      ref={(el) => {
+        if (el) {
+          el.srcObject = new MediaStream([track]);
+        }
+      }}
+    />
   );
 }
 

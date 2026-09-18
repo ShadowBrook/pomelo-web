@@ -60,6 +60,7 @@ function pushEvent(partial: Partial<CallEvent>): CallEvent {
     room: '',
     token: '',
     wsUrl: '',
+    participantCount: 2,
     ...partial,
   };
 }
@@ -223,5 +224,51 @@ describe('useCallStore', () => {
 
     expect(useCallStore.getState().phase).toBe('idle');
     expect(useCallStore.getState().callId).toBeNull();
+  });
+
+  // ------------------------------------------------------------------
+  // 群聊通话
+  // ------------------------------------------------------------------
+
+  it('群聊主叫：startGroupCall 以成员数组发起并标记群聊通话', async () => {
+    fakeClient.inviteCall.mockResolvedValue({ code: 0, message: 'success', callId: 'call-g1' });
+
+    await useCallStore.getState().startGroupCall(['200', '300'], { '200': '老 Y', '300': '小 Z' }, CallMediaType.VIDEO, '9001');
+
+    expect(fakeClient.inviteCall).toHaveBeenCalledWith(['200', '300'], CallMediaType.VIDEO, '9001');
+    const s = useCallStore.getState();
+    expect(s.phase).toBe('outgoing');
+    expect(s.isGroupCall).toBe(true);
+    expect(s.participantCount).toBe(3);
+    expect(s.callId).toBe('call-g1');
+  });
+
+  it('群聊来电：participantCount>2 标记为群聊通话并携带人数', async () => {
+    await useCallStore.getState().onCallEvent(pushEvent({ event: 1, participantCount: 4, peerNickname: '老 Y' }));
+
+    const s = useCallStore.getState();
+    expect(s.phase).toBe('incoming');
+    expect(s.isGroupCall).toBe(true);
+    expect(s.participantCount).toBe(4);
+  });
+
+  it('1:1 来电不标记群聊', async () => {
+    await useCallStore.getState().onCallEvent(pushEvent({ event: 1, participantCount: 2 }));
+
+    expect(useCallStore.getState().isGroupCall).toBe(false);
+  });
+
+  it('群聊主叫已在通话中：后续成员接听只记名字，不重复进房', async () => {
+    useCallStore.setState({ phase: 'outgoing', callId: 'call-1', peerId: '200', peerName: '老 Y', isGroupCall: true, participantCount: 3 });
+    await useCallStore.getState().onCallEvent(pushEvent({ event: 2, peerId: '300', peerNickname: '小 Z', room: 'r', token: 't', wsUrl: 'ws://lk' }));
+    expect(useCallStore.getState().phase).toBe('active');
+    const roomsAfterFirst = roomInstances.length;
+
+    await useCallStore.getState().onCallEvent(pushEvent({ event: 2, peerId: '400', peerNickname: '小 W', room: 'r', token: 't2', wsUrl: 'ws://lk' }));
+
+    const s = useCallStore.getState();
+    expect(s.phase).toBe('active');
+    expect(s.participantNames['400']).toBe('小 W');
+    expect(roomInstances.length).toBe(roomsAfterFirst);
   });
 });

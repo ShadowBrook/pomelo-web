@@ -3390,6 +3390,8 @@ export const im = $root.im = (() => {
              * @typedef {Object} im.call.CallInviteReq.$Properties
              * @property {number|Long|null} [peerId] CallInviteReq peerId
              * @property {im.call.CallMediaType|null} [mediaType] CallInviteReq mediaType
+             * @property {Array.<number|Long>|null} [peerIds] CallInviteReq peerIds
+             * @property {number|Long|null} [groupId] CallInviteReq groupId
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -3415,6 +3417,7 @@ export const im = $root.im = (() => {
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
             const CallInviteReq = function (properties) {
+                this.peerIds = [];
                 if (properties)
                     for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
                         if (properties[keys[i]] != null && keys[i] !== "__proto__")
@@ -3436,6 +3439,22 @@ export const im = $root.im = (() => {
              * @instance
              */
             CallInviteReq.prototype.mediaType = 0;
+
+            /**
+             * CallInviteReq peerIds.
+             * @member {Array.<number|Long>} peerIds
+             * @memberof im.call.CallInviteReq
+             * @instance
+             */
+            CallInviteReq.prototype.peerIds = $util.emptyArray;
+
+            /**
+             * CallInviteReq groupId.
+             * @member {number|Long} groupId
+             * @memberof im.call.CallInviteReq
+             * @instance
+             */
+            CallInviteReq.prototype.groupId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
 
             /**
              * Creates a new CallInviteReq instance using the specified properties.
@@ -3473,6 +3492,10 @@ export const im = $root.im = (() => {
                     writer.uint32(/* id 1, wireType 0 =*/8).int64(message.peerId);
                 if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType") && message.mediaType !== 0)
                     writer.uint32(/* id 2, wireType 0 =*/16).int32(message.mediaType);
+                if (message.peerIds != null && message.peerIds.length)
+                    writer.uint32(/* id 3, wireType 2 =*/26).int64s(message.peerIds);
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId") && (typeof message.groupId === "object" ? message.groupId.low || message.groupId.high : message.groupId !== 0))
+                    writer.uint32(/* id 4, wireType 0 =*/32).int64(message.groupId);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -3548,6 +3571,29 @@ export const im = $root.im = (() => {
                                 delete message.mediaType;
                             continue;
                         }
+                    case 3: {
+                            if (wireType === 2) {
+                                if (!(message.peerIds && message.peerIds.length))
+                                    message.peerIds = [];
+                                reader.int64s(message.peerIds);
+                                continue;
+                            }
+                            if (wireType !== 0)
+                                break;
+                            if (!(message.peerIds && message.peerIds.length))
+                                message.peerIds = [];
+                            message.peerIds.push(reader.int64());
+                            continue;
+                        }
+                    case 4: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.groupId = value;
+                            else
+                                delete message.groupId;
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -3602,6 +3648,16 @@ export const im = $root.im = (() => {
                 if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType"))
                     if (typeof message.mediaType !== "number" || (message.mediaType | 0) !== message.mediaType)
                         return "mediaType: enum value expected";
+                if (message.peerIds != null && $Object.hasOwnProperty.call(message, "peerIds")) {
+                    if (!$Array.isArray(message.peerIds))
+                        return "peerIds: array expected";
+                    for (let i = 0; i < message.peerIds.length; ++i)
+                        if (!$util.isInteger(message.peerIds[i]) && !(message.peerIds[i] && $util.isInteger(message.peerIds[i].low) && $util.isInteger(message.peerIds[i].high)))
+                            return "peerIds: integer|Long[] expected";
+                }
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (!$util.isInteger(message.groupId) && !(message.groupId && $util.isInteger(message.groupId.low) && $util.isInteger(message.groupId.high)))
+                        return "groupId: integer|Long expected";
                 return null;
             };
 
@@ -3647,6 +3703,30 @@ export const im = $root.im = (() => {
                         if (typeof object.mediaType === "number" && (object.mediaType | 0) === object.mediaType)
                             message.mediaType = object.mediaType;
                     }
+                if (object.peerIds) {
+                    if (!$Array.isArray(object.peerIds))
+                        throw $TypeError(".im.call.CallInviteReq.peerIds: array expected");
+                    message.peerIds = $Array(object.peerIds.length);
+                    for (let i = 0; i < object.peerIds.length; ++i)
+                        if ($util.Long)
+                            message.peerIds[i] = $util.Long.fromValue(object.peerIds[i], false);
+                        else if (typeof object.peerIds[i] === "string")
+                            message.peerIds[i] = $parseInt(object.peerIds[i], 10);
+                        else if (typeof object.peerIds[i] === "number")
+                            message.peerIds[i] = object.peerIds[i];
+                        else if (typeof object.peerIds[i] === "object")
+                            message.peerIds[i] = new $util.LongBits(object.peerIds[i].low >>> 0, object.peerIds[i].high >>> 0).toNumber();
+                }
+                if (object.groupId != null)
+                    if (typeof object.groupId === "object" ? object.groupId.low || object.groupId.high : $Number(object.groupId) !== 0)
+                        if ($util.Long)
+                            message.groupId = $util.Long.fromValue(object.groupId, false);
+                        else if (typeof object.groupId === "string")
+                            message.groupId = $parseInt(object.groupId, 10);
+                        else if (typeof object.groupId === "number")
+                            message.groupId = object.groupId;
+                        else if (typeof object.groupId === "object")
+                            message.groupId = new $util.LongBits(object.groupId.low >>> 0, object.groupId.high >>> 0).toNumber();
                 return message;
             };
 
@@ -3667,6 +3747,8 @@ export const im = $root.im = (() => {
                 if (_depth > $util.recursionLimit)
                     throw $Error("max depth exceeded");
                 let object = {};
+                if (options.arrays || options.defaults)
+                    object.peerIds = [];
                 if (options.defaults) {
                     if ($util.Long) {
                         let long = new $util.Long(0, 0, false);
@@ -3674,6 +3756,11 @@ export const im = $root.im = (() => {
                     } else
                         object.peerId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
                     object.mediaType = options.enums === $String ? "CALL_MEDIA_AUDIO" : 0;
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.groupId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.groupId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
                 }
                 if (message.peerId != null && $Object.hasOwnProperty.call(message, "peerId"))
                     if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
@@ -3684,6 +3771,23 @@ export const im = $root.im = (() => {
                         object.peerId = options.longs === $String ? $util.Long.prototype.toString.call(message.peerId) : options.longs === $Number ? new $util.LongBits(message.peerId.low >>> 0, message.peerId.high >>> 0).toNumber() : message.peerId;
                 if (message.mediaType != null && $Object.hasOwnProperty.call(message, "mediaType"))
                     object.mediaType = options.enums === $String ? $root.im.call.CallMediaType[message.mediaType] === $undefined ? message.mediaType : $root.im.call.CallMediaType[message.mediaType] : message.mediaType;
+                if (message.peerIds && message.peerIds.length) {
+                    object.peerIds = $Array(message.peerIds.length);
+                    for (let j = 0; j < message.peerIds.length; ++j)
+                        if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                            object.peerIds[j] = typeof message.peerIds[j] === "number" ? $BigInt(message.peerIds[j]) : $util.Long.fromBits(message.peerIds[j].low >>> 0, message.peerIds[j].high >>> 0, false).toBigInt();
+                        else if (typeof message.peerIds[j] === "number")
+                            object.peerIds[j] = options.longs === $String ? $String(message.peerIds[j]) : message.peerIds[j];
+                        else
+                            object.peerIds[j] = options.longs === $String ? $util.Long.prototype.toString.call(message.peerIds[j]) : options.longs === $Number ? new $util.LongBits(message.peerIds[j].low >>> 0, message.peerIds[j].high >>> 0).toNumber() : message.peerIds[j];
+                }
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.groupId = typeof message.groupId === "number" ? $BigInt(message.groupId) : $util.Long.fromBits(message.groupId.low >>> 0, message.groupId.high >>> 0, false).toBigInt();
+                    else if (typeof message.groupId === "number")
+                        object.groupId = options.longs === $String ? $String(message.groupId) : message.groupId;
+                    else
+                        object.groupId = options.longs === $String ? $util.Long.prototype.toString.call(message.groupId) : options.longs === $Number ? new $util.LongBits(message.groupId.low >>> 0, message.groupId.high >>> 0).toNumber() : message.groupId;
                 return object;
             };
 
@@ -5372,6 +5476,7 @@ export const im = $root.im = (() => {
              * @property {string|null} [room] CallEventPush room
              * @property {string|null} [token] CallEventPush token
              * @property {string|null} [wsUrl] CallEventPush wsUrl
+             * @property {number|null} [participantCount] CallEventPush participantCount
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -5484,6 +5589,14 @@ export const im = $root.im = (() => {
             CallEventPush.prototype.wsUrl = "";
 
             /**
+             * CallEventPush participantCount.
+             * @member {number} participantCount
+             * @memberof im.call.CallEventPush
+             * @instance
+             */
+            CallEventPush.prototype.participantCount = 0;
+
+            /**
              * Creates a new CallEventPush instance using the specified properties.
              * @function create
              * @memberof im.call.CallEventPush
@@ -5535,6 +5648,8 @@ export const im = $root.im = (() => {
                     writer.uint32(/* id 9, wireType 2 =*/74).string(message.token);
                 if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl") && message.wsUrl !== "")
                     writer.uint32(/* id 10, wireType 2 =*/82).string(message.wsUrl);
+                if (message.participantCount != null && $Object.hasOwnProperty.call(message, "participantCount") && message.participantCount !== 0)
+                    writer.uint32(/* id 11, wireType 0 =*/88).int32(message.participantCount);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -5682,6 +5797,15 @@ export const im = $root.im = (() => {
                                 delete message.wsUrl;
                             continue;
                         }
+                    case 11: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.participantCount = value;
+                            else
+                                delete message.participantCount;
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -5760,6 +5884,9 @@ export const im = $root.im = (() => {
                 if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl"))
                     if (!$util.isString(message.wsUrl))
                         return "wsUrl: string expected";
+                if (message.participantCount != null && $Object.hasOwnProperty.call(message, "participantCount"))
+                    if (!$util.isInteger(message.participantCount))
+                        return "participantCount: integer expected";
                 return null;
             };
 
@@ -5860,6 +5987,9 @@ export const im = $root.im = (() => {
                 if (object.wsUrl != null)
                     if (typeof object.wsUrl !== "string" || object.wsUrl.length)
                         message.wsUrl = $String(object.wsUrl);
+                if (object.participantCount != null)
+                    if ($Number(object.participantCount) !== 0)
+                        message.participantCount = object.participantCount | 0;
                 return message;
             };
 
@@ -5895,6 +6025,7 @@ export const im = $root.im = (() => {
                     object.room = "";
                     object.token = "";
                     object.wsUrl = "";
+                    object.participantCount = 0;
                 }
                 if (message.callId != null && $Object.hasOwnProperty.call(message, "callId"))
                     object.callId = message.callId;
@@ -5921,6 +6052,8 @@ export const im = $root.im = (() => {
                     object.token = message.token;
                 if (message.wsUrl != null && $Object.hasOwnProperty.call(message, "wsUrl"))
                     object.wsUrl = message.wsUrl;
+                if (message.participantCount != null && $Object.hasOwnProperty.call(message, "participantCount"))
+                    object.participantCount = message.participantCount;
                 return object;
             };
 

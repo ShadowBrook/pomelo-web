@@ -7,6 +7,15 @@ import { startIncomingRing, startOutgoingRing, stopRing, ensureAudioUnlocked } f
 
 export type CallPhase = 'idle' | 'outgoing' | 'incoming' | 'active';
 
+/** 通话网格里的一个远端参与方（id = LiveKit identity = userId） */
+export interface CallPeer {
+  id: string;
+  /** 展示名（昵称 > 用户名 > ID），渲染时允许组件层再兜底 */
+  name: string;
+  /** 该参与方当前发布的摄像头轨（语音通话/未开摄像头为 null） */
+  video: MediaStreamTrack | null;
+}
+
 interface CallState {
   phase: CallPhase;
   callId: string | null;
@@ -15,6 +24,14 @@ interface CallState {
   peerName: string;
   peerAvatar: string;
   mediaType: CallMediaType;
+  /** 群聊通话标记（决定浮层文案与多人网格布局） */
+  isGroupCall: boolean;
+  /** 服务端告知的参与方总数（含主叫，振铃时下发；群聊人数展示用） */
+  participantCount: number;
+  /** 远端参与方（LiveKit 房间实时视图，进房后由房间事件维护） */
+  participants: CallPeer[];
+  /** 已知参与方展示名（发起时的选人结果 + 推送携带），键为 userId */
+  participantNames: Record<string, string>;
   /** LiveKit 入会三件套 */
   room: string;
   token: string;
@@ -25,11 +42,14 @@ interface CallState {
   camOn: boolean;
   /** 本端媒体发布失败的持久提示（toast 太易错过；挂到浮层上直到重拨） */
   micError: string | null;
-  /** 远端/本地摄像头 track（视频通话预览用，组件负责挂到 <video>） */
+  /** 单聊远端摄像头轨（1:1 全屏视图用；多人网格走 participants） */
   remoteVideoTrack: MediaStreamTrack | null;
   localVideoTrack: MediaStreamTrack | null;
 
+  /** 1:1 主叫入口（聊天窗头部按钮） */
   startCall: (peerId: string, peerName: string, mediaType: CallMediaType) => Promise<void>;
+  /** 群聊通话主叫入口：peerIds 不含自己，names 为选人结果；groupId 决定记录落群会话 */
+  startGroupCall: (peerIds: string[], names: Record<string, string>, mediaType: CallMediaType, groupId?: string) => Promise<void>;
   /** SDK 的 callEvent 推送入口（useIMClient 里接线） */
   onCallEvent: (event: CallEvent) => Promise<void>;
   accept: () => Promise<void>;
@@ -42,12 +62,12 @@ interface CallState {
 
 /** LiveKit Room 实例不进响应式状态（非序列化对象），模块级持有 */
 let livekitRoom: import('livekit-client').Room | null = null;
-/** 远端语音的播放元素（attach 产物，持引用防 GC；换轨时移除旧元素） */
-let remoteAudioEl: HTMLAudioElement | null = null;
+/** 远端语音的播放元素（按参与方 identity 一人一个，持引用防 GC） */
+const remoteAudioEls = new Map<string, HTMLAudioElement>();
 
 function idle(): Pick<
   CallState,
-  'phase' | 'callId' | 'peerId' | 'peerName' | 'peerAvatar' | 'mediaType' | 'room' | 'token' | 'wsUrl' | 'connectedAt' | 'micOn' | 'camOn' | 'micError' | 'remoteVideoTrack' | 'localVideoTrack'
+  'phase' | 'callId' | 'peerId' | 'peerName' | 'peerAvatar' | 'mediaType' | 'isGroupCall' | 'participantCount' | 'participants' | 'participantNames' | 'room' | 'token' | 'wsUrl' | 'connectedAt' | 'micOn' | 'camOn' | 'micError' | 'remoteVideoTrack' | 'localVideoTrack'
 > {
     return {
       phase: 'idle',
@@ -56,6 +76,10 @@ function idle(): Pick<
       peerName: '',
       peerAvatar: '',
       mediaType: CallMediaType.AUDIO,
+      isGroupCall: false,
+      participantCount: 0,
+      participants: [],
+      participantNames: {},
       room: '',
       token: '',
       wsUrl: '',
@@ -80,32 +104,39 @@ function displayEndText(reason: number): string {
   }
 }
 
+/** 从已知名字簿解析展示名：群邀名册 > 好友列表 > 原始 ID */
+function resolvePeerName(id: string): string {
+  const s = useCallStore.getState();
+  if (s.participantNames[id]) return s.participantNames[id];
+  const friend = useFriendStore.getState().friends.find((f) => f.userId === id);
+  return friend?.nickname || friend?.userName || id;
+}
+
+/** 用新信息补充名字簿（已有名字不覆盖：群邀时选定的名字优先） */
+function rememberPeerName(id: string, name: string | undefined | null): void {
+  if (!id || !name) return;
+  const names = { ...useCallStore.getState().participantNames };
+  if (!names[id]) {
+    names[id] = name;
+    useCallStore.setState({ participantNames: names });
+  }
+}
+
 export const useCallStore = create<CallState>()(() => ({
   ...idle(),
 
-  /** 主叫入口（聊天窗头部按钮） */
+  /** 1:1 主叫入口（聊天窗头部按钮） */
   startCall: async (peerId, peerName, mediaType) => {
-    ensureAudioUnlocked();
-    const client = getIMClient();
-    if (!client) {
-      toast('连接未就绪，请稍后再试');
-      return;
-    }
-    useCallStore.setState({ phase: 'outgoing', peerId, peerName, mediaType, callId: null });
-    startOutgoingRing();
-    try {
-      const resp = await client.inviteCall(peerId, mediaType);
-      // 振铃期间可能已被 end（极少）：仅在仍是同一通 outgoing 时落 callId
-      const cur = useCallStore.getState();
-      if (cur.phase === 'outgoing' && cur.peerId === peerId) {
-        useCallStore.setState({ callId: resp.callId });
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : '呼叫失败';
-      stopRing();
-      useCallStore.setState(idle());
-      toast(msg);
-    }
+    await startOutgoingCommon({ [peerId]: peerName }, mediaType, { peerId, peerName });
+  },
+
+  /** 群聊通话主叫入口（群聊窗口选人发起） */
+  startGroupCall: async (peerIds, names, mediaType, groupId) => {
+    const first = peerIds[0] ?? '';
+    await startOutgoingCommon(names, mediaType, {
+      peerId: first,
+      peerName: names[first] || first,
+    }, peerIds, groupId);
   },
 
   /** S→C 通话事件（SDK 分发） */
@@ -120,6 +151,7 @@ export const useCallStore = create<CallState>()(() => ({
       // 来电：仅空闲时可入（忙线已被服务端挡掉，这里是双保险）
       if (s.phase !== 'idle') return;
       const friend = useFriendStore.getState().friends.find((f) => f.userId === event.peerId);
+      const isGroup = (event.participantCount ?? 0) > 2;
       useCallStore.setState({
         phase: 'incoming',
         callId: event.callId,
@@ -127,14 +159,22 @@ export const useCallStore = create<CallState>()(() => ({
         peerName: event.peerNickname || event.peerUserName || friend?.nickname || event.peerId,
         peerAvatar: friend?.avatar || '',
         mediaType: event.mediaType,
+        isGroupCall: isGroup,
+        participantCount: event.participantCount ?? 0,
+        participants: [],
+        participantNames: {},
       });
+      rememberPeerName(event.peerId, event.peerNickname || event.peerUserName);
       startIncomingRing();
       return;
     }
 
     if (event.event === 2) {
-      // 对方接听（我是主叫）：拿主叫入会材料进房
-      if (s.phase !== 'outgoing' || event.callId !== s.callId) return;
+      // 对方（或群聊中某成员）接听：主叫拿自己的入会材料进房。
+      // 已在 active 中时后续接听不再重复进房（新人由 LiveKit ParticipantConnected 呈现），只记名字。
+      if (s.phase === 'idle' || event.callId !== s.callId) return;
+      rememberPeerName(event.peerId, event.peerNickname || event.peerUserName);
+      if (s.phase !== 'outgoing') return;
       stopRing();
       useCallStore.setState({
         phase: 'active',
@@ -243,6 +283,48 @@ export const useCallStore = create<CallState>()(() => ({
   },
 }));
 
+/** 主叫公共路径：置 outgoing 态 → inviteCall（群聊传数组）→ 落 callId */
+async function startOutgoingCommon(
+  names: Record<string, string>,
+  mediaType: CallMediaType,
+  peerView: { peerId: string; peerName: string },
+  peerIds?: string[],
+  groupId?: string,
+): Promise<void> {
+  ensureAudioUnlocked();
+  const client = getIMClient();
+  if (!client) {
+    toast('连接未就绪，请稍后再试');
+    return;
+  }
+  useCallStore.setState({
+    phase: 'outgoing',
+    peerId: peerView.peerId,
+    peerName: peerView.peerName,
+    mediaType,
+    isGroupCall: (peerIds?.length ?? 0) > 1,
+    participantCount: (peerIds?.length ?? 1) + 1,
+    participantNames: { ...names },
+    callId: null,
+  });
+  startOutgoingRing();
+  try {
+    const resp = peerIds && peerIds.length > 1
+      ? await client.inviteCall(peerIds, mediaType, groupId)
+      : await client.inviteCall(peerView.peerId, mediaType);
+    // 振铃期间可能已被 end（极少）：仅在仍是同一通 outgoing 时落 callId
+    const cur = useCallStore.getState();
+    if (cur.phase === 'outgoing' && cur.peerId === peerView.peerId) {
+      useCallStore.setState({ callId: resp.callId });
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '呼叫失败';
+    stopRing();
+    useCallStore.setState(idle());
+    toast(msg);
+  }
+}
+
 // ------------------------------------------------------------------
 // LiveKit 房间
 // ------------------------------------------------------------------
@@ -255,6 +337,33 @@ export const useCallStore = create<CallState>()(() => ({
 const CAM_CAPTURE = { resolution: { width: 640, height: 480, frameRate: 24 } };
 const CAM_PUBLISH = { videoEncoding: { maxBitrate: 500_000, maxFramerate: 24 } };
 
+/** 依名字簿更新远端参与方列表（保留已有 video 轨） */
+function upsertPeer(id: string, video: MediaStreamTrack | null | undefined): void {
+  const cur = useCallStore.getState().participants;
+  const idx = cur.findIndex((p) => p.id === id);
+  if (idx >= 0) {
+    if (video === undefined) return;
+    const next = [...cur];
+    next[idx] = { ...next[idx], video };
+    useCallStore.setState({ participants: next });
+    return;
+  }
+  useCallStore.setState({
+    participants: [...cur, { id, name: resolvePeerName(id), video: video ?? null }],
+  });
+}
+
+function removePeer(id: string): void {
+  useCallStore.setState({
+    participants: useCallStore.getState().participants.filter((p) => p.id !== id),
+  });
+  const el = remoteAudioEls.get(id);
+  if (el) {
+    el.remove();
+    remoteAudioEls.delete(id);
+  }
+}
+
 async function joinLiveKit(): Promise<void> {
   const { room, token, wsUrl, mediaType } = useCallStore.getState();
   if (!room || !token || !wsUrl) return;
@@ -264,24 +373,39 @@ async function joinLiveKit(): Promise<void> {
     const lk = new Room({ adaptiveStream: true, dynacast: true });
     livekitRoom = lk;
 
-    lk.on(RoomEvent.TrackSubscribed, (track) => {
+    lk.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
       console.info('[Call] 订阅到远端轨:', track.source, track.kind);
+      const id = participant?.identity ?? '';
       if (track.kind === 'video') {
         useCallStore.setState({ remoteVideoTrack: track.mediaStreamTrack });
+        if (id) upsertPeer(id, track.mediaStreamTrack);
       } else if (track.kind === 'audio') {
-        // 远端语音：attach 产出 <audio> 并播放；持引用防 GC，换轨时移除旧元素
-        remoteAudioEl?.remove();
+        // 远端语音：按参与方各挂一个 <audio>；持引用防 GC，离房时统一清理
+        remoteAudioEls.get(id)?.remove();
         const el = track.attach();
         el.autoplay = true;
         el.play?.().catch(() => { /* 自动播放被拦时保持静默，用户点界面任意处即解锁 */ });
-        remoteAudioEl = el;
+        remoteAudioEls.set(id, el);
       }
     });
-    lk.on(RoomEvent.TrackUnsubscribed, (track) => {
+    lk.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
       track.detach();
+      const id = participant?.identity ?? '';
       if (track.kind === 'video') {
         useCallStore.setState({ remoteVideoTrack: null });
+        if (id) upsertPeer(id, null);
       }
+      if (track.kind === 'audio' && id) {
+        remoteAudioEls.get(id)?.remove();
+        remoteAudioEls.delete(id);
+      }
+    });
+    lk.on(RoomEvent.ParticipantConnected, (participant) => {
+      rememberPeerName(participant.identity, participant.name);
+      upsertPeer(participant.identity, undefined);
+    });
+    lk.on(RoomEvent.ParticipantDisconnected, (participant) => {
+      removePeer(participant.identity);
     });
     lk.on(RoomEvent.LocalTrackPublished, (pub) => {
       if (pub.source === Track.Source.Camera && pub.track?.mediaStreamTrack) {
@@ -308,6 +432,13 @@ async function joinLiveKit(): Promise<void> {
     });
 
     await lk.connect(wsUrl, token);
+
+    // 进房时已在房间里的其他参与方（群聊先到者）立即入列
+    for (const p of Array.from(lk.remoteParticipants?.values() ?? [])) {
+      rememberPeerName(p.identity, p.name);
+      const cam = p.getTrackPublication?.(Track.Source.Camera);
+      upsertPeer(p.identity, cam?.track?.mediaStreamTrack ?? null);
+    }
 
     // 关键：发布本端媒体。livekit-client 不会自动推流，不调 enable 则整通无声/无画面
     try {
@@ -361,7 +492,6 @@ async function leaveLiveKit(): Promise<void> {
       // 断开失败无需处理
     }
   }
-  remoteAudioEl?.remove();
-  remoteAudioEl = null;
+  remoteAudioEls.forEach((el) => el.remove());
+  remoteAudioEls.clear();
 }
-

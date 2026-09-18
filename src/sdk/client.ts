@@ -413,12 +413,19 @@ export class IMClient {
   // Call Operations（音视频通话信令；媒体直连 LiveKit，不经 IM 通道）
   // ================================================================
 
-  /** 发起通话，成功返回 callId */
-  inviteCall(peerId: string, mediaType: CallMediaType): Promise<CallInviteResp> {
+  /**
+   * 发起通话，成功返回 callId。
+   * 传数组即群聊通话（peer_ids，不含主叫；人数上限由服务端约束）；
+   * groupId 为群聊通话的归属群，>0 时通话记录落群会话而非双方收件箱。
+   */
+  inviteCall(peerId: string | string[], mediaType: CallMediaType, groupId?: string): Promise<CallInviteResp> {
+    const body = Array.isArray(peerId)
+      ? { peerId: peerId[0], mediaType, peerIds: peerId.map((id) => Number(id)), groupId: Number(groupId ?? 0) }
+      : { peerId, mediaType };
     return this._sendFriendOp<CallInviteResp>(
       Cmd.CALL_INVITE_REQ,
       Cmd.CALL_INVITE_RESP,
-      enc(im.call.CallInviteReq, { peerId, mediaType }),
+      enc(im.call.CallInviteReq, body),
       'call-invite',
       10000,
     );
@@ -1376,6 +1383,7 @@ export class IMClient {
           room: p?.room ?? '',
           token: p?.token ?? '',
           wsUrl: p?.wsUrl ?? '',
+          participantCount: p?.participantCount ?? 0,
         };
         this._emit('callEvent', event);
         break;

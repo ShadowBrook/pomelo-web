@@ -171,12 +171,14 @@ export function callRecordIsSelf(content: string): boolean | null {
 
 /**
  * 通话记录系统消息（MSG_TYPE_SYSTEM）→ 展示文本。
- * content: {"kind":"call","mediaType":0|1,"answered":bool,"durationMs":n,...}
+ * content: {"kind":"call","mediaType":0|1,"answered":bool,"durationMs":n,"participants":n,...}
+ * participants>2 视为群聊通话，文案带人数。
  */
 export function formatCallRecord(content: string): string {
   const c = parseCallRecord(content);
   if (!c) return content;
-  const media = Number(c.mediaType) === 1 ? '视频通话' : '语音通话';
+  const count = Number(c.participants ?? 0);
+  const media = `${Number(c.mediaType) === 1 ? '视频' : '语音'}${count > 2 ? `群聊通话（${count} 人）` : '通话'}`;
   const durationMs = Number(c.durationMs);
   if (c.answered && durationMs > 0) {
     const total = Math.round(durationMs / 1000);

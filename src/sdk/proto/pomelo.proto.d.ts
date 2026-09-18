@@ -1453,6 +1453,12 @@ export namespace im {
             /** CallInviteReq mediaType. */
             mediaType: im.call.CallMediaType;
 
+            /** CallInviteReq peerIds. */
+            peerIds: (number|Long)[];
+
+            /** CallInviteReq groupId. */
+            groupId: (number|Long);
+
             /**
              * Creates a new CallInviteReq instance using the specified properties.
              * @param [properties] Properties to set
@@ -1542,6 +1548,12 @@ export namespace im {
 
                 /** CallInviteReq mediaType */
                 mediaType?: (im.call.CallMediaType|null);
+
+                /** CallInviteReq peerIds */
+                peerIds?: ((number|Long)[]|null);
+
+                /** CallInviteReq groupId */
+                groupId?: (number|Long|null);
 
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
@@ -2233,6 +2245,9 @@ export namespace im {
             /** CallEventPush wsUrl. */
             wsUrl: string;
 
+            /** CallEventPush participantCount. */
+            participantCount: number;
+
             /**
              * Creates a new CallEventPush instance using the specified properties.
              * @param [properties] Properties to set
@@ -2346,6 +2361,9 @@ export namespace im {
 
                 /** CallEventPush wsUrl */
                 wsUrl?: (string|null);
+
+                /** CallEventPush participantCount */
+                participantCount?: (number|null);
 
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
