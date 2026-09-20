@@ -8,6 +8,8 @@ import { formatMsgTime } from '@/utils/imTime';
 interface Props {
   messages: ChatMessage[];
   currentUserId: string;
+  /** 会话对端（单聊=对方 userId；群聊=groupId），透传给气泡解析发送者头像 */
+  peerId?: string;
   onRetry?: (messageId: string) => void;
   onLoadMore?: () => void;
   loadingHistory?: boolean;
@@ -34,6 +36,7 @@ function shouldShowTimeDivider(prev: ChatMessage | null, curr: ChatMessage): boo
 export function MessageList({
   messages,
   currentUserId,
+  peerId,
   onRetry,
   onLoadMore,
   loadingHistory = false,
@@ -118,7 +121,7 @@ export function MessageList({
             <div className={`mb-1 ${isSelf ? 'text-right pr-[52px]' : 'text-left pl-[52px]'}`}>
               {showTime && <span className="text-[11px] text-text-sub">{formatMsgTime(msg.timestamp)}</span>}
             </div>
-            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} readCount={readCounts?.[msg.seq ?? -1]} groupMemberCount={groupMemberCount} onReply={onReply} onForward={onForward} selecting={selecting} selected={selectedIds?.has(msg.id)} onToggleSelect={onToggleSelect} onStartSelect={onStartSelect} />
+            <MessageBubble message={msg} isSelf={isSelf} peerId={peerId} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} readCount={readCounts?.[msg.seq ?? -1]} groupMemberCount={groupMemberCount} onReply={onReply} onForward={onForward} selecting={selecting} selected={selectedIds?.has(msg.id)} onToggleSelect={onToggleSelect} onStartSelect={onStartSelect} />
           </div>
         );
       })}

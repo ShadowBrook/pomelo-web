@@ -8,6 +8,7 @@ import { getProfile } from '@/utils/api';
 import { getIMClient } from '@/hooks/useIMClient';
 import { GridAvatar } from '@/components/GridAvatar';
 import { InviteMemberDialog } from '@/components/InviteMemberDialog';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import type { GroupMember } from '@/sdk/types';
 
 interface Props {
@@ -95,6 +96,8 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
   const friend = useFriendStore((s) => s.friends.find((f) => f.userId === peerId));
   const group = useGroupStore((s) => s.groups[peerId]);
   const members = useGroupStore((s) => s.groupMembers[peerId]);
+  // 自己与自己的会话：不按陌生人处理，也不展示加好友/删好友操作
+  const isSelf = peerId === user?.userId;
   // 陌生人资料兜底（好友数据缺头像/昵称时也拉一次）
   const [profile, setProfile] = useState<{ nickname: string; avatar: string } | null>(null);
   // 移除群成员的确认目标（null 表示无弹窗）
@@ -118,7 +121,7 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
       getProfile(peerId)
         .then((res) => {
           // 后端 ok() 把字段挂在顶层（{code, nickname, avatar, ...}），没有 data 包裹层
-          if (!cancelled && res.nickname) setProfile({ nickname: res.nickname, avatar: res.avatar });
+          if (!cancelled && res.nickname) setProfile({ nickname: res.nickname, avatar: sameOriginMediaUrl(res.avatar) });
         })
         .catch(() => {});
     }
@@ -196,7 +199,8 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
               )}
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-base font-medium text-text-main truncate">{displayName}</span>
-                {!friend && <span className="text-[11px] px-1.5 rounded-sm bg-warn text-white flex-shrink-0">陌生人</span>}
+                {isSelf && <span className="text-[11px] px-1.5 rounded-sm bg-primary/15 text-primary flex-shrink-0">自己</span>}
+                {!friend && !isSelf && <span className="text-[11px] px-1.5 rounded-sm bg-warn text-white flex-shrink-0">陌生人</span>}
               </div>
             </div>
           )}
@@ -309,7 +313,7 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
               </button>
             </div>
           ) : (
-            user && <FooterAction peerId={peerId} isFriend={!!friend} />
+            user && !isSelf && <FooterAction peerId={peerId} isFriend={!!friend} />
           )}
         </div>
       </div>

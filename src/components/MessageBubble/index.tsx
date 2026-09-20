@@ -12,6 +12,9 @@ import {
   unwrapReplyContent,
 } from '@/sdk/media';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useFriendStore } from '@/stores/useFriendStore';
+import { useGroupStore } from '@/stores/useGroupStore';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 
 /** 视频消息：封面缩略图 + 播放浮层 + 时长角标，点击弹出全屏播放页 */
 function VideoMessage({ url, thumbUrl, durationMs }: { url?: string; thumbUrl?: string; durationMs?: number }) {
@@ -321,6 +324,8 @@ function ForwardCard({ content }: { content: string }) {
 interface Props {
   message: ChatMessage;
   isSelf: boolean;
+  /** 会话对端（单聊=对方 userId；群聊=groupId），用于解析发送者头像 */
+  peerId?: string;
   onRetry?: (messageId: string) => void;
   isGroup?: boolean;
   onReadClick?: (messageId: string, seq: number) => void;
@@ -438,10 +443,18 @@ function Body({ message }: { message: ChatMessage }) {
 }
 
 export const MessageBubble = React.memo(function MessageBubble({
-  message, isSelf, onRetry, isGroup, onReadClick, readCount, groupMemberCount, onReply, onForward, selecting, selected, onToggleSelect, onStartSelect,
+  message, isSelf, peerId, onRetry, isGroup, onReadClick, readCount, groupMemberCount, onReply, onForward, selecting, selected, onToggleSelect, onStartSelect,
 }: Props) {
   const avatar = useAuthStore((s) => s.user?.avatar);
   const selfChar = useAuthStore((s) => s.user?.nickname?.charAt(0).toUpperCase() || '我');
+  // 对方头像：单聊查好友资料，群聊按发送者查成员缓存（均已在入库时做过同源改写）
+  const friend = useFriendStore((s) => s.friends.find((f) => f.userId === peerId));
+  const groupMembers = useGroupStore((s) => s.groupMembers[peerId ?? '']);
+  const senderMember = groupMembers?.find((m) => m.userId === message.senderId);
+  const peerName = isGroup
+    ? senderMember?.nickname || message.senderNickname || message.senderUserName || message.senderId
+    : friend?.nickname || friend?.userName || message.senderNickname || message.senderUserName || message.senderId;
+  const peerAvatar = sameOriginMediaUrl((isGroup ? senderMember?.avatar : friend?.avatar) || '');
 
   const qos = isSelf && !isGroup && (message.status === 'pending' || message.status === 'sending' || message.status === 'failed');
   // 全部已读：除自己外的成员都已读（成员数含自己）
@@ -465,7 +478,9 @@ export const MessageBubble = React.memo(function MessageBubble({
 
       {!isSelf && (
         <div className="w-9 h-9 rounded-md bg-primary/15 flex-shrink-0 flex items-center justify-center text-primary text-xs mr-2 overflow-hidden">
-          {(message.senderNickname || message.senderUserName || message.senderId).charAt(0).toUpperCase()}
+          {peerAvatar
+            ? <img src={peerAvatar} alt={peerName} className="w-full h-full object-cover" />
+            : peerName.charAt(0).toUpperCase()}
         </div>
       )}
 
@@ -525,7 +540,7 @@ export const MessageBubble = React.memo(function MessageBubble({
 
       {isSelf && (
         <div className="w-9 h-9 rounded-md bg-primary/15 flex-shrink-0 flex items-center justify-center text-primary text-xs ml-2 overflow-hidden">
-          {avatar ? <img src={avatar} alt="me" className="w-full h-full object-cover" /> : selfChar}
+          {avatar ? <img src={sameOriginMediaUrl(avatar)} alt="me" className="w-full h-full object-cover" /> : selfChar}
         </div>
       )}
     </div>

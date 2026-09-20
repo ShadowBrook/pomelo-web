@@ -67,6 +67,10 @@ export enum Cmd {
   CMD_UPLOAD_REQ = 0x00A0,
   CMD_UPLOAD_RESP = 0x00A1,
 
+  // 用户资料 0x00C0-0x00C1
+  CMD_PROFILE_UPDATE_REQ = 0x00C0,
+  CMD_PROFILE_UPDATE_RESP = 0x00C1,
+
   // 音视频通话 0x00B0-0x00B8（信令走 IM 通道，媒体直连 LiveKit SFU）
   CALL_INVITE_REQ = 0x00B0,
   CALL_INVITE_RESP = 0x00B1,
@@ -371,6 +375,13 @@ export interface UploadResp {
   objectKey: string;
   presignedUrl: string; // presigned PUT URL
   expireAt: number;
+}
+
+// 资料更新响应（CMD_PROFILE_UPDATE_RESP body）
+export interface UpdateProfileResp {
+  code: number;
+  message: string;
+  avatar: string; // 读侧预签名后的头像 URL，可直接渲染
 }
 
 // 媒体消息 content 的字符串化 JSON 结构。

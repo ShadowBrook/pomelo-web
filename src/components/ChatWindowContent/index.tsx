@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useChatSession } from '@/hooks/useChatSession';
 import { useGroupReadCounts } from '@/hooks/useGroupReadCounts';
 import { useBrowserFullscreen } from '@/hooks/useBrowserFullscreen';
@@ -8,6 +8,8 @@ import { useConversationStore } from '@/stores/useConversationStore';
 import { CallMediaType } from '@/sdk/types';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { toast } from '@/stores/useToastStore';
+import * as api from '@/utils/api';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { ChatWindowHeader } from '@/components/ChatWindowHeader';
@@ -31,6 +33,35 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
   const s = useChatSession(peerId);
   const { isFullscreen, toggle: toggleFullscreen } = useBrowserFullscreen();
   const [detailOpen, setDetailOpen] = useState(true);
+
+  // 头像懒刷新：进入单聊时拉一次最新资料（服务端读侧签名），回填好友与会话缓存。
+  // 不做变更扇出推送；群聊成员头像由 ChatDetailPanel 打开时的 getGroupMembers 刷新。
+  useEffect(() => {
+    if (s.isGroup) return;
+    let cancelled = false;
+    api.getProfile(peerId).then((p) => {
+      if (cancelled || !p || p.code !== 0 || !p.avatar) return;
+      const avatar = sameOriginMediaUrl(p.avatar);
+      const friendState = useFriendStore.getState();
+      if (friendState.friends.some((f) => f.userId === peerId && f.avatar !== avatar)) {
+        useFriendStore.setState({
+          friends: friendState.friends.map((f) => (f.userId === peerId ? { ...f, avatar } : f)),
+        });
+      }
+      const convState = useConversationStore.getState();
+      const conv = convState.conversations[peerId];
+      if (conv && conv.avatar !== avatar) {
+        useConversationStore.setState({
+          conversations: { ...convState.conversations, [peerId]: { ...conv, avatar } },
+        });
+      }
+    }).catch(() => {
+      // 资料拉取失败不影响聊天：沿用缓存里的旧头像
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [peerId, s.isGroup]);
 
   // 通话入口：单聊直接拨给对端；群聊先选人（多选上限见 GroupCallDialog）再发起群聊通话
   const startCall = (mediaType: CallMediaType) => {
@@ -173,6 +204,7 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           <MessageList
             messages={s.messages}
             currentUserId={s.currentUserId}
+            peerId={peerId}
             onRetry={s.retrySend}
             loadingHistory={s.loadingHistory}
             hasMore={s.hasMore}

@@ -1,6 +1,7 @@
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 /** 聊天窗标题段：名称 + 人数/陌生人徽章（声音/全屏/关闭在头部行右端，见 ChatWindowContent） */
 export function ChatWindowHeader({ peerId }: { peerId: string }) {
@@ -8,9 +9,11 @@ export function ChatWindowHeader({ peerId }: { peerId: string }) {
   const friend = useFriendStore((s) => s.friends.find((f) => f.userId === peerId));
   const group = useGroupStore((s) => s.groups[peerId]);
   const memberCount = useGroupStore((s) => s.groupMembers[peerId]?.length);
+  const selfId = useAuthStore((s) => s.user?.userId);
 
   const isGroup = conversation?.type === 'group';
-  const isStranger = !isGroup && !friend;
+  // 自己与自己的会话不是陌生人
+  const isStranger = !isGroup && peerId !== selfId && !friend;
   const count = memberCount ?? group?.memberCount;
 
   return (

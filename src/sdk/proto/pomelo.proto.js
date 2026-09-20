@@ -1082,6 +1082,8 @@ export const im = $root.im = (() => {
          * @property {number} CMD_CALL_EVENT_PUSH=182 CMD_CALL_EVENT_PUSH value
          * @property {number} CMD_CALL_TOKEN_REQ=183 CMD_CALL_TOKEN_REQ value
          * @property {number} CMD_CALL_TOKEN_RESP=184 CMD_CALL_TOKEN_RESP value
+         * @property {number} CMD_PROFILE_UPDATE_REQ=192 CMD_PROFILE_UPDATE_REQ value
+         * @property {number} CMD_PROFILE_UPDATE_RESP=193 CMD_PROFILE_UPDATE_RESP value
          * @property {number} CMD_ERROR=65535 CMD_ERROR value
          */
         common.Cmd = (function() {
@@ -1150,6 +1152,8 @@ export const im = $root.im = (() => {
             values[valuesById[182] = "CMD_CALL_EVENT_PUSH"] = 182;
             values[valuesById[183] = "CMD_CALL_TOKEN_REQ"] = 183;
             values[valuesById[184] = "CMD_CALL_TOKEN_RESP"] = 184;
+            values[valuesById[192] = "CMD_PROFILE_UPDATE_REQ"] = 192;
+            values[valuesById[193] = "CMD_PROFILE_UPDATE_RESP"] = 193;
             values[valuesById[65535] = "CMD_ERROR"] = 65535;
             return values;
         })();
@@ -20319,6 +20323,14 @@ export const im = $root.im = (() => {
                     case 184:
                         message.cmd = 184;
                         break;
+                    case "CMD_PROFILE_UPDATE_REQ":
+                    case 192:
+                        message.cmd = 192;
+                        break;
+                    case "CMD_PROFILE_UPDATE_RESP":
+                    case 193:
+                        message.cmd = 193;
+                        break;
                     case "CMD_ERROR":
                     case 65535:
                         message.cmd = 65535;
@@ -22511,6 +22523,627 @@ export const im = $root.im = (() => {
         })();
 
         return upload;
+    })();
+
+    im.profile = (function() {
+
+        /**
+         * Namespace profile.
+         * @memberof im
+         * @namespace
+         */
+        const profile = {};
+
+        profile.ProfileUpdateReq = (function() {
+
+            /**
+             * Properties of a ProfileUpdateReq.
+             * @typedef {Object} im.profile.ProfileUpdateReq.$Properties
+             * @property {string|null} [avatar] ProfileUpdateReq avatar
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a ProfileUpdateReq.
+             * @memberof im.profile
+             * @interface IProfileUpdateReq
+             * @augments im.profile.ProfileUpdateReq.$Properties
+             * @deprecated Use im.profile.ProfileUpdateReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a ProfileUpdateReq.
+             * @typedef {im.profile.ProfileUpdateReq.$Properties} im.profile.ProfileUpdateReq.$Shape
+             */
+
+            /**
+             * Constructs a new ProfileUpdateReq.
+             * @memberof im.profile
+             * @classdesc Represents a ProfileUpdateReq.
+             * @constructor
+             * @param {im.profile.ProfileUpdateReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const ProfileUpdateReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * ProfileUpdateReq avatar.
+             * @member {string} avatar
+             * @memberof im.profile.ProfileUpdateReq
+             * @instance
+             */
+            ProfileUpdateReq.prototype.avatar = "";
+
+            /**
+             * Creates a new ProfileUpdateReq instance using the specified properties.
+             * @function create
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {im.profile.ProfileUpdateReq.$Properties=} [properties] Properties to set
+             * @returns {im.profile.ProfileUpdateReq} ProfileUpdateReq instance
+             * @type {{
+             *   (properties: im.profile.ProfileUpdateReq.$Shape): im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape;
+             *   (properties?: im.profile.ProfileUpdateReq.$Properties): im.profile.ProfileUpdateReq;
+             * }}
+             */
+            ProfileUpdateReq.create = function(properties) {
+                return new ProfileUpdateReq(properties);
+            };
+
+            /**
+             * Encodes the specified ProfileUpdateReq message. Does not implicitly {@link im.profile.ProfileUpdateReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {im.profile.ProfileUpdateReq.$Properties} message ProfileUpdateReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            ProfileUpdateReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar") && message.avatar !== "")
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.avatar);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified ProfileUpdateReq message, length delimited. Does not implicitly {@link im.profile.ProfileUpdateReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {im.profile.ProfileUpdateReq.$Properties} message ProfileUpdateReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            ProfileUpdateReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a ProfileUpdateReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape} ProfileUpdateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            ProfileUpdateReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.profile.ProfileUpdateReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.avatar = value;
+                            else
+                                delete message.avatar;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a ProfileUpdateReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape} ProfileUpdateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            ProfileUpdateReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a ProfileUpdateReq message.
+             * @function verify
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            ProfileUpdateReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
+                    if (!$util.isString(message.avatar))
+                        return "avatar: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a ProfileUpdateReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.profile.ProfileUpdateReq} ProfileUpdateReq
+             */
+            ProfileUpdateReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.profile.ProfileUpdateReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.profile.ProfileUpdateReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.profile.ProfileUpdateReq();
+                if (object.avatar != null)
+                    if (typeof object.avatar !== "string" || object.avatar.length)
+                        message.avatar = $String(object.avatar);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a ProfileUpdateReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {im.profile.ProfileUpdateReq} message ProfileUpdateReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            ProfileUpdateReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults)
+                    object.avatar = "";
+                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
+                    object.avatar = message.avatar;
+                return object;
+            };
+
+            /**
+             * Converts this ProfileUpdateReq to JSON.
+             * @function toJSON
+             * @memberof im.profile.ProfileUpdateReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            ProfileUpdateReq.prototype.toJSON = function() {
+                return ProfileUpdateReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for ProfileUpdateReq
+             * @function getTypeUrl
+             * @memberof im.profile.ProfileUpdateReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            ProfileUpdateReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.profile.ProfileUpdateReq";
+            };
+
+            return ProfileUpdateReq;
+        })();
+
+        profile.ProfileUpdateResp = (function() {
+
+            /**
+             * Properties of a ProfileUpdateResp.
+             * @typedef {Object} im.profile.ProfileUpdateResp.$Properties
+             * @property {number|null} [code] ProfileUpdateResp code
+             * @property {string|null} [message] ProfileUpdateResp message
+             * @property {string|null} [avatar] ProfileUpdateResp avatar
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a ProfileUpdateResp.
+             * @memberof im.profile
+             * @interface IProfileUpdateResp
+             * @augments im.profile.ProfileUpdateResp.$Properties
+             * @deprecated Use im.profile.ProfileUpdateResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a ProfileUpdateResp.
+             * @typedef {im.profile.ProfileUpdateResp.$Properties} im.profile.ProfileUpdateResp.$Shape
+             */
+
+            /**
+             * Constructs a new ProfileUpdateResp.
+             * @memberof im.profile
+             * @classdesc Represents a ProfileUpdateResp.
+             * @constructor
+             * @param {im.profile.ProfileUpdateResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const ProfileUpdateResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * ProfileUpdateResp code.
+             * @member {number} code
+             * @memberof im.profile.ProfileUpdateResp
+             * @instance
+             */
+            ProfileUpdateResp.prototype.code = 0;
+
+            /**
+             * ProfileUpdateResp message.
+             * @member {string} message
+             * @memberof im.profile.ProfileUpdateResp
+             * @instance
+             */
+            ProfileUpdateResp.prototype.message = "";
+
+            /**
+             * ProfileUpdateResp avatar.
+             * @member {string} avatar
+             * @memberof im.profile.ProfileUpdateResp
+             * @instance
+             */
+            ProfileUpdateResp.prototype.avatar = "";
+
+            /**
+             * Creates a new ProfileUpdateResp instance using the specified properties.
+             * @function create
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {im.profile.ProfileUpdateResp.$Properties=} [properties] Properties to set
+             * @returns {im.profile.ProfileUpdateResp} ProfileUpdateResp instance
+             * @type {{
+             *   (properties: im.profile.ProfileUpdateResp.$Shape): im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape;
+             *   (properties?: im.profile.ProfileUpdateResp.$Properties): im.profile.ProfileUpdateResp;
+             * }}
+             */
+            ProfileUpdateResp.create = function(properties) {
+                return new ProfileUpdateResp(properties);
+            };
+
+            /**
+             * Encodes the specified ProfileUpdateResp message. Does not implicitly {@link im.profile.ProfileUpdateResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {im.profile.ProfileUpdateResp.$Properties} message ProfileUpdateResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            ProfileUpdateResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar") && message.avatar !== "")
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.avatar);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified ProfileUpdateResp message, length delimited. Does not implicitly {@link im.profile.ProfileUpdateResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {im.profile.ProfileUpdateResp.$Properties} message ProfileUpdateResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            ProfileUpdateResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a ProfileUpdateResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape} ProfileUpdateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            ProfileUpdateResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.profile.ProfileUpdateResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    case 3: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.avatar = value;
+                            else
+                                delete message.avatar;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a ProfileUpdateResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape} ProfileUpdateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            ProfileUpdateResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a ProfileUpdateResp message.
+             * @function verify
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            ProfileUpdateResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
+                    if (!$util.isString(message.avatar))
+                        return "avatar: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a ProfileUpdateResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.profile.ProfileUpdateResp} ProfileUpdateResp
+             */
+            ProfileUpdateResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.profile.ProfileUpdateResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.profile.ProfileUpdateResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.profile.ProfileUpdateResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                if (object.avatar != null)
+                    if (typeof object.avatar !== "string" || object.avatar.length)
+                        message.avatar = $String(object.avatar);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a ProfileUpdateResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {im.profile.ProfileUpdateResp} message ProfileUpdateResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            ProfileUpdateResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                    object.avatar = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
+                    object.avatar = message.avatar;
+                return object;
+            };
+
+            /**
+             * Converts this ProfileUpdateResp to JSON.
+             * @function toJSON
+             * @memberof im.profile.ProfileUpdateResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            ProfileUpdateResp.prototype.toJSON = function() {
+                return ProfileUpdateResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for ProfileUpdateResp
+             * @function getTypeUrl
+             * @memberof im.profile.ProfileUpdateResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            ProfileUpdateResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.profile.ProfileUpdateResp";
+            };
+
+            return ProfileUpdateResp;
+        })();
+
+        return profile;
     })();
 
     im.relation = (function() {

@@ -1,4 +1,5 @@
 import { CallRecordContent, MediaContent, MsgType, ReplySnippet } from './types';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 
 /** 媒体类型判断（含图片/语音/视频/文件/自定义表情） */
 export function isMediaType(msgType: number): boolean {
@@ -15,7 +16,11 @@ export function parseMediaContent(content: string): MediaContent | null {
   try {
     const obj = JSON.parse(content);
     if (!obj || typeof obj !== 'object' || typeof obj.key !== 'string') return null;
-    return obj as MediaContent;
+    const media = obj as MediaContent;
+    // 服务端注入的 url/thumbUrl 是 http presigned 时改写为同源 /minio 代理（Safari 混合内容）
+    if (media.url) media.url = sameOriginMediaUrl(media.url);
+    if (media.thumbUrl) media.thumbUrl = sameOriginMediaUrl(media.thumbUrl);
+    return media;
   } catch {
     return null;
   }

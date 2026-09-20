@@ -1,5 +1,6 @@
 import { encode, decode, generateId } from './protocol';
 import { enc, plain, text, im } from './pbcodec';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import {
   Cmd,
   MsgType,
@@ -22,6 +23,7 @@ import {
   GroupReadStateResp,
   GroupMemberChangeNotify,
   UploadResp,
+  UpdateProfileResp,
   CallEvent,
   CallInviteResp,
   CallJoinInfo,
@@ -532,9 +534,10 @@ export class IMClient {
    * 文件字节直传 presigned PUT URL。
    * Content-Type 必须与预签名时的 content-type 完全一致（SigV4 签名包含该 header），
    * 否则 MinIO 返回 SignatureDoesNotMatch。
+   * presigned URL 为 http 时改写为同源 /minio 代理（https 页面直连会被 Safari 按混合内容拦截）。
    */
   async putFileToPresignedUrl(presignedUrl: string, file: File): Promise<void> {
-    const resp = await fetch(presignedUrl, {
+    const resp = await fetch(sameOriginMediaUrl(presignedUrl), {
       method: 'PUT',
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
@@ -542,6 +545,23 @@ export class IMClient {
     if (!resp.ok) {
       throw new Error(`上传文件失败: HTTP ${resp.status}`);
     }
+  }
+
+  /**
+   * 更新资料（CMD_PROFILE_UPDATE_REQ/RESP），当前仅头像。
+   * avatarKey 为先经 requestUpload/putFileToPresignedUrl 直传的服务端对象 key；
+   * 响应 avatar 是读侧预签名 GET URL，可直接渲染。
+   */
+  updateProfile(avatarKey: string): Promise<UpdateProfileResp> {
+    return this._sendGroupOp(
+      Cmd.CMD_PROFILE_UPDATE_REQ,
+      Cmd.CMD_PROFILE_UPDATE_RESP,
+      enc(im.profile.ProfileUpdateReq, { avatar: avatarKey }),
+    ).then((raw: any) => ({
+      code: raw?.code ?? 0,
+      message: raw?.message ?? '',
+      avatar: raw?.avatar || '',
+    }));
   }
 
   // ================================================================
@@ -1140,7 +1160,7 @@ export class IMClient {
       userId: String(n.userId ?? ''),
       userName: n.userName || '',
       nickname: n.nickname || '',
-      avatar: n.avatar || '',
+      avatar: sameOriginMediaUrl(n.avatar || ''),
     };
   }
 
@@ -1281,6 +1301,27 @@ export class IMClient {
         break;
       }
 
+      // 资料更新响应
+      case Cmd.CMD_PROFILE_UPDATE_RESP: {
+        const raw = plain(im.profile.ProfileUpdateResp, body);
+        const resp: UpdateProfileResp = {
+          code: raw?.code ?? 0,
+          message: raw?.message ?? '',
+          avatar: raw?.avatar || '',
+        };
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          if (resp.code === 0) {
+            pending.resolve(resp);
+          } else {
+            pending.reject(new Error(resp.message));
+          }
+        }
+        break;
+      }
+
       // 好友操作响应
       case Cmd.FRIEND_SEARCH_RESP: {
         const u = plain(im.relation.SearchUserResp, body);
@@ -1291,7 +1332,7 @@ export class IMClient {
             userId: String(x.userId ?? ''),
             userName: x.userName || '',
             nickname: x.nickname || '',
-            avatar: x.avatar || '',
+            avatar: sameOriginMediaUrl(x.avatar || ''),
           })),
         };
         // 关联到 pendingFriendOps（通过 messageId）

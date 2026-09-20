@@ -65,6 +65,15 @@ export default defineConfig(({ mode }) => {
           secure: false,
           rewrite: (path: string) => path.replace(/^\/lk/, ''),
         },
+        // 对象存储同源代理：https 页面直连 http 的 presigned URL 会被 Safari 等按
+        // 混合内容强制拦截（fetch 报 Load failed）。改走同源 /minio，由代理把 Host
+        // 回填为签发时的 publicEndpoint（changeOrigin），SigV4 签名依然有效。
+        '/minio': {
+          target: env.VITE_MINIO_TARGET || 'http://localhost:9002',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path: string) => path.replace(/^\/minio/, ''),
+        },
       },
     },
     build: {

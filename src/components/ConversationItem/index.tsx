@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useFriendStore } from '@/stores/useFriendStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useGroupStore } from '@/stores/useGroupStore';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import { formatListTime } from '@/utils/imTime';
+import { getIMClient } from '@/hooks/useIMClient';
+import { GridAvatar } from '@/components/GridAvatar';
 
 interface Props {
   peerId: string;
@@ -29,12 +34,28 @@ function renderPreview(text: string) {
 export const ConversationItem = React.memo(function ConversationItem({ peerId, isActive, onClick, onDelete }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const friends = useFriendStore((s) => s.friends);
+  const selfId = useAuthStore((s) => s.user?.userId);
   const conversation = useConversationStore((s) => s.conversations[peerId]);
+  const groupMembers = useGroupStore((s) => s.groupMembers[peerId]);
+
+  const { nickname, avatar, type } = conversation ?? {};
+  const isGroup = type === 'group';
+  // 自己与自己的会话不是陌生人
+  const isStranger = !!conversation && !isGroup && peerId !== selfId && !friends.some((f) => f.userId === peerId);
+
+  // 群聊无自定义头像时用成员拼图（对齐微信）；成员缓存缺失则懒加载一次
+  useEffect(() => {
+    if (!conversation || !isGroup || avatar || groupMembers) return;
+    const client = getIMClient();
+    if (!client) return;
+    client.getGroupMembers(peerId)
+      .then((ms) => useGroupStore.getState().setMembers(peerId, ms))
+      .catch(() => { /* 拉取失败保持字母/拼图兜底，不阻塞列表 */ });
+  }, [conversation, isGroup, avatar, peerId, groupMembers]);
+
   if (!conversation) return null;
 
-  const { nickname, avatar, lastMessage, lastMessageTime, unreadCount, draft, type } = conversation;
-  const isGroup = type === 'group';
-  const isStranger = !isGroup && !friends.some((f) => f.userId === peerId);
+  const { lastMessage, lastMessageTime, unreadCount, draft } = conversation;
 
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -47,9 +68,17 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
     >
       {/* 头像 */}
       <div className="relative flex-shrink-0">
-        <div className="w-10 h-10 rounded-md bg-primary/15 flex items-center justify-center text-primary text-sm font-bold overflow-hidden">
-          {avatar ? <img src={avatar} alt={nickname} className="w-full h-full object-cover" /> : nickname.charAt(0).toUpperCase()}
-        </div>
+        {avatar ? (
+          <div className="w-10 h-10 rounded-md bg-primary/15 flex items-center justify-center text-primary text-sm font-bold overflow-hidden">
+            <img src={sameOriginMediaUrl(avatar)} alt={nickname} className="w-full h-full object-cover" />
+          </div>
+        ) : isGroup ? (
+          <GridAvatar name={nickname} members={groupMembers} />
+        ) : (
+          <div className="w-10 h-10 rounded-md bg-primary/15 flex items-center justify-center text-primary text-sm font-bold overflow-hidden">
+            {nickname.charAt(0).toUpperCase()}
+          </div>
+        )}
         {isStranger && (
           <span className="absolute -top-1 -left-1 w-4 h-4 rounded-sm bg-warn text-white text-[9px] leading-4 text-center font-bold">陌</span>
         )}

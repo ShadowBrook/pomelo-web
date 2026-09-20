@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as api from '@/utils/api';
 import type { FriendNotify, FriendDeleteNotify } from '@/sdk/types';
 import { getIMClient } from '@/hooks/useIMClient';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 
 export interface Friend {
   userId: string;
@@ -63,7 +64,8 @@ export const useFriendStore = create<FriendState>()((set) => ({
     try {
       set({ loading: true, error: null });
       const res = await api.getFriends(userId);
-      set({ friends: res.friends || [], loading: false });
+      // 头像 URL 同源改写（http presigned → /minio 代理，规避 Safari 混合内容拦截）
+      set({ friends: (res.friends || []).map((f) => ({ ...f, avatar: sameOriginMediaUrl(f.avatar) })), loading: false });
     } catch (e: any) {
       set({ loading: false, error: e.message || '加载好友列表失败' });
     }
@@ -73,7 +75,7 @@ export const useFriendStore = create<FriendState>()((set) => ({
     try {
       set({ loading: true, error: null });
       const res = await api.getPendingFriends(userId);
-      set({ pendingRequests: res.pending || [], loading: false });
+      set({ pendingRequests: (res.pending || []).map((r) => ({ ...r, avatar: sameOriginMediaUrl(r.avatar) })), loading: false });
     } catch (e: any) {
       set({ loading: false, error: e.message || '加载好友申请失败' });
     }

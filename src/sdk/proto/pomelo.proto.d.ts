@@ -569,6 +569,12 @@ export namespace im {
             /** CMD_CALL_TOKEN_RESP value */
             CMD_CALL_TOKEN_RESP = 184,
 
+            /** CMD_PROFILE_UPDATE_REQ value */
+            CMD_PROFILE_UPDATE_REQ = 192,
+
+            /** CMD_PROFILE_UPDATE_RESP value */
+            CMD_PROFILE_UPDATE_RESP = 193,
+
             /** CMD_ERROR value */
             CMD_ERROR = 65535
         }
@@ -8047,6 +8053,256 @@ export namespace im {
 
             /** Shape of an UploadResp. */
             type $Shape = im.upload.UploadResp.$Properties;
+        }
+    }
+
+    /** Namespace profile. */
+    namespace profile {
+
+        /**
+         * Properties of a ProfileUpdateReq.
+         * @deprecated Use im.profile.ProfileUpdateReq.$Properties instead.
+         */
+        interface IProfileUpdateReq extends im.profile.ProfileUpdateReq.$Properties {
+        }
+
+        /** Represents a ProfileUpdateReq. */
+        class ProfileUpdateReq {
+
+            /**
+             * Constructs a new ProfileUpdateReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.profile.ProfileUpdateReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** ProfileUpdateReq avatar. */
+            avatar: string;
+
+            /**
+             * Creates a new ProfileUpdateReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns ProfileUpdateReq instance
+             */
+            static create(properties: im.profile.ProfileUpdateReq.$Shape): im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape;
+            static create(properties?: im.profile.ProfileUpdateReq.$Properties): im.profile.ProfileUpdateReq;
+
+            /**
+             * Encodes the specified ProfileUpdateReq message. Does not implicitly {@link im.profile.ProfileUpdateReq.verify|verify} messages.
+             * @param message ProfileUpdateReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.profile.ProfileUpdateReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified ProfileUpdateReq message, length delimited. Does not implicitly {@link im.profile.ProfileUpdateReq.verify|verify} messages.
+             * @param message ProfileUpdateReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.profile.ProfileUpdateReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a ProfileUpdateReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape} ProfileUpdateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape;
+
+            /**
+             * Decodes a ProfileUpdateReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape} ProfileUpdateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape;
+
+            /**
+             * Verifies a ProfileUpdateReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a ProfileUpdateReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns ProfileUpdateReq
+             */
+            static fromObject(object: { [k: string]: any }): im.profile.ProfileUpdateReq;
+
+            /**
+             * Creates a plain object from a ProfileUpdateReq message. Also converts values to other types if specified.
+             * @param message ProfileUpdateReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.profile.ProfileUpdateReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this ProfileUpdateReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for ProfileUpdateReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace ProfileUpdateReq {
+
+            /** Properties of a ProfileUpdateReq. */
+            interface $Properties {
+
+                /** ProfileUpdateReq avatar */
+                avatar?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a ProfileUpdateReq. */
+            type $Shape = im.profile.ProfileUpdateReq.$Properties;
+        }
+
+        /**
+         * Properties of a ProfileUpdateResp.
+         * @deprecated Use im.profile.ProfileUpdateResp.$Properties instead.
+         */
+        interface IProfileUpdateResp extends im.profile.ProfileUpdateResp.$Properties {
+        }
+
+        /** Represents a ProfileUpdateResp. */
+        class ProfileUpdateResp {
+
+            /**
+             * Constructs a new ProfileUpdateResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.profile.ProfileUpdateResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** ProfileUpdateResp code. */
+            code: number;
+
+            /** ProfileUpdateResp message. */
+            message: string;
+
+            /** ProfileUpdateResp avatar. */
+            avatar: string;
+
+            /**
+             * Creates a new ProfileUpdateResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns ProfileUpdateResp instance
+             */
+            static create(properties: im.profile.ProfileUpdateResp.$Shape): im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape;
+            static create(properties?: im.profile.ProfileUpdateResp.$Properties): im.profile.ProfileUpdateResp;
+
+            /**
+             * Encodes the specified ProfileUpdateResp message. Does not implicitly {@link im.profile.ProfileUpdateResp.verify|verify} messages.
+             * @param message ProfileUpdateResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.profile.ProfileUpdateResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified ProfileUpdateResp message, length delimited. Does not implicitly {@link im.profile.ProfileUpdateResp.verify|verify} messages.
+             * @param message ProfileUpdateResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.profile.ProfileUpdateResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a ProfileUpdateResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape} ProfileUpdateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape;
+
+            /**
+             * Decodes a ProfileUpdateResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape} ProfileUpdateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape;
+
+            /**
+             * Verifies a ProfileUpdateResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a ProfileUpdateResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns ProfileUpdateResp
+             */
+            static fromObject(object: { [k: string]: any }): im.profile.ProfileUpdateResp;
+
+            /**
+             * Creates a plain object from a ProfileUpdateResp message. Also converts values to other types if specified.
+             * @param message ProfileUpdateResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.profile.ProfileUpdateResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this ProfileUpdateResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for ProfileUpdateResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace ProfileUpdateResp {
+
+            /** Properties of a ProfileUpdateResp. */
+            interface $Properties {
+
+                /** ProfileUpdateResp code */
+                code?: (number|null);
+
+                /** ProfileUpdateResp message */
+                message?: (string|null);
+
+                /** ProfileUpdateResp avatar */
+                avatar?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a ProfileUpdateResp. */
+            type $Shape = im.profile.ProfileUpdateResp.$Properties;
         }
     }
 

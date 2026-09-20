@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import * as api from '@/utils/api';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 
 interface UserInfo {
   userId: string;   // Snowflake 全局唯一 ID（字符串形式）
@@ -19,6 +20,8 @@ interface AuthState {
   register: (userName: string, nickname: string, password: string, avatar?: string) => Promise<void>;
   logout: () => void;
   restoreSession: () => void;
+  /** 头像更新成功后回填（avatar 为读侧预签名 URL） */
+  updateAvatar: (avatar: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -36,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
               userId: res.userId!,
               userName: res.userName || userName,
               nickname: res.nickname || userName,
-              avatar: res.avatar || '',
+              avatar: sameOriginMediaUrl(res.avatar || ''),
             },
             token: res.token || 'test-token',
             isLoggedIn: true,
@@ -75,8 +78,13 @@ export const useAuthStore = create<AuthState>()(
       restoreSession: () => {
         const { user, token } = get();
         if (user && token) {
-          set({ isLoggedIn: true });
+          // 兼容持久化里的旧 http 直连头像 URL（Safari 混合内容拦截）
+          set({ isLoggedIn: true, user: { ...user, avatar: sameOriginMediaUrl(user.avatar) } });
         }
+      },
+
+      updateAvatar: (avatar) => {
+        set((state) => (state.user ? { user: { ...state.user, avatar: sameOriginMediaUrl(avatar) } } : state));
       },
     }),
     {
