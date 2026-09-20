@@ -68,13 +68,13 @@ export function useChatSession(peerId: string) {
   // 按「目标会话」判定单聊/群聊：转发时目标 ≠ 当前会话；
   // 未打开过的群不在 conversations 里，用群列表兜底
   const sendFn = useCallback(
-    (params: { recipientId: string; msgType: MsgType; content: string }) => {
+    (params: { recipientId: string; msgType: MsgType; content: string; ext?: Record<string, string> }) => {
       const client = getIMClient();
       if (!client) throw new Error('IMClient not connected');
       const group = !!useGroupStore.getState().groups[params.recipientId]
         || useConversationStore.getState().conversations[params.recipientId]?.type === 'group';
       return group
-        ? client.sendGroupMessage(params.recipientId, params.msgType, params.content)
+        ? client.sendGroupMessage(params.recipientId, params.msgType, params.content, params.ext)
         : client.sendMessage(params);
     },
     [],
@@ -95,8 +95,8 @@ export function useChatSession(peerId: string) {
   });
 
   const sendText = useCallback(
-    (text: string) => {
-      useChatStore.getState().sendText(peerId, text, replyTo ? buildReply(replyTo) : undefined, sendFn);
+    (text: string, mentionIds?: string[]) => {
+      useChatStore.getState().sendText(peerId, text, replyTo ? buildReply(replyTo) : undefined, sendFn, mentionIds);
       setReplyTo(null);
       useConversationStore.getState().updateDraft(peerId, '');
     },

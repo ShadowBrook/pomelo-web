@@ -1056,6 +1056,10 @@ export const im = $root.im = (() => {
          * @property {number} CMD_GROUP_INVITE_RESP=115 CMD_GROUP_INVITE_RESP value
          * @property {number} CMD_GROUP_KICK_REQ=116 CMD_GROUP_KICK_REQ value
          * @property {number} CMD_GROUP_KICK_RESP=117 CMD_GROUP_KICK_RESP value
+         * @property {number} CMD_GROUP_TRANSFER_REQ=118 CMD_GROUP_TRANSFER_REQ value
+         * @property {number} CMD_GROUP_TRANSFER_RESP=119 CMD_GROUP_TRANSFER_RESP value
+         * @property {number} CMD_GROUP_DISSOLVE_REQ=120 CMD_GROUP_DISSOLVE_REQ value
+         * @property {number} CMD_GROUP_DISSOLVE_RESP=121 CMD_GROUP_DISSOLVE_RESP value
          * @property {number} CMD_GROUP_GET_INFO_REQ=134 CMD_GROUP_GET_INFO_REQ value
          * @property {number} CMD_GROUP_GET_INFO_RESP=135 CMD_GROUP_GET_INFO_RESP value
          * @property {number} CMD_GROUP_GET_MEMBERS_REQ=136 CMD_GROUP_GET_MEMBERS_REQ value
@@ -1126,6 +1130,10 @@ export const im = $root.im = (() => {
             values[valuesById[115] = "CMD_GROUP_INVITE_RESP"] = 115;
             values[valuesById[116] = "CMD_GROUP_KICK_REQ"] = 116;
             values[valuesById[117] = "CMD_GROUP_KICK_RESP"] = 117;
+            values[valuesById[118] = "CMD_GROUP_TRANSFER_REQ"] = 118;
+            values[valuesById[119] = "CMD_GROUP_TRANSFER_RESP"] = 119;
+            values[valuesById[120] = "CMD_GROUP_DISSOLVE_REQ"] = 120;
+            values[valuesById[121] = "CMD_GROUP_DISSOLVE_RESP"] = 121;
             values[valuesById[134] = "CMD_GROUP_GET_INFO_REQ"] = 134;
             values[valuesById[135] = "CMD_GROUP_GET_INFO_RESP"] = 135;
             values[valuesById[136] = "CMD_GROUP_GET_MEMBERS_REQ"] = 136;
@@ -15728,6 +15736,10 @@ export const im = $root.im = (() => {
                     case 5:
                         message.type = 5;
                         break;
+                    case "DISSOLVED":
+                    case 6:
+                        message.type = 6;
+                        break;
                     default:
                         if (typeof object.type === "number" && (object.type | 0) === object.type)
                             message.type = object.type;
@@ -15863,6 +15875,7 @@ export const im = $root.im = (() => {
              * @property {number} KICKED=3 KICKED value
              * @property {number} ADMIN_SET=4 ADMIN_SET value
              * @property {number} OWNER_TRANSFERRED=5 OWNER_TRANSFERRED value
+             * @property {number} DISSOLVED=6 DISSOLVED value
              */
             GroupMemberChangeNotify.ChangeType = (function() {
                 const valuesById = $Object.create(null), values = $Object.create(valuesById);
@@ -15872,10 +15885,1249 @@ export const im = $root.im = (() => {
                 values[valuesById[3] = "KICKED"] = 3;
                 values[valuesById[4] = "ADMIN_SET"] = 4;
                 values[valuesById[5] = "OWNER_TRANSFERRED"] = 5;
+                values[valuesById[6] = "DISSOLVED"] = 6;
                 return values;
             })();
 
             return GroupMemberChangeNotify;
+        })();
+
+        group.TransferGroupReq = (function() {
+
+            /**
+             * Properties of a TransferGroupReq.
+             * @typedef {Object} im.group.TransferGroupReq.$Properties
+             * @property {number|Long|null} [groupId] TransferGroupReq groupId
+             * @property {number|Long|null} [targetUserId] TransferGroupReq targetUserId
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a TransferGroupReq.
+             * @memberof im.group
+             * @interface ITransferGroupReq
+             * @augments im.group.TransferGroupReq.$Properties
+             * @deprecated Use im.group.TransferGroupReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a TransferGroupReq.
+             * @typedef {im.group.TransferGroupReq.$Properties} im.group.TransferGroupReq.$Shape
+             */
+
+            /**
+             * Constructs a new TransferGroupReq.
+             * @memberof im.group
+             * @classdesc Represents a TransferGroupReq.
+             * @constructor
+             * @param {im.group.TransferGroupReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const TransferGroupReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * TransferGroupReq groupId.
+             * @member {number|Long} groupId
+             * @memberof im.group.TransferGroupReq
+             * @instance
+             */
+            TransferGroupReq.prototype.groupId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * TransferGroupReq targetUserId.
+             * @member {number|Long} targetUserId
+             * @memberof im.group.TransferGroupReq
+             * @instance
+             */
+            TransferGroupReq.prototype.targetUserId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * Creates a new TransferGroupReq instance using the specified properties.
+             * @function create
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {im.group.TransferGroupReq.$Properties=} [properties] Properties to set
+             * @returns {im.group.TransferGroupReq} TransferGroupReq instance
+             * @type {{
+             *   (properties: im.group.TransferGroupReq.$Shape): im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape;
+             *   (properties?: im.group.TransferGroupReq.$Properties): im.group.TransferGroupReq;
+             * }}
+             */
+            TransferGroupReq.create = function(properties) {
+                return new TransferGroupReq(properties);
+            };
+
+            /**
+             * Encodes the specified TransferGroupReq message. Does not implicitly {@link im.group.TransferGroupReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {im.group.TransferGroupReq.$Properties} message TransferGroupReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            TransferGroupReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId") && (typeof message.groupId === "object" ? message.groupId.low || message.groupId.high : message.groupId !== 0))
+                    writer.uint32(/* id 1, wireType 0 =*/8).int64(message.groupId);
+                if (message.targetUserId != null && $Object.hasOwnProperty.call(message, "targetUserId") && (typeof message.targetUserId === "object" ? message.targetUserId.low || message.targetUserId.high : message.targetUserId !== 0))
+                    writer.uint32(/* id 2, wireType 0 =*/16).int64(message.targetUserId);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified TransferGroupReq message, length delimited. Does not implicitly {@link im.group.TransferGroupReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {im.group.TransferGroupReq.$Properties} message TransferGroupReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            TransferGroupReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a TransferGroupReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape} TransferGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            TransferGroupReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.TransferGroupReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.groupId = value;
+                            else
+                                delete message.groupId;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.targetUserId = value;
+                            else
+                                delete message.targetUserId;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a TransferGroupReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape} TransferGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            TransferGroupReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a TransferGroupReq message.
+             * @function verify
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            TransferGroupReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (!$util.isInteger(message.groupId) && !(message.groupId && $util.isInteger(message.groupId.low) && $util.isInteger(message.groupId.high)))
+                        return "groupId: integer|Long expected";
+                if (message.targetUserId != null && $Object.hasOwnProperty.call(message, "targetUserId"))
+                    if (!$util.isInteger(message.targetUserId) && !(message.targetUserId && $util.isInteger(message.targetUserId.low) && $util.isInteger(message.targetUserId.high)))
+                        return "targetUserId: integer|Long expected";
+                return null;
+            };
+
+            /**
+             * Creates a TransferGroupReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.TransferGroupReq} TransferGroupReq
+             */
+            TransferGroupReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.TransferGroupReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.TransferGroupReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.TransferGroupReq();
+                if (object.groupId != null)
+                    if (typeof object.groupId === "object" ? object.groupId.low || object.groupId.high : $Number(object.groupId) !== 0)
+                        if ($util.Long)
+                            message.groupId = $util.Long.fromValue(object.groupId, false);
+                        else if (typeof object.groupId === "string")
+                            message.groupId = $parseInt(object.groupId, 10);
+                        else if (typeof object.groupId === "number")
+                            message.groupId = object.groupId;
+                        else if (typeof object.groupId === "object")
+                            message.groupId = new $util.LongBits(object.groupId.low >>> 0, object.groupId.high >>> 0).toNumber();
+                if (object.targetUserId != null)
+                    if (typeof object.targetUserId === "object" ? object.targetUserId.low || object.targetUserId.high : $Number(object.targetUserId) !== 0)
+                        if ($util.Long)
+                            message.targetUserId = $util.Long.fromValue(object.targetUserId, false);
+                        else if (typeof object.targetUserId === "string")
+                            message.targetUserId = $parseInt(object.targetUserId, 10);
+                        else if (typeof object.targetUserId === "number")
+                            message.targetUserId = object.targetUserId;
+                        else if (typeof object.targetUserId === "object")
+                            message.targetUserId = new $util.LongBits(object.targetUserId.low >>> 0, object.targetUserId.high >>> 0).toNumber();
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a TransferGroupReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {im.group.TransferGroupReq} message TransferGroupReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            TransferGroupReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.groupId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.groupId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.targetUserId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.targetUserId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                }
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.groupId = typeof message.groupId === "number" ? $BigInt(message.groupId) : $util.Long.fromBits(message.groupId.low >>> 0, message.groupId.high >>> 0, false).toBigInt();
+                    else if (typeof message.groupId === "number")
+                        object.groupId = options.longs === $String ? $String(message.groupId) : message.groupId;
+                    else
+                        object.groupId = options.longs === $String ? $util.Long.prototype.toString.call(message.groupId) : options.longs === $Number ? new $util.LongBits(message.groupId.low >>> 0, message.groupId.high >>> 0).toNumber() : message.groupId;
+                if (message.targetUserId != null && $Object.hasOwnProperty.call(message, "targetUserId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.targetUserId = typeof message.targetUserId === "number" ? $BigInt(message.targetUserId) : $util.Long.fromBits(message.targetUserId.low >>> 0, message.targetUserId.high >>> 0, false).toBigInt();
+                    else if (typeof message.targetUserId === "number")
+                        object.targetUserId = options.longs === $String ? $String(message.targetUserId) : message.targetUserId;
+                    else
+                        object.targetUserId = options.longs === $String ? $util.Long.prototype.toString.call(message.targetUserId) : options.longs === $Number ? new $util.LongBits(message.targetUserId.low >>> 0, message.targetUserId.high >>> 0).toNumber() : message.targetUserId;
+                return object;
+            };
+
+            /**
+             * Converts this TransferGroupReq to JSON.
+             * @function toJSON
+             * @memberof im.group.TransferGroupReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            TransferGroupReq.prototype.toJSON = function() {
+                return TransferGroupReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for TransferGroupReq
+             * @function getTypeUrl
+             * @memberof im.group.TransferGroupReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            TransferGroupReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.TransferGroupReq";
+            };
+
+            return TransferGroupReq;
+        })();
+
+        group.TransferGroupResp = (function() {
+
+            /**
+             * Properties of a TransferGroupResp.
+             * @typedef {Object} im.group.TransferGroupResp.$Properties
+             * @property {number|null} [code] TransferGroupResp code
+             * @property {string|null} [message] TransferGroupResp message
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a TransferGroupResp.
+             * @memberof im.group
+             * @interface ITransferGroupResp
+             * @augments im.group.TransferGroupResp.$Properties
+             * @deprecated Use im.group.TransferGroupResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a TransferGroupResp.
+             * @typedef {im.group.TransferGroupResp.$Properties} im.group.TransferGroupResp.$Shape
+             */
+
+            /**
+             * Constructs a new TransferGroupResp.
+             * @memberof im.group
+             * @classdesc Represents a TransferGroupResp.
+             * @constructor
+             * @param {im.group.TransferGroupResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const TransferGroupResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * TransferGroupResp code.
+             * @member {number} code
+             * @memberof im.group.TransferGroupResp
+             * @instance
+             */
+            TransferGroupResp.prototype.code = 0;
+
+            /**
+             * TransferGroupResp message.
+             * @member {string} message
+             * @memberof im.group.TransferGroupResp
+             * @instance
+             */
+            TransferGroupResp.prototype.message = "";
+
+            /**
+             * Creates a new TransferGroupResp instance using the specified properties.
+             * @function create
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {im.group.TransferGroupResp.$Properties=} [properties] Properties to set
+             * @returns {im.group.TransferGroupResp} TransferGroupResp instance
+             * @type {{
+             *   (properties: im.group.TransferGroupResp.$Shape): im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape;
+             *   (properties?: im.group.TransferGroupResp.$Properties): im.group.TransferGroupResp;
+             * }}
+             */
+            TransferGroupResp.create = function(properties) {
+                return new TransferGroupResp(properties);
+            };
+
+            /**
+             * Encodes the specified TransferGroupResp message. Does not implicitly {@link im.group.TransferGroupResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {im.group.TransferGroupResp.$Properties} message TransferGroupResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            TransferGroupResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified TransferGroupResp message, length delimited. Does not implicitly {@link im.group.TransferGroupResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {im.group.TransferGroupResp.$Properties} message TransferGroupResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            TransferGroupResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a TransferGroupResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape} TransferGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            TransferGroupResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.TransferGroupResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a TransferGroupResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape} TransferGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            TransferGroupResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a TransferGroupResp message.
+             * @function verify
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            TransferGroupResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a TransferGroupResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.TransferGroupResp} TransferGroupResp
+             */
+            TransferGroupResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.TransferGroupResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.TransferGroupResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.TransferGroupResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a TransferGroupResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {im.group.TransferGroupResp} message TransferGroupResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            TransferGroupResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                return object;
+            };
+
+            /**
+             * Converts this TransferGroupResp to JSON.
+             * @function toJSON
+             * @memberof im.group.TransferGroupResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            TransferGroupResp.prototype.toJSON = function() {
+                return TransferGroupResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for TransferGroupResp
+             * @function getTypeUrl
+             * @memberof im.group.TransferGroupResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            TransferGroupResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.TransferGroupResp";
+            };
+
+            return TransferGroupResp;
+        })();
+
+        group.DissolveGroupReq = (function() {
+
+            /**
+             * Properties of a DissolveGroupReq.
+             * @typedef {Object} im.group.DissolveGroupReq.$Properties
+             * @property {number|Long|null} [groupId] DissolveGroupReq groupId
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a DissolveGroupReq.
+             * @memberof im.group
+             * @interface IDissolveGroupReq
+             * @augments im.group.DissolveGroupReq.$Properties
+             * @deprecated Use im.group.DissolveGroupReq.$Properties instead.
+             */
+
+            /**
+             * Shape of a DissolveGroupReq.
+             * @typedef {im.group.DissolveGroupReq.$Properties} im.group.DissolveGroupReq.$Shape
+             */
+
+            /**
+             * Constructs a new DissolveGroupReq.
+             * @memberof im.group
+             * @classdesc Represents a DissolveGroupReq.
+             * @constructor
+             * @param {im.group.DissolveGroupReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const DissolveGroupReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * DissolveGroupReq groupId.
+             * @member {number|Long} groupId
+             * @memberof im.group.DissolveGroupReq
+             * @instance
+             */
+            DissolveGroupReq.prototype.groupId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * Creates a new DissolveGroupReq instance using the specified properties.
+             * @function create
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {im.group.DissolveGroupReq.$Properties=} [properties] Properties to set
+             * @returns {im.group.DissolveGroupReq} DissolveGroupReq instance
+             * @type {{
+             *   (properties: im.group.DissolveGroupReq.$Shape): im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape;
+             *   (properties?: im.group.DissolveGroupReq.$Properties): im.group.DissolveGroupReq;
+             * }}
+             */
+            DissolveGroupReq.create = function(properties) {
+                return new DissolveGroupReq(properties);
+            };
+
+            /**
+             * Encodes the specified DissolveGroupReq message. Does not implicitly {@link im.group.DissolveGroupReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {im.group.DissolveGroupReq.$Properties} message DissolveGroupReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            DissolveGroupReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId") && (typeof message.groupId === "object" ? message.groupId.low || message.groupId.high : message.groupId !== 0))
+                    writer.uint32(/* id 1, wireType 0 =*/8).int64(message.groupId);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified DissolveGroupReq message, length delimited. Does not implicitly {@link im.group.DissolveGroupReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {im.group.DissolveGroupReq.$Properties} message DissolveGroupReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            DissolveGroupReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a DissolveGroupReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape} DissolveGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            DissolveGroupReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.DissolveGroupReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.groupId = value;
+                            else
+                                delete message.groupId;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a DissolveGroupReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape} DissolveGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            DissolveGroupReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a DissolveGroupReq message.
+             * @function verify
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            DissolveGroupReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (!$util.isInteger(message.groupId) && !(message.groupId && $util.isInteger(message.groupId.low) && $util.isInteger(message.groupId.high)))
+                        return "groupId: integer|Long expected";
+                return null;
+            };
+
+            /**
+             * Creates a DissolveGroupReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.DissolveGroupReq} DissolveGroupReq
+             */
+            DissolveGroupReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.DissolveGroupReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.DissolveGroupReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.DissolveGroupReq();
+                if (object.groupId != null)
+                    if (typeof object.groupId === "object" ? object.groupId.low || object.groupId.high : $Number(object.groupId) !== 0)
+                        if ($util.Long)
+                            message.groupId = $util.Long.fromValue(object.groupId, false);
+                        else if (typeof object.groupId === "string")
+                            message.groupId = $parseInt(object.groupId, 10);
+                        else if (typeof object.groupId === "number")
+                            message.groupId = object.groupId;
+                        else if (typeof object.groupId === "object")
+                            message.groupId = new $util.LongBits(object.groupId.low >>> 0, object.groupId.high >>> 0).toNumber();
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a DissolveGroupReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {im.group.DissolveGroupReq} message DissolveGroupReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            DissolveGroupReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults)
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.groupId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.groupId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.groupId = typeof message.groupId === "number" ? $BigInt(message.groupId) : $util.Long.fromBits(message.groupId.low >>> 0, message.groupId.high >>> 0, false).toBigInt();
+                    else if (typeof message.groupId === "number")
+                        object.groupId = options.longs === $String ? $String(message.groupId) : message.groupId;
+                    else
+                        object.groupId = options.longs === $String ? $util.Long.prototype.toString.call(message.groupId) : options.longs === $Number ? new $util.LongBits(message.groupId.low >>> 0, message.groupId.high >>> 0).toNumber() : message.groupId;
+                return object;
+            };
+
+            /**
+             * Converts this DissolveGroupReq to JSON.
+             * @function toJSON
+             * @memberof im.group.DissolveGroupReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            DissolveGroupReq.prototype.toJSON = function() {
+                return DissolveGroupReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for DissolveGroupReq
+             * @function getTypeUrl
+             * @memberof im.group.DissolveGroupReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            DissolveGroupReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.DissolveGroupReq";
+            };
+
+            return DissolveGroupReq;
+        })();
+
+        group.DissolveGroupResp = (function() {
+
+            /**
+             * Properties of a DissolveGroupResp.
+             * @typedef {Object} im.group.DissolveGroupResp.$Properties
+             * @property {number|null} [code] DissolveGroupResp code
+             * @property {string|null} [message] DissolveGroupResp message
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of a DissolveGroupResp.
+             * @memberof im.group
+             * @interface IDissolveGroupResp
+             * @augments im.group.DissolveGroupResp.$Properties
+             * @deprecated Use im.group.DissolveGroupResp.$Properties instead.
+             */
+
+            /**
+             * Shape of a DissolveGroupResp.
+             * @typedef {im.group.DissolveGroupResp.$Properties} im.group.DissolveGroupResp.$Shape
+             */
+
+            /**
+             * Constructs a new DissolveGroupResp.
+             * @memberof im.group
+             * @classdesc Represents a DissolveGroupResp.
+             * @constructor
+             * @param {im.group.DissolveGroupResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const DissolveGroupResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * DissolveGroupResp code.
+             * @member {number} code
+             * @memberof im.group.DissolveGroupResp
+             * @instance
+             */
+            DissolveGroupResp.prototype.code = 0;
+
+            /**
+             * DissolveGroupResp message.
+             * @member {string} message
+             * @memberof im.group.DissolveGroupResp
+             * @instance
+             */
+            DissolveGroupResp.prototype.message = "";
+
+            /**
+             * Creates a new DissolveGroupResp instance using the specified properties.
+             * @function create
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {im.group.DissolveGroupResp.$Properties=} [properties] Properties to set
+             * @returns {im.group.DissolveGroupResp} DissolveGroupResp instance
+             * @type {{
+             *   (properties: im.group.DissolveGroupResp.$Shape): im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape;
+             *   (properties?: im.group.DissolveGroupResp.$Properties): im.group.DissolveGroupResp;
+             * }}
+             */
+            DissolveGroupResp.create = function(properties) {
+                return new DissolveGroupResp(properties);
+            };
+
+            /**
+             * Encodes the specified DissolveGroupResp message. Does not implicitly {@link im.group.DissolveGroupResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {im.group.DissolveGroupResp.$Properties} message DissolveGroupResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            DissolveGroupResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified DissolveGroupResp message, length delimited. Does not implicitly {@link im.group.DissolveGroupResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {im.group.DissolveGroupResp.$Properties} message DissolveGroupResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            DissolveGroupResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes a DissolveGroupResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape} DissolveGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            DissolveGroupResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.DissolveGroupResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes a DissolveGroupResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape} DissolveGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            DissolveGroupResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a DissolveGroupResp message.
+             * @function verify
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            DissolveGroupResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a DissolveGroupResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.DissolveGroupResp} DissolveGroupResp
+             */
+            DissolveGroupResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.DissolveGroupResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.DissolveGroupResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.DissolveGroupResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a DissolveGroupResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {im.group.DissolveGroupResp} message DissolveGroupResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            DissolveGroupResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                return object;
+            };
+
+            /**
+             * Converts this DissolveGroupResp to JSON.
+             * @function toJSON
+             * @memberof im.group.DissolveGroupResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            DissolveGroupResp.prototype.toJSON = function() {
+                return DissolveGroupResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for DissolveGroupResp
+             * @function getTypeUrl
+             * @memberof im.group.DissolveGroupResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            DissolveGroupResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.DissolveGroupResp";
+            };
+
+            return DissolveGroupResp;
         })();
 
         group.GroupAckReq = (function() {
@@ -20219,6 +21471,22 @@ export const im = $root.im = (() => {
                     case 117:
                         message.cmd = 117;
                         break;
+                    case "CMD_GROUP_TRANSFER_REQ":
+                    case 118:
+                        message.cmd = 118;
+                        break;
+                    case "CMD_GROUP_TRANSFER_RESP":
+                    case 119:
+                        message.cmd = 119;
+                        break;
+                    case "CMD_GROUP_DISSOLVE_REQ":
+                    case 120:
+                        message.cmd = 120;
+                        break;
+                    case "CMD_GROUP_DISSOLVE_RESP":
+                    case 121:
+                        message.cmd = 121;
+                        break;
                     case "CMD_GROUP_GET_INFO_REQ":
                     case 134:
                         message.cmd = 134;
@@ -22540,6 +23808,7 @@ export const im = $root.im = (() => {
              * Properties of a ProfileUpdateReq.
              * @typedef {Object} im.profile.ProfileUpdateReq.$Properties
              * @property {string|null} [avatar] ProfileUpdateReq avatar
+             * @property {string|null} [signature] ProfileUpdateReq signature
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -22573,11 +23842,34 @@ export const im = $root.im = (() => {
 
             /**
              * ProfileUpdateReq avatar.
-             * @member {string} avatar
+             * @member {string|null|undefined} avatar
              * @memberof im.profile.ProfileUpdateReq
              * @instance
              */
-            ProfileUpdateReq.prototype.avatar = "";
+            ProfileUpdateReq.prototype.avatar = null;
+
+            /**
+             * ProfileUpdateReq signature.
+             * @member {string|null|undefined} signature
+             * @memberof im.profile.ProfileUpdateReq
+             * @instance
+             */
+            ProfileUpdateReq.prototype.signature = null;
+
+            // OneOf field names bound to virtual getters and setters
+            let $oneOfFields;
+
+            // Virtual OneOf for proto3 optional field
+            $Object.defineProperty(ProfileUpdateReq.prototype, "_avatar", {
+                get: $util.oneOfGetter($oneOfFields = ["avatar"]),
+                set: $util.oneOfSetter($oneOfFields)
+            });
+
+            // Virtual OneOf for proto3 optional field
+            $Object.defineProperty(ProfileUpdateReq.prototype, "_signature", {
+                get: $util.oneOfGetter($oneOfFields = ["signature"]),
+                set: $util.oneOfSetter($oneOfFields)
+            });
 
             /**
              * Creates a new ProfileUpdateReq instance using the specified properties.
@@ -22611,8 +23903,10 @@ export const im = $root.im = (() => {
                     _depth = 0;
                 if (_depth > $util.recursionLimit)
                     throw $Error("max depth exceeded");
-                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar") && message.avatar !== "")
+                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.avatar);
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature"))
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.signature);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -22650,7 +23944,7 @@ export const im = $root.im = (() => {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                let end, message, value;
+                let end, message;
                 if (length === $undefined)
                     end = reader.len;
                 else {
@@ -22673,10 +23967,15 @@ export const im = $root.im = (() => {
                     case 1: {
                             if (wireType !== 2)
                                 break;
-                            if ((value = reader.stringVerify()).length)
-                                message.avatar = value;
-                            else
-                                delete message.avatar;
+                            message.avatar = reader.stringVerify();
+                            message._avatar = "avatar";
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            message.signature = reader.stringVerify();
+                            message._signature = "signature";
                             continue;
                         }
                     }
@@ -22727,9 +24026,17 @@ export const im = $root.im = (() => {
                     _depth = 0;
                 if (_depth > $util.recursionLimit)
                     return "max depth exceeded";
-                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
+                let properties = {};
+                if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar")) {
+                    properties._avatar = 1;
                     if (!$util.isString(message.avatar))
                         return "avatar: string expected";
+                }
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature")) {
+                    properties._signature = 1;
+                    if (!$util.isString(message.signature))
+                        return "signature: string expected";
+                }
                 return null;
             };
 
@@ -22752,8 +24059,9 @@ export const im = $root.im = (() => {
                     throw $Error("max depth exceeded");
                 let message = new $root.im.profile.ProfileUpdateReq();
                 if (object.avatar != null)
-                    if (typeof object.avatar !== "string" || object.avatar.length)
-                        message.avatar = $String(object.avatar);
+                    message.avatar = $String(object.avatar);
+                if (object.signature != null)
+                    message.signature = $String(object.signature);
                 return message;
             };
 
@@ -22774,10 +24082,10 @@ export const im = $root.im = (() => {
                 if (_depth > $util.recursionLimit)
                     throw $Error("max depth exceeded");
                 let object = {};
-                if (options.defaults)
-                    object.avatar = "";
                 if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
                     object.avatar = message.avatar;
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature"))
+                    object.signature = message.signature;
                 return object;
             };
 
@@ -22817,6 +24125,7 @@ export const im = $root.im = (() => {
              * @property {number|null} [code] ProfileUpdateResp code
              * @property {string|null} [message] ProfileUpdateResp message
              * @property {string|null} [avatar] ProfileUpdateResp avatar
+             * @property {string|null} [signature] ProfileUpdateResp signature
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -22873,6 +24182,14 @@ export const im = $root.im = (() => {
             ProfileUpdateResp.prototype.avatar = "";
 
             /**
+             * ProfileUpdateResp signature.
+             * @member {string} signature
+             * @memberof im.profile.ProfileUpdateResp
+             * @instance
+             */
+            ProfileUpdateResp.prototype.signature = "";
+
+            /**
              * Creates a new ProfileUpdateResp instance using the specified properties.
              * @function create
              * @memberof im.profile.ProfileUpdateResp
@@ -22910,6 +24227,8 @@ export const im = $root.im = (() => {
                     writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
                 if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar") && message.avatar !== "")
                     writer.uint32(/* id 3, wireType 2 =*/26).string(message.avatar);
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature") && message.signature !== "")
+                    writer.uint32(/* id 4, wireType 2 =*/34).string(message.signature);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -22994,6 +24313,15 @@ export const im = $root.im = (() => {
                                 delete message.avatar;
                             continue;
                         }
+                    case 4: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.signature = value;
+                            else
+                                delete message.signature;
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -23051,6 +24379,9 @@ export const im = $root.im = (() => {
                 if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
                     if (!$util.isString(message.avatar))
                         return "avatar: string expected";
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature"))
+                    if (!$util.isString(message.signature))
+                        return "signature: string expected";
                 return null;
             };
 
@@ -23081,6 +24412,9 @@ export const im = $root.im = (() => {
                 if (object.avatar != null)
                     if (typeof object.avatar !== "string" || object.avatar.length)
                         message.avatar = $String(object.avatar);
+                if (object.signature != null)
+                    if (typeof object.signature !== "string" || object.signature.length)
+                        message.signature = $String(object.signature);
                 return message;
             };
 
@@ -23105,6 +24439,7 @@ export const im = $root.im = (() => {
                     object.code = 0;
                     object.message = "";
                     object.avatar = "";
+                    object.signature = "";
                 }
                 if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
                     object.code = message.code;
@@ -23112,6 +24447,8 @@ export const im = $root.im = (() => {
                     object.message = message.message;
                 if (message.avatar != null && $Object.hasOwnProperty.call(message, "avatar"))
                     object.avatar = message.avatar;
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature"))
+                    object.signature = message.signature;
                 return object;
             };
 

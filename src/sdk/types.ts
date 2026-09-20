@@ -67,6 +67,12 @@ export enum Cmd {
   CMD_UPLOAD_REQ = 0x00A0,
   CMD_UPLOAD_RESP = 0x00A1,
 
+  // 群转让 / 解散（0x0076~0x0079 空档）
+  CMD_GROUP_TRANSFER_REQ = 0x0076,
+  CMD_GROUP_TRANSFER_RESP = 0x0077,
+  CMD_GROUP_DISSOLVE_REQ = 0x0078,
+  CMD_GROUP_DISSOLVE_RESP = 0x0079,
+
   // 用户资料 0x00C0-0x00C1
   CMD_PROFILE_UPDATE_REQ = 0x00C0,
   CMD_PROFILE_UPDATE_RESP = 0x00C1,
@@ -136,6 +142,8 @@ export interface OutgoingMessage {
   serverMessageId?: string;
   /** 消息种类：c2c 走 C2CReq 补发，group 走 C2GReq 补发（重连/认证后重发时区分编码路径） */
   kind?: 'c2c' | 'group';
+  /** 群消息扩展元数据（如 @ 提及 mentioned_user_ids），随 MessageContent.ext 透传 */
+  ext?: Record<string, string>;
 }
 
 // 接收消息（归一化）。C2C 消息用 recipientId，群消息用 groupId
@@ -146,6 +154,8 @@ export interface IncomingMessage {
   groupId?: string;
   senderUserName?: string;
   senderNickname?: string;
+  /** 被 @ 的用户 ID 列表（群消息 ext.mentioned_user_ids） */
+  mentions?: string[];
   msgType: MsgType;
   content: string;
   seq: number;
@@ -298,6 +308,8 @@ export interface GroupMessage {
   senderNickname?: string;
   msgType: number;
   content: string;
+  /** 被 @ 的用户 ID 列表（ext.mentioned_user_ids） */
+  mentions?: string[];
   seq: number;
   createdAt: number;
 }
@@ -382,6 +394,7 @@ export interface UpdateProfileResp {
   code: number;
   message: string;
   avatar: string; // 读侧预签名后的头像 URL，可直接渲染
+  signature: string; // 请求包含 signature 时回显新值
 }
 
 // 媒体消息 content 的字符串化 JSON 结构。

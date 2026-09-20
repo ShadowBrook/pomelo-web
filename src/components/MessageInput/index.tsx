@@ -16,7 +16,7 @@ interface Props {
   /** 只读会话（如已被移出群聊）：禁用输入与所有发送入口 */
   disabled?: boolean;
   draft?: string;
-  onSendText: (text: string) => void;
+  onSendText: (text: string, mentionIds?: string[]) => void;
   onSendImage: (file: File) => void;
   onSendFile: (file: File) => void;
   onSendVoice: (file: File, duration?: number) => void;
@@ -24,6 +24,8 @@ interface Props {
   onSendEmoji: (file: File) => void;
   onDraftChange: (text: string) => void;
   quickReplies?: string[];
+  /** 群成员（仅群聊传入）：@ 按钮弹出成员选择 */
+  members?: Array<{ userId: string; nickname: string; userName: string }>;
 }
 
 function ToolButton({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) {
@@ -68,6 +70,7 @@ export function MessageInput({
   onCancelReply,
   peerId,
   disabled = false,
+  members,
   draft,
   onSendText,
   onSendImage,
@@ -88,6 +91,67 @@ export function MessageInput({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const emojiInputRef = useRef<HTMLInputElement>(null);
 
+  // @ 提及：mention.start 指向 '@' 后第一个字符；非空即弹出候选下拉
+  const [mention, setMention] = useState<{ start: number } | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  // 选中的被 @ 用户 ID（随消息作为 ext.mentioned_user_ids 元数据发送）
+  const mentionIdsRef = useRef<string[]>([]);
+
+  // 输入 '@'（行首或空白后）触发；查询词出现空白、删除到 '@' 前、或光标移开提及段即关闭
+  const syncMention = (value: string, caret: number) => {
+    if (!members || members.length === 0 || disabled) {
+      setMention(null);
+      return;
+    }
+    const at = value.lastIndexOf('@', Math.max(0, caret - 1));
+    if (at === -1 || caret <= at || /\s/.test(value.slice(at + 1, caret)) || (at > 0 && !/\s/.test(value[at - 1]))) {
+      setMention(null);
+      return;
+    }
+    setMention((prev) => (prev && prev.start === at + 1 ? prev : { start: at + 1 }));
+    setMentionIndex(0);
+  };
+
+  const mentionQuery = mention ? text.slice(mention.start, textareaRef.current?.selectionStart ?? text.length) : '';
+  const mentionCandidates = (members ?? []).filter((m) => {
+    const name = (m.nickname || m.userName).toLowerCase();
+    return !mentionQuery || name.includes(mentionQuery.toLowerCase());
+  });
+
+  /** 选中候选：把 '@查询词' 替换为 '@昵称 '，光标落到其后 */
+  const pickMention = (member: { userId: string; nickname: string; userName: string }) => {
+    const el = textareaRef.current;
+    const name = member.nickname || member.userName;
+    if (!mentionIdsRef.current.includes(member.userId)) {
+      mentionIdsRef.current.push(member.userId);
+    }
+    const caret = el?.selectionStart ?? text.length;
+    const at = (mention?.start ?? caret) - 1;
+    const next = text.slice(0, at) + `@${name} ` + text.slice(caret);
+    const pos = at + name.length + 2;
+    setText(next);
+    onDraftChange(next);
+    setMention(null);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(pos, pos);
+    });
+  };
+
+  /** 工具栏 @ 按钮：在光标处插入 '@' 并打开下拉 */
+  const openMention = () => {
+    const el = textareaRef.current;
+    const caret = el?.selectionStart ?? text.length;
+    const next = text.slice(0, caret) + '@' + text.slice(caret);
+    setText(next);
+    onDraftChange(next);
+    setMention({ start: caret + 1 });
+    setMentionIndex(0);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(caret + 1, caret + 1);
+    });
+  };
   // 录音状态
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -118,13 +182,40 @@ export function MessageInput({
     if (disabled) return;
     const trimmed = text.trim();
     if (!trimmed) return;
-    onSendText(trimmed);
+    const mentionIds = mentionIdsRef.current;
+    mentionIdsRef.current = [];
+    onSendText(trimmed, mentionIds.length > 0 ? mentionIds : undefined);
     setText('');
     onDraftChange('');
+    setMention(null);
     textareaRef.current?.focus();
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // @ 提及下拉打开时：↑/↓ 移动高亮，Enter/Tab 选中，Esc 关闭（优先于发送）
+    if (mention && mentionCandidates.length > 0) {
+      const idx = mentionIndex % mentionCandidates.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex(e.key === 'ArrowDown' ? idx + 1 : idx + mentionCandidates.length - 1);
+        return;
+      }
+      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+        e.preventDefault();
+        pickMention(mentionCandidates[idx]);
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        pickMention(mentionCandidates[idx]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setMention(null);
+        return;
+      }
+    }
     // Ctrl/Cmd+Enter：插入换行（参考产品行为）
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
@@ -143,6 +234,7 @@ export function MessageInput({
   const handleChange = (value: string) => {
     setText(value);
     onDraftChange(value);
+    syncMention(value, textareaRef.current?.selectionStart ?? value.length);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,7 +359,7 @@ export function MessageInput({
             <rect x="2.5" y="5" width="13" height="14" rx="2" /><path d="M15.5 10.5L21 7v10l-5.5-3.5z" />
           </svg>
         </ToolButton>
-        <ToolButton title="@" onClick={() => toast('功能开发中')}>
+        <ToolButton title="@成员" onClick={openMention}>
           <span className="text-[15px] leading-none font-medium">@</span>
         </ToolButton>
         <ToolButton title={recording ? '停止录音' : '语音输入'} onClick={toggleRecord}>
@@ -291,12 +383,37 @@ export function MessageInput({
       {/* 录音提示条 */}
       {recording && <RecordingIndicator />}
 
+      {/* @ 成员选择弹层：输入 '@' 后按查询词过滤，↑/↓ 选择、Enter/Tab 确认 */}
+      {mention && !disabled && (
+        <div className="relative">
+          <div className="absolute bottom-3 left-12 bg-panel rounded-md shadow-xl border border-line py-1 w-[220px] max-h-[220px] overflow-y-auto z-20">
+            {mentionCandidates.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-text-sub">无匹配成员</div>
+            ) : (
+              mentionCandidates.map((m, i) => (
+                <button
+                  key={m.userId}
+                  // mousedown 先于 textarea blur，避免点击项前弹层被失焦关闭
+                  onMouseDown={(e) => { e.preventDefault(); pickMention(m); }}
+                  className={`w-full text-left px-3 py-1.5 text-sm truncate transition-colors ${
+                    i === mentionIndex % mentionCandidates.length ? 'bg-bg-page text-primary' : 'text-text-main hover:bg-bg-page'
+                  }`}
+                >
+                  {m.nickname || m.userName}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 输入区域（无边框，白底透明输入） */}
       <textarea
         ref={textareaRef}
         value={text}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onClick={() => syncMention(text, textareaRef.current?.selectionStart ?? text.length)}
         disabled={disabled}
         placeholder={disabled ? '你已被移出群聊，无法发送消息' : '输入聊天信息，按 Enter 键快速发送 ...'}
         rows={3}

@@ -17,6 +17,8 @@ export interface ChatMessage {
   recipientId: string;
   senderUserName?: string;
   senderNickname?: string;
+  /** 被 @ 的用户 ID 列表（群消息元数据） */
+  mentions?: string[];
   msgType: MsgType;
   content: string;
   status: MessageStatus;
@@ -34,7 +36,7 @@ interface ChatState {
   groupReadStates: Record<string, Record<string, number>>;
 
   addMessage: (msg: ChatMessage) => void;
-  sendText: (peerId: string, text: string, reply: ReplySnippet | undefined, sendFn: (params: { recipientId: string; msgType: MsgType; content: string }) => string) => void;
+  sendText: (peerId: string, text: string, reply: ReplySnippet | undefined, sendFn: (params: { recipientId: string; msgType: MsgType; content: string; ext?: Record<string, string> }) => string, mentionIds?: string[]) => void;
   sendMedia: (
     peerId: string,
     params: { msgType: MsgType; file: File; duration?: number; reply?: ReplySnippet },
@@ -129,14 +131,20 @@ export const useChatStore = create<ChatState>()(
         });
       },
 
-      sendText: (peerId, text, reply, sendFn) => {
+      sendText: (peerId, text, reply, sendFn, mentionIds) => {
         // 引用时包装为 REPLY 类型消息（content = {reply: 快照, body: {msgType, content}}）
         const msgType = reply ? MsgType.REPLY : MsgType.TEXT;
         const content = reply ? wrapReplyContent(reply, { msgType: MsgType.TEXT, content: text }) : text;
-        const msgId = sendFn({ recipientId: peerId, msgType, content });
+        const msgId = sendFn({
+          recipientId: peerId,
+          msgType,
+          content,
+          ext: mentionIds && mentionIds.length > 0 ? { mentioned_user_ids: mentionIds.join(',') } : undefined,
+        });
         const msg: ChatMessage = {
           id: msgId, senderId: '__self__', recipientId: peerId,
           msgType, content, status: 'sending', timestamp: Date.now(),
+          mentions: mentionIds && mentionIds.length > 0 ? mentionIds : undefined,
         };
         set((state) => ({
           messages: { ...state.messages, [peerId]: [...(state.messages[peerId] || []), msg] },

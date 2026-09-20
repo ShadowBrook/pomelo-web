@@ -8,6 +8,7 @@ interface UserInfo {
   userName: string; // 用户名, 登录凭证
   nickname: string;
   avatar: string;
+  signature: string; // 个性签名
 }
 
 interface AuthState {
@@ -22,6 +23,8 @@ interface AuthState {
   restoreSession: () => void;
   /** 头像更新成功后回填（avatar 为读侧预签名 URL） */
   updateAvatar: (avatar: string) => void;
+  /** 个性签名更新成功后回填 */
+  updateSignature: (signature: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -40,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
               userName: res.userName || userName,
               nickname: res.nickname || userName,
               avatar: sameOriginMediaUrl(res.avatar || ''),
+              signature: res.signature || '',
             },
             token: res.token || 'test-token',
             isLoggedIn: true,
@@ -59,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
               userName: userName,
               nickname,
               avatar: avatar || '',
+              signature: '',
             },
             token: res.token || 'test-token',
             isLoggedIn: true,
@@ -79,12 +84,16 @@ export const useAuthStore = create<AuthState>()(
         const { user, token } = get();
         if (user && token) {
           // 兼容持久化里的旧 http 直连头像 URL（Safari 混合内容拦截）
-          set({ isLoggedIn: true, user: { ...user, avatar: sameOriginMediaUrl(user.avatar) } });
+          set({ isLoggedIn: true, user: { ...user, signature: user.signature ?? '', avatar: sameOriginMediaUrl(user.avatar) } });
         }
       },
 
       updateAvatar: (avatar) => {
         set((state) => (state.user ? { user: { ...state.user, avatar: sameOriginMediaUrl(avatar) } } : state));
+      },
+
+      updateSignature: (signature) => {
+        set((state) => (state.user ? { user: { ...state.user, signature } } : state));
       },
     }),
     {

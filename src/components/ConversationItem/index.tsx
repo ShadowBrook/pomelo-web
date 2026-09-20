@@ -98,7 +98,10 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
           </span>
           <span className="text-[11px] text-text-sub flex-shrink-0 ml-2">{formatListTime(lastMessageTime)}</span>
         </div>
-        <p className="text-xs truncate mt-0.5">{draft ? renderPreview(`[草稿] ${draft}`) : renderPreview(lastMessage)}</p>
+        <p className="text-xs truncate mt-0.5">
+          {conversation.mentionedMe && !draft && <span className="text-danger">[有人@我] </span>}
+          {draft ? renderPreview(`[草稿] ${draft}`) : renderPreview(lastMessage)}
+        </p>
       </div>
 
       {/* 悬停删除 */}

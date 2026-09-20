@@ -216,6 +216,9 @@ export function useIMClient() {
               lastMessageTime: msg.createdAt || Date.now(),
               lastMessageId: String(msg.id),
               unreadCount: isActive ? s.conversations[groupId].unreadCount : s.conversations[groupId].unreadCount + 1,
+              mentionedMe: msg.mentions?.includes(userIdRef.current ?? '')
+                ? true
+                : s.conversations[groupId].mentionedMe,
             },
           },
         }));
@@ -246,6 +249,28 @@ export function useIMClient() {
     });
 
     client.on('groupMemberChange', (notify: GroupMemberChangeNotify) => {
+      // 群被解散：清本地群、成员与会话（历史消息保留在服务端），关聊天窗由组件自行响应
+      if (notify.type === 'DISSOLVED') {
+        useGroupStore.getState().removeGroup(notify.groupId);
+        useGroupStore.getState().markRemoved(notify.groupId);
+        useGroupStore.getState().removeMember(notify.groupId, notify.userId);
+        useConversationStore.getState().removeConversation(notify.groupId);
+        toast('该群已被群主解散');
+        return;
+      }
+      // 群主转让：刷新群列表（ownerId）与成员角色缓存
+      if (notify.type === 'OWNER_TRANSFERRED') {
+        client.getMyGroups()
+          .then((groups) => useGroupStore.getState().setGroups(groups))
+          .catch((err) => console.error('刷新群列表失败:', err));
+        client.getGroupMembers(notify.groupId)
+          .then((members) => useGroupStore.getState().setMembers(notify.groupId, members))
+          .catch((err) => console.error('刷新群成员失败:', err));
+        if (notify.userId === userIdRef.current) {
+          toast('你现在是该群的群主了');
+        }
+        return;
+      }
       // LEFT/KICKED 移除成员；INVITED/JOINED 等刷新群成员列表
       if (notify.type === 'LEFT' || notify.type === 'KICKED') {
         useGroupStore.getState().removeMember(notify.groupId, notify.userId);

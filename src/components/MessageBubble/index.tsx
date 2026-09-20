@@ -354,11 +354,24 @@ function CallRecordIcon({ video }: { video: boolean }) {
   );
 }
 
+/** 文本中的 @提及 高亮（@token 以空白/结尾为界；无 @ 时直接返回原文） */
+function renderTextWithMentions(content: string): React.ReactNode {
+  if (!content.includes('@')) {
+    return content;
+  }
+  const parts = content.split(/(@[^\s@]+)/g);
+  return parts.map((part, i) =>
+    part.startsWith('@') && part.length > 1
+      ? <span key={i} className="text-primary">{part}</span>
+      : part,
+  );
+}
+
 /** 按类型渲染消息正文（引用解包后递归复用） */
 function renderInner(msgType: number, content: string, url?: string): React.ReactNode {
   switch (msgType) {
     case MsgType.TEXT:
-      return <p className="whitespace-pre-wrap">{content}</p>;
+      return <p className="whitespace-pre-wrap">{renderTextWithMentions(content)}</p>;
 
     case MsgType.SYSTEM: {
       // 通话记录：气泡文案带类型图标；左右侧由 MessageList 按服务端 outgoing 标记决定

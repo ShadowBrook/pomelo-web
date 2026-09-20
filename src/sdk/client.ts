@@ -41,6 +41,7 @@ const GROUP_MEMBER_CHANGE_NAMES = [
   'KICKED',
   'ADMIN_SET',
   'OWNER_TRANSFERRED',
+  'DISSOLVED',
 ] as const;
 
 interface IMClientOptions {
@@ -548,20 +549,46 @@ export class IMClient {
   }
 
   /**
-   * 更新资料（CMD_PROFILE_UPDATE_REQ/RESP），当前仅头像。
-   * avatarKey 为先经 requestUpload/putFileToPresignedUrl 直传的服务端对象 key；
-   * 响应 avatar 是读侧预签名 GET URL，可直接渲染。
+   * 更新资料（CMD_PROFILE_UPDATE_REQ/RESP）。proto3 optional 语义：
+   * 只传需要更新的字段（avatar 为先经 requestUpload/putFileToPresignedUrl
+   * 直传的服务端对象 key，空串=清除）；响应回显读侧预签名后的值。
    */
-  updateProfile(avatarKey: string): Promise<UpdateProfileResp> {
+  updateProfile(fields: { avatar?: string; signature?: string }): Promise<UpdateProfileResp> {
+    const body: Record<string, string> = {};
+    if (fields.avatar !== undefined) {
+      body.avatar = fields.avatar;
+    }
+    if (fields.signature !== undefined) {
+      body.signature = fields.signature;
+    }
     return this._sendGroupOp(
       Cmd.CMD_PROFILE_UPDATE_REQ,
       Cmd.CMD_PROFILE_UPDATE_RESP,
-      enc(im.profile.ProfileUpdateReq, { avatar: avatarKey }),
+      enc(im.profile.ProfileUpdateReq, body),
     ).then((raw: any) => ({
       code: raw?.code ?? 0,
       message: raw?.message ?? '',
       avatar: raw?.avatar || '',
+      signature: raw?.signature || '',
     }));
+  }
+
+  /** 转让群主（仅群主；目标须为成员）。成员会收到 OWNER_TRANSFERRED 推送 */
+  transferGroup(groupId: string, targetUserId: string): Promise<GroupOpResp> {
+    return this._sendGroupOp(
+      Cmd.CMD_GROUP_TRANSFER_REQ,
+      Cmd.CMD_GROUP_TRANSFER_RESP,
+      enc(im.group.TransferGroupReq, { groupId, targetUserId }),
+    ).then((raw: any) => ({ code: raw?.code ?? 0, message: raw?.message ?? '' }));
+  }
+
+  /** 解散群聊（仅群主）。成员会收到 DISSOLVED 推送；历史消息保留 */
+  dissolveGroup(groupId: string): Promise<GroupOpResp> {
+    return this._sendGroupOp(
+      Cmd.CMD_GROUP_DISSOLVE_REQ,
+      Cmd.CMD_GROUP_DISSOLVE_RESP,
+      enc(im.group.DissolveGroupReq, { groupId }),
+    ).then((raw: any) => ({ code: raw?.code ?? 0, message: raw?.message ?? '' }));
   }
 
   // ================================================================
@@ -589,7 +616,7 @@ export class IMClient {
     );
   }
 
-  sendGroupMessage(groupId: string, msgType: MsgType, content: string): string {
+  sendGroupMessage(groupId: string, msgType: MsgType, content: string, ext?: Record<string, string>): string {
     if (!this.connected) throw new Error('Not connected');
     const msgId = generateId();
     // 与 C2C 一致走发送队列：认证未完成时延迟发送，断线重连后自动补发
@@ -603,6 +630,7 @@ export class IMClient {
       createdAt: Date.now(),
       retryCount: 0,
       kind: 'group',
+      ext,
     };
     this.pendingQueue.set(msgId, msg);
     this._flush();
@@ -845,9 +873,13 @@ export class IMClient {
     msg.status = 'sending';
 
     const isGroup = msg.kind === 'group';
+    const messageFields: Record<string, unknown> = { msgType: msg.msgType, content: utf8(msg.content) };
+    if (msg.ext && Object.keys(msg.ext).length > 0) {
+      messageFields.ext = msg.ext;
+    }
     const bodyBytes = isGroup
-      ? enc(im.group.C2GReq, { groupId: msg.recipientId, messageId: msg.id, message: { msgType: msg.msgType, content: utf8(msg.content) } })
-      : enc(im.chat.C2CReq, { senderId: this.userId, recipientId: msg.recipientId, messageId: msg.id, message: { msgType: msg.msgType, content: utf8(msg.content) } });
+      ? enc(im.group.C2GReq, { groupId: msg.recipientId, messageId: msg.id, message: messageFields })
+      : enc(im.chat.C2CReq, { senderId: this.userId, recipientId: msg.recipientId, messageId: msg.id, message: messageFields });
 
     // 将 userName / nickname 放入 varHeaders，供后端填充 Notify 的 senderNickname
     const buf = encode(isGroup ? Cmd.C2G_REQ : Cmd.C2C_REQ, msg.id, bodyBytes, this.userId, {
@@ -1090,9 +1122,18 @@ export class IMClient {
       senderNickname: ext.senderNickname,
       msgType: mc.msgType != null && Number(mc.msgType) !== 0 ? (Number(mc.msgType) as MsgType) : MsgType.TEXT,
       content: mc.content ? text(mc.content) : '',
+      mentions: this._mentionsOf(ext),
       seq: Number(meta?.seq != null ? meta.seq : (ext.seq || 0)) || 0,
       createdAt,
     };
+  }
+
+  /** ext.mentioned_user_ids（逗号分隔 uid）→ string[] */
+  private _mentionsOf(ext: Record<string, string>): string[] | undefined {
+    const raw = ext.mentioned_user_ids;
+    if (!raw) return undefined;
+    const ids = raw.split(',').map((x) => x.trim()).filter(Boolean);
+    return ids.length > 0 ? ids : undefined;
   }
 
   /** C2GNotify → GroupMessage（display 名取自 message.ext，id 优先取外层 messageId） */
@@ -1111,6 +1152,7 @@ export class IMClient {
       senderNickname: ext.senderNickname,
       msgType: mc.msgType != null && Number(mc.msgType) !== 0 ? (Number(mc.msgType) as number) : MsgType.TEXT,
       content: mc.content ? text(mc.content) : '',
+      mentions: this._mentionsOf(ext),
       seq: g.seq != null ? Number(g.seq) : 0,
       createdAt: (mc.timestamp != null ? Number(mc.timestamp) : 0) || Date.now(),
     };
@@ -1301,6 +1343,24 @@ export class IMClient {
         break;
       }
 
+      // 群转让/解散响应
+      case Cmd.CMD_GROUP_TRANSFER_RESP:
+      case Cmd.CMD_GROUP_DISSOLVE_RESP: {
+        const raw = plain(im.group.TransferGroupResp, body);
+        const resp: GroupOpResp = { code: raw?.code ?? 0, message: raw?.message ?? '' };
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          if (resp.code === 0) {
+            pending.resolve(resp);
+          } else {
+            pending.reject(new Error(resp.message));
+          }
+        }
+        break;
+      }
+
       // 资料更新响应
       case Cmd.CMD_PROFILE_UPDATE_RESP: {
         const raw = plain(im.profile.ProfileUpdateResp, body);
@@ -1308,6 +1368,7 @@ export class IMClient {
           code: raw?.code ?? 0,
           message: raw?.message ?? '',
           avatar: raw?.avatar || '',
+          signature: raw?.signature || '',
         };
         const pending = this.pendingFriendOps.get(messageId);
         if (pending) {

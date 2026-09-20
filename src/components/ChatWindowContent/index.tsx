@@ -89,6 +89,8 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
   const kicked = s.isGroup && (removedByPush || missingFromMyGroups);
   const readCounts = useGroupReadCounts(peerId, s.isGroup && !kicked, s.messages, s.currentUserId);
   const groupStoreMemberCount = useGroupStore((st) => st.groups[peerId]?.memberCount);
+  // 群成员缓存（订阅式）：@ 提及选择列表数据源
+  const groupMembersForMention = useGroupStore((st) => st.groupMembers[peerId]);
   const groupReadState = useChatStore((st) => st.groupReadStates[peerId]);
   // 成员数优先用已读游标表的实际行数（更准），回退群列表快照
   const groupMemberCount = s.isGroup
@@ -223,13 +225,14 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           <MessageInput
             peerId={peerId}
             disabled={kicked}
+            members={s.isGroup ? groupMembersForMention : undefined}
             draft={s.draft}
             replyPreview={s.replyTo ? {
               senderName: s.replyTo.senderNickname || s.replyTo.senderUserName || s.replyTo.senderId,
               snippet: buildReplySnippet(s.replyTo),
             } : undefined}
             onCancelReply={() => s.setReplyTo(null)}
-            onSendText={s.sendText}
+            onSendText={(text, mentionIds) => s.sendText(text, mentionIds)}
             onSendImage={s.sendImage}
             onSendFile={s.sendFile}
             onSendVoice={s.sendVoice}

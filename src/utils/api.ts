@@ -78,6 +78,18 @@ export async function login(userName: string, password: string) {
 }
 
 // 查询用户信息
+/** 修改密码：需要登录态（Authorization: Bearer JWT）。
+ *  原密码错误也返回 401，因此不走 request 助手（其会把 401 一律按登录过期处理）。 */
+export async function changePassword(token: string, oldPassword: string, newPassword: string) {
+  const res = await fetch(`${BASE_URL}/user/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ oldPassword, newPassword }),
+  });
+  const body = await res.json().catch(() => ({ code: res.status, message: `HTTP ${res.status}` }));
+  return { code: body.code ?? res.status, message: body.message || '' };
+}
+
 export async function getProfile(userId: string) {
   return request<{ userId: string; userName: string; nickname: string; avatar: string; status: number }>(
     `/user/${userId}/profile`

@@ -491,6 +491,18 @@ export namespace im {
             /** CMD_GROUP_KICK_RESP value */
             CMD_GROUP_KICK_RESP = 117,
 
+            /** CMD_GROUP_TRANSFER_REQ value */
+            CMD_GROUP_TRANSFER_REQ = 118,
+
+            /** CMD_GROUP_TRANSFER_RESP value */
+            CMD_GROUP_TRANSFER_RESP = 119,
+
+            /** CMD_GROUP_DISSOLVE_REQ value */
+            CMD_GROUP_DISSOLVE_REQ = 120,
+
+            /** CMD_GROUP_DISSOLVE_RESP value */
+            CMD_GROUP_DISSOLVE_RESP = 121,
+
             /** CMD_GROUP_GET_INFO_REQ value */
             CMD_GROUP_GET_INFO_REQ = 134,
 
@@ -5848,8 +5860,497 @@ export namespace im {
                 ADMIN_SET = 4,
 
                 /** OWNER_TRANSFERRED value */
-                OWNER_TRANSFERRED = 5
+                OWNER_TRANSFERRED = 5,
+
+                /** DISSOLVED value */
+                DISSOLVED = 6
             }
+        }
+
+        /**
+         * Properties of a TransferGroupReq.
+         * @deprecated Use im.group.TransferGroupReq.$Properties instead.
+         */
+        interface ITransferGroupReq extends im.group.TransferGroupReq.$Properties {
+        }
+
+        /** Represents a TransferGroupReq. */
+        class TransferGroupReq {
+
+            /**
+             * Constructs a new TransferGroupReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.TransferGroupReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** TransferGroupReq groupId. */
+            groupId: (number|Long);
+
+            /** TransferGroupReq targetUserId. */
+            targetUserId: (number|Long);
+
+            /**
+             * Creates a new TransferGroupReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns TransferGroupReq instance
+             */
+            static create(properties: im.group.TransferGroupReq.$Shape): im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape;
+            static create(properties?: im.group.TransferGroupReq.$Properties): im.group.TransferGroupReq;
+
+            /**
+             * Encodes the specified TransferGroupReq message. Does not implicitly {@link im.group.TransferGroupReq.verify|verify} messages.
+             * @param message TransferGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.TransferGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified TransferGroupReq message, length delimited. Does not implicitly {@link im.group.TransferGroupReq.verify|verify} messages.
+             * @param message TransferGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.TransferGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a TransferGroupReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape} TransferGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape;
+
+            /**
+             * Decodes a TransferGroupReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape} TransferGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape;
+
+            /**
+             * Verifies a TransferGroupReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a TransferGroupReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns TransferGroupReq
+             */
+            static fromObject(object: { [k: string]: any }): im.group.TransferGroupReq;
+
+            /**
+             * Creates a plain object from a TransferGroupReq message. Also converts values to other types if specified.
+             * @param message TransferGroupReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.TransferGroupReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this TransferGroupReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for TransferGroupReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace TransferGroupReq {
+
+            /** Properties of a TransferGroupReq. */
+            interface $Properties {
+
+                /** TransferGroupReq groupId */
+                groupId?: (number|Long|null);
+
+                /** TransferGroupReq targetUserId */
+                targetUserId?: (number|Long|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a TransferGroupReq. */
+            type $Shape = im.group.TransferGroupReq.$Properties;
+        }
+
+        /**
+         * Properties of a TransferGroupResp.
+         * @deprecated Use im.group.TransferGroupResp.$Properties instead.
+         */
+        interface ITransferGroupResp extends im.group.TransferGroupResp.$Properties {
+        }
+
+        /** Represents a TransferGroupResp. */
+        class TransferGroupResp {
+
+            /**
+             * Constructs a new TransferGroupResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.TransferGroupResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** TransferGroupResp code. */
+            code: number;
+
+            /** TransferGroupResp message. */
+            message: string;
+
+            /**
+             * Creates a new TransferGroupResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns TransferGroupResp instance
+             */
+            static create(properties: im.group.TransferGroupResp.$Shape): im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape;
+            static create(properties?: im.group.TransferGroupResp.$Properties): im.group.TransferGroupResp;
+
+            /**
+             * Encodes the specified TransferGroupResp message. Does not implicitly {@link im.group.TransferGroupResp.verify|verify} messages.
+             * @param message TransferGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.TransferGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified TransferGroupResp message, length delimited. Does not implicitly {@link im.group.TransferGroupResp.verify|verify} messages.
+             * @param message TransferGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.TransferGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a TransferGroupResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape} TransferGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape;
+
+            /**
+             * Decodes a TransferGroupResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape} TransferGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape;
+
+            /**
+             * Verifies a TransferGroupResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a TransferGroupResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns TransferGroupResp
+             */
+            static fromObject(object: { [k: string]: any }): im.group.TransferGroupResp;
+
+            /**
+             * Creates a plain object from a TransferGroupResp message. Also converts values to other types if specified.
+             * @param message TransferGroupResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.TransferGroupResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this TransferGroupResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for TransferGroupResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace TransferGroupResp {
+
+            /** Properties of a TransferGroupResp. */
+            interface $Properties {
+
+                /** TransferGroupResp code */
+                code?: (number|null);
+
+                /** TransferGroupResp message */
+                message?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a TransferGroupResp. */
+            type $Shape = im.group.TransferGroupResp.$Properties;
+        }
+
+        /**
+         * Properties of a DissolveGroupReq.
+         * @deprecated Use im.group.DissolveGroupReq.$Properties instead.
+         */
+        interface IDissolveGroupReq extends im.group.DissolveGroupReq.$Properties {
+        }
+
+        /** Represents a DissolveGroupReq. */
+        class DissolveGroupReq {
+
+            /**
+             * Constructs a new DissolveGroupReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.DissolveGroupReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** DissolveGroupReq groupId. */
+            groupId: (number|Long);
+
+            /**
+             * Creates a new DissolveGroupReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns DissolveGroupReq instance
+             */
+            static create(properties: im.group.DissolveGroupReq.$Shape): im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape;
+            static create(properties?: im.group.DissolveGroupReq.$Properties): im.group.DissolveGroupReq;
+
+            /**
+             * Encodes the specified DissolveGroupReq message. Does not implicitly {@link im.group.DissolveGroupReq.verify|verify} messages.
+             * @param message DissolveGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.DissolveGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified DissolveGroupReq message, length delimited. Does not implicitly {@link im.group.DissolveGroupReq.verify|verify} messages.
+             * @param message DissolveGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.DissolveGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a DissolveGroupReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape} DissolveGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape;
+
+            /**
+             * Decodes a DissolveGroupReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape} DissolveGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape;
+
+            /**
+             * Verifies a DissolveGroupReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a DissolveGroupReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns DissolveGroupReq
+             */
+            static fromObject(object: { [k: string]: any }): im.group.DissolveGroupReq;
+
+            /**
+             * Creates a plain object from a DissolveGroupReq message. Also converts values to other types if specified.
+             * @param message DissolveGroupReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.DissolveGroupReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this DissolveGroupReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for DissolveGroupReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace DissolveGroupReq {
+
+            /** Properties of a DissolveGroupReq. */
+            interface $Properties {
+
+                /** DissolveGroupReq groupId */
+                groupId?: (number|Long|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a DissolveGroupReq. */
+            type $Shape = im.group.DissolveGroupReq.$Properties;
+        }
+
+        /**
+         * Properties of a DissolveGroupResp.
+         * @deprecated Use im.group.DissolveGroupResp.$Properties instead.
+         */
+        interface IDissolveGroupResp extends im.group.DissolveGroupResp.$Properties {
+        }
+
+        /** Represents a DissolveGroupResp. */
+        class DissolveGroupResp {
+
+            /**
+             * Constructs a new DissolveGroupResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.DissolveGroupResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** DissolveGroupResp code. */
+            code: number;
+
+            /** DissolveGroupResp message. */
+            message: string;
+
+            /**
+             * Creates a new DissolveGroupResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns DissolveGroupResp instance
+             */
+            static create(properties: im.group.DissolveGroupResp.$Shape): im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape;
+            static create(properties?: im.group.DissolveGroupResp.$Properties): im.group.DissolveGroupResp;
+
+            /**
+             * Encodes the specified DissolveGroupResp message. Does not implicitly {@link im.group.DissolveGroupResp.verify|verify} messages.
+             * @param message DissolveGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.DissolveGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified DissolveGroupResp message, length delimited. Does not implicitly {@link im.group.DissolveGroupResp.verify|verify} messages.
+             * @param message DissolveGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.DissolveGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a DissolveGroupResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape} DissolveGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape;
+
+            /**
+             * Decodes a DissolveGroupResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape} DissolveGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape;
+
+            /**
+             * Verifies a DissolveGroupResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a DissolveGroupResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns DissolveGroupResp
+             */
+            static fromObject(object: { [k: string]: any }): im.group.DissolveGroupResp;
+
+            /**
+             * Creates a plain object from a DissolveGroupResp message. Also converts values to other types if specified.
+             * @param message DissolveGroupResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.DissolveGroupResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this DissolveGroupResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for DissolveGroupResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace DissolveGroupResp {
+
+            /** Properties of a DissolveGroupResp. */
+            interface $Properties {
+
+                /** DissolveGroupResp code */
+                code?: (number|null);
+
+                /** DissolveGroupResp message */
+                message?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a DissolveGroupResp. */
+            type $Shape = im.group.DissolveGroupResp.$Properties;
         }
 
         /**
@@ -8079,7 +8580,10 @@ export namespace im {
             $unknowns?: Uint8Array[];
 
             /** ProfileUpdateReq avatar. */
-            avatar: string;
+            avatar?: (string|null);
+
+            /** ProfileUpdateReq signature. */
+            signature?: (string|null);
 
             /**
              * Creates a new ProfileUpdateReq instance using the specified properties.
@@ -8168,6 +8672,9 @@ export namespace im {
                 /** ProfileUpdateReq avatar */
                 avatar?: (string|null);
 
+                /** ProfileUpdateReq signature */
+                signature?: (string|null);
+
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
@@ -8203,6 +8710,9 @@ export namespace im {
 
             /** ProfileUpdateResp avatar. */
             avatar: string;
+
+            /** ProfileUpdateResp signature. */
+            signature: string;
 
             /**
              * Creates a new ProfileUpdateResp instance using the specified properties.
@@ -8296,6 +8806,9 @@ export namespace im {
 
                 /** ProfileUpdateResp avatar */
                 avatar?: (string|null);
+
+                /** ProfileUpdateResp signature */
+                signature?: (string|null);
 
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
