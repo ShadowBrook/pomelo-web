@@ -1,5 +1,4 @@
 import { useState, useRef, KeyboardEvent, useEffect, lazy, Suspense, ReactNode } from 'react';
-import { toast } from '@/stores/useToastStore';
 import { recordedVoiceMime, voiceExt } from '@/utils/voice';
 
 const EmojiPicker = lazy(() => import('@/components/EmojiPicker'));

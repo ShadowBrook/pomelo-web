@@ -67,7 +67,7 @@ export const useFriendStore = create<FriendState>()((set) => ({
       const res = await api.getFriends(userId);
       // 头像 URL 同源改写（http presigned → /minio 代理，规避 Safari 混合内容拦截）
       set({
-        friends: (res.friends || []).map((f) => ({
+        friends: (res.friends || []).map((f: Friend): Friend => ({
           ...f,
           avatar: sameOriginMediaUrl(f.avatar),
           signature: f.signature || '',
@@ -83,7 +83,7 @@ export const useFriendStore = create<FriendState>()((set) => ({
     try {
       set({ loading: true, error: null });
       const res = await api.getPendingFriends(userId);
-      set({ pendingRequests: (res.pending || []).map((r) => ({ ...r, avatar: sameOriginMediaUrl(r.avatar) })), loading: false });
+      set({ pendingRequests: (res.pending || []).map((r: PendingRequest): PendingRequest => ({ ...r, avatar: sameOriginMediaUrl(r.avatar) })), loading: false });
     } catch (e: any) {
       set({ loading: false, error: e.message || '加载好友申请失败' });
     }
@@ -211,6 +211,7 @@ export const useFriendStore = create<FriendState>()((set) => ({
             userName: notify.userName || '',
             nickname: notify.nickname,
             avatar: notify.avatar,
+            signature: '',
             online: true, // 能推送 Notify 说明对方在线
             friendedAt: Date.now(),
           },

@@ -8,7 +8,7 @@ describe('useAuthStore.updateAvatar', () => {
 
   it('登录态下回填头像 URL', () => {
     useAuthStore.setState({
-      user: { userId: '100', userName: 'alice', nickname: '爱丽丝', avatar: '' },
+      user: { userId: '100', userName: 'alice', nickname: '爱丽丝', avatar: '', signature: '' },
       isLoggedIn: true,
     });
 

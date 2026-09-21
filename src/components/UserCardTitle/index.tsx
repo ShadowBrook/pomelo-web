@@ -8,7 +8,7 @@ import { MsgType } from '@/sdk/types';
 import * as api from '@/utils/api';
 import { AvatarCropperDialog } from '@/components/AvatarCropperDialog';
 
-type MenuKey = 'profile' | 'password' | 'logout' | 'about' | 'help';
+type MenuKey = 'profile' | 'signature' | 'password' | 'logout' | 'about' | 'help';
 
 /** 头像图片上限：头像走通用媒体上传通道，客户端先做体积约束 */
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
