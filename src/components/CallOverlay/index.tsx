@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AvatarImg } from '@/components/CachedImg';
 import { useCallStore } from '@/stores/useCallStore';
 import { CallMediaType } from '@/sdk/types';
 
@@ -249,7 +250,7 @@ function RingingAvatar({ name, avatar, still = false }: { name: string; avatar: 
         </>
       )}
       <div className="w-24 h-24 rounded-full bg-primary/40 flex items-center justify-center text-white text-3xl font-bold overflow-hidden">
-        {avatar ? <img src={avatar} alt={name} className="w-full h-full object-cover" /> : name.charAt(0).toUpperCase()}
+        <AvatarImg url={avatar} name={name} className="w-full h-full object-cover" />
       </div>
     </div>
   );

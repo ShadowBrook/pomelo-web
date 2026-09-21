@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { CachedImg } from '@/components/CachedImg';
 import { ChatMessage } from '@/stores/useChatStore';
 import { MsgType } from '@/sdk/types';
 import {
@@ -35,7 +36,7 @@ function VideoMessage({ url, thumbUrl, durationMs }: { url?: string; thumbUrl?: 
         title="点击播放"
       >
         {thumbUrl ? (
-          <img src={thumbUrl} alt="视频封面" className="w-full h-full object-cover" />
+          <CachedImg url={thumbUrl} alt="视频封面" className="w-full h-full object-cover" />
         ) : (
           <video src={url} preload="metadata" muted className="w-full h-full object-cover" />
         )}
@@ -216,20 +217,28 @@ function ImageMessage({ url, thumbUrl }: { url: string; thumbUrl?: string }) {
   const previewUrl = thumbUrl || url;
   return (
     <>
-      <img
-        src={previewUrl}
+      <CachedImg
+        url={previewUrl}
         alt="图片"
         className="max-w-full rounded cursor-pointer object-contain"
         style={{ maxHeight: 200 }}
         onClick={() => setOpen(true)}
+        fallback={(
+          /* 缓存就绪前先占位，避免气泡高度跳变 */
+          <div
+            className="rounded bg-black/[0.06] animate-pulse cursor-pointer"
+            style={{ width: 160, height: 120 }}
+            onClick={() => setOpen(true)}
+          />
+        )}
       />
       {open && (
         <div
           className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center cursor-zoom-out"
           onClick={() => setOpen(false)}
         >
-          {/* 原图仅在点开时才请求 */}
-          <img src={url} alt="图片预览" className="max-w-[92vw] max-h-[90vh] object-contain rounded shadow-2xl" />
+          {/* 原图仅在点开时才请求（挂载时才触发，保持懒加载） */}
+          <CachedImg url={url} alt="图片预览" className="max-w-[92vw] max-h-[90vh] object-contain rounded shadow-2xl" />
         </div>
       )}
     </>
@@ -240,7 +249,7 @@ function ImageMessage({ url, thumbUrl }: { url: string; thumbUrl?: string }) {
 function ReplyBlock({ reply }: { reply: { senderName?: string; senderId: string; snippet: string; thumbUrl?: string } }) {
   return (
     <div className="flex items-stretch gap-1.5 mb-1 rounded bg-black/5 px-1.5 py-1 max-w-[260px]">
-      {reply.thumbUrl ? <img src={reply.thumbUrl} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" /> : null}
+      {reply.thumbUrl ? <CachedImg url={reply.thumbUrl} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" /> : null}
       <div className="min-w-0 text-left">
         <div className="text-[11px] text-primary leading-tight truncate">{reply.senderName || reply.senderId}</div>
         <div className="text-[11px] text-text-sub leading-tight truncate">{reply.snippet}</div>
@@ -270,14 +279,14 @@ function ForwardItemBody({ it }: { it: ForwardItem }) {
     case MsgType.IMAGE:
     case MsgType.EMOJI:
       return (m.thumbUrl || m.url)
-        ? <img src={m.thumbUrl || m.url} alt="" className="max-h-[160px] rounded" />
+        ? <CachedImg url={m.thumbUrl || m.url} alt="" className="max-h-[160px] rounded" />
         : <div className="text-text-sub">[图片]</div>;
     case MsgType.VIDEO:
       if (m.url) {
         return <video src={m.url} controls poster={m.thumbUrl} className="max-h-[200px] rounded" />;
       }
       return m.thumbUrl
-        ? <img src={m.thumbUrl} alt="视频封面" className="max-h-[160px] rounded" />
+        ? <CachedImg url={m.thumbUrl} alt="视频封面" className="max-h-[160px] rounded" />
         : <div className="text-text-sub">[视频]</div>;
     case MsgType.VOICE:
       return <VoiceMessage url={m.url} durationMs={m.duration} seed={m.key} />;
@@ -396,7 +405,7 @@ function renderInner(msgType: number, content: string, url?: string, thumbUrl?: 
 
     case MsgType.EMOJI:
       return url
-        ? <img src={url} alt="表情" className="w-16 h-16 object-contain" />
+        ? <CachedImg url={url} alt="表情" className="w-16 h-16 object-contain" />
         : <span className="text-2xl">[表情]</span>;
 
     case MsgType.VOICE: {
@@ -506,7 +515,7 @@ export const MessageBubble = React.memo(function MessageBubble({
       {!isSelf && (
         <div className="w-9 h-9 rounded-md bg-primary/15 flex-shrink-0 flex items-center justify-center text-primary text-xs mr-2 overflow-hidden">
           {peerAvatar
-            ? <img src={peerAvatar} alt={peerName} className="w-full h-full object-cover" />
+            ? <CachedImg url={peerAvatar} alt={peerName} className="w-full h-full object-cover" fallback={peerName.charAt(0).toUpperCase()} />
             : peerName.charAt(0).toUpperCase()}
         </div>
       )}
@@ -572,7 +581,7 @@ export const MessageBubble = React.memo(function MessageBubble({
 
       {isSelf && (
         <div className="w-9 h-9 rounded-md bg-primary/15 flex-shrink-0 flex items-center justify-center text-primary text-xs ml-2 overflow-hidden">
-          {avatar ? <img src={sameOriginMediaUrl(avatar)} alt="me" className="w-full h-full object-cover" /> : selfChar}
+          <CachedImg url={avatar} alt="me" className="w-full h-full object-cover" fallback={selfChar} />
         </div>
       )}
     </div>

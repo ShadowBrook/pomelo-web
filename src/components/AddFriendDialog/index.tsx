@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AvatarImg } from '@/components/CachedImg';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -72,7 +73,7 @@ export function AddFriendDialog({ open, onClose }: Props) {
             searchResults.map((u) => (
               <div key={u.userId} className="flex items-center px-4 py-3 hover:bg-gray-50">
                 <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold overflow-hidden">
-                  {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover rounded-full" /> : u.nickname.charAt(0).toUpperCase()}
+                  <AvatarImg url={u.avatar} name={u.nickname} className="w-full h-full object-cover rounded-full" />
                 </div>
                 <div className="ml-3 flex-1">
                   <p className="text-sm font-medium text-text-main">{u.nickname}</p>

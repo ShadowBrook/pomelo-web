@@ -1,3 +1,4 @@
+import { AvatarImg } from '@/components/CachedImg';
 interface Member {
   nickname: string;
   avatar: string;
@@ -23,7 +24,7 @@ export function GridAvatar({ name, members, className = 'w-10 h-10' }: Props) {
     <div className={`${className} rounded-md overflow-hidden grid grid-cols-2 flex-shrink-0`}>
       {four.map((m, i) => (
         <div key={i} className="bg-primary/10 flex items-center justify-center text-[9px] text-primary overflow-hidden">
-          {m.avatar ? <img src={m.avatar} alt="" className="w-full h-full object-cover" /> : m.nickname.charAt(0).toUpperCase()}
+          <AvatarImg url={m.avatar} name={m.nickname} className="w-full h-full object-cover" />
         </div>
       ))}
     </div>

@@ -3,11 +3,11 @@ import { useConversationStore } from '@/stores/useConversationStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useGroupStore } from '@/stores/useGroupStore';
-import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import { formatListTime } from '@/utils/imTime';
 import { getIMClient } from '@/hooks/useIMClient';
 import { GridAvatar } from '@/components/GridAvatar';
 
+import { CachedImg } from '@/components/CachedImg';
 interface Props {
   peerId: string;
   isActive: boolean;
@@ -70,7 +70,7 @@ export const ConversationItem = React.memo(function ConversationItem({ peerId, i
       <div className="relative flex-shrink-0">
         {avatar ? (
           <div className="w-10 h-10 rounded-md bg-primary/15 flex items-center justify-center text-primary text-sm font-bold overflow-hidden">
-            <img src={sameOriginMediaUrl(avatar)} alt={nickname} className="w-full h-full object-cover" />
+            <CachedImg url={avatar} alt={nickname} className="w-full h-full object-cover" fallback={nickname.charAt(0).toUpperCase()} />
           </div>
         ) : isGroup ? (
           <GridAvatar name={nickname} members={groupMembers} />
