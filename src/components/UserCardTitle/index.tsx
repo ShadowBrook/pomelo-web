@@ -8,6 +8,7 @@ import { MsgType } from '@/sdk/types';
 import * as api from '@/utils/api';
 import { AvatarCropperDialog } from '@/components/AvatarCropperDialog';
 
+import { CachedImg } from '@/components/CachedImg';
 type MenuKey = 'profile' | 'signature' | 'password' | 'logout' | 'about' | 'help';
 
 /** 头像图片上限：头像走通用媒体上传通道，客户端先做体积约束 */
@@ -152,13 +153,16 @@ export function UserCardTitle() {
     <div className="relative flex items-center gap-2.5 px-3 h-16 flex-shrink-0 bg-titlebar-main select-none">
       {/* 头像（圆形 + 左下在线点，参考图） */}
       <div className="relative flex-shrink-0">
-        {user?.avatar ? (
-          <img src={user.avatar} alt="me" className="w-11 h-11 rounded-full object-cover" />
-        ) : (
-          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-white text-base">
-            {user?.nickname?.charAt(0).toUpperCase() || '柚'}
-          </div>
-        )}
+        <CachedImg
+          url={user?.avatar}
+          alt="me"
+          className="w-11 h-11 rounded-full object-cover"
+          fallback={(
+            <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-white text-base">
+              {user?.nickname?.charAt(0).toUpperCase() || '柚'}
+            </div>
+          )}
+        />
         {connState === 'connected' && (
           <span className="absolute left-0 bottom-0 w-2.5 h-2.5 rounded-full bg-ok border border-white/70" />
         )}
@@ -222,7 +226,7 @@ export function UserCardTitle() {
                   className="relative w-16 h-16 rounded-md overflow-hidden group"
                 >
                   {user?.avatar ? (
-                    <img src={user.avatar} alt="me" className="w-16 h-16 rounded-md object-cover" />
+                    <CachedImg url={user?.avatar} alt="me" className="w-16 h-16 rounded-md object-cover" />
                   ) : (
                     <div className="w-16 h-16 rounded-md bg-primary text-white flex items-center justify-center text-xl">
                       {user?.nickname?.charAt(0).toUpperCase() || '我'}

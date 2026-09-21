@@ -11,6 +11,7 @@ import { InviteMemberDialog } from '@/components/InviteMemberDialog';
 import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import type { GroupMember } from '@/sdk/types';
 
+import { CachedImg, AvatarImg } from '@/components/CachedImg';
 interface Props {
   peerId: string;
   isGroup: boolean;
@@ -59,13 +60,16 @@ function MemberRow({
   const name = member.nickname || member.userName || member.userId;
   return (
     <div className="flex items-center gap-2 px-1 py-1 rounded hover:bg-bg-page">
-      {member.avatar ? (
-        <img src={member.avatar} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-      ) : (
-        <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[11px] flex-shrink-0">
-          {name.charAt(0).toUpperCase()}
-        </div>
-      )}
+      <CachedImg
+        url={member.avatar}
+        alt=""
+        className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+        fallback={(
+          <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[11px] flex-shrink-0">
+            {name.charAt(0).toUpperCase()}
+          </div>
+        )}
+      />
       <span className="flex-1 min-w-0 text-xs text-text-main truncate">
         {name}
         {isSelf && <span className="ml-1 px-1 rounded-sm border border-danger text-danger text-[10px]">我</span>}
@@ -228,13 +232,16 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              {displayAvatar ? (
-                <img src={displayAvatar} alt={displayName} className="w-14 h-14 rounded-md object-cover flex-shrink-0" />
-              ) : (
-                <div className="w-14 h-14 rounded-md bg-primary/15 text-primary flex items-center justify-center text-xl flex-shrink-0">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <CachedImg
+                url={displayAvatar}
+                alt={displayName}
+                className="w-14 h-14 rounded-md object-cover flex-shrink-0"
+                fallback={(
+                  <div className="w-14 h-14 rounded-md bg-primary/15 text-primary flex items-center justify-center text-xl flex-shrink-0">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              />
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-base font-medium text-text-main truncate">{displayName}</span>
                 {isSelf && <span className="text-[11px] px-1.5 rounded-sm bg-primary/15 text-primary flex-shrink-0">自己</span>}
@@ -410,7 +417,7 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
                     className={`flex items-center gap-2 px-2 py-2 rounded cursor-pointer hover:bg-bg-page ${transferTarget?.userId === m.userId ? 'bg-bg-page' : ''}`}
                   >
                     <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs flex-shrink-0 overflow-hidden">
-                      {m.avatar ? <img src={sameOriginMediaUrl(m.avatar)} alt="" className="w-full h-full object-cover" /> : (m.nickname || m.userName).charAt(0).toUpperCase()}
+                      <AvatarImg url={m.avatar} name={m.nickname || m.userName} className="w-full h-full object-cover" />
                     </div>
                     <span className="flex-1 min-w-0 text-sm text-text-main truncate">{m.nickname || m.userName}</span>
                     {transferTarget?.userId === m.userId && <span className="text-xs text-primary">✓</span>}

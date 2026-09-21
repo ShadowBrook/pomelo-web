@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { AvatarImg } from '@/components/CachedImg';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import type { ChatMessage } from '@/stores/useChatStore';
@@ -71,7 +72,7 @@ export function ForwardDialog({ source, onForward, onClose }: {
               onClick={() => forward(o.peerId)}
             >
               <div className="w-8 h-8 rounded bg-primary/15 flex items-center justify-center text-primary text-xs overflow-hidden flex-shrink-0">
-                {o.avatar ? <img src={o.avatar} className="w-full h-full object-cover" alt="" /> : o.label.charAt(0).toUpperCase()}
+                <AvatarImg url={o.avatar} name={o.label} className="w-full h-full object-cover" />
               </div>
               <span className="text-sm text-text-main truncate">{o.label}</span>
               {o.isGroup && <span className="text-[10px] text-text-sub ml-auto">群</span>}

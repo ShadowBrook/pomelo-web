@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 
+import { AvatarImg } from '@/components/CachedImg';
 interface Props {
   onChatWithFriend: (peerId: string, nickname: string, avatar: string) => void;
 }
@@ -35,7 +36,7 @@ export function FriendsPanel({ onChatWithFriend }: Props) {
           {pendingRequests.map((req) => (
             <div key={req.userId} className="flex items-center px-3 py-2 hover:bg-bg-page">
               <div className="w-9 h-9 rounded-md bg-primary/15 text-primary flex items-center justify-center text-xs overflow-hidden">
-                {req.avatar ? <img src={req.avatar} alt="" className="w-full h-full object-cover" /> : req.nickname.charAt(0).toUpperCase()}
+                <AvatarImg url={req.avatar} name={req.nickname} className="w-full h-full object-cover" />
               </div>
               <div className="ml-2 flex-1 min-w-0">
                 <p className="text-sm font-medium text-text-main truncate">{req.nickname}</p>
@@ -64,7 +65,7 @@ export function FriendsPanel({ onChatWithFriend }: Props) {
           >
             <div className="relative">
               <div className="w-9 h-9 rounded-md bg-primary/15 text-primary flex items-center justify-center text-xs overflow-hidden">
-                {friend.avatar ? <img src={friend.avatar} alt="" className="w-full h-full object-cover" /> : friend.nickname.charAt(0).toUpperCase()}
+                <AvatarImg url={friend.avatar} name={friend.nickname} className="w-full h-full object-cover" />
               </div>
               {friend.online && (
                 <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-ok rounded-full border border-white"></div>
