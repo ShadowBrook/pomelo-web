@@ -5,7 +5,7 @@ import { generateId } from '@/sdk/protocol';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { buildMediaContent, captureVideoPoster, contentNeedsSignedUrl, isMediaType } from '@/sdk/media';
+import { buildMediaContent, captureVideoPoster, contentNeedsSignedUrl, isMediaType, makeImageThumbnail } from '@/sdk/media';
 import { wrapReplyContent } from '@/sdk/media';
 import type { ReplySnippet } from '@/sdk/types';
 
@@ -13,6 +13,8 @@ export interface ChatMessage {
   id: string;
   /** 发送确认后 id 会改写为服务端雪花 ID，这里保留原客户端 ID 供后续状态事件匹配 */
   clientMsgId?: string;
+  /** 媒体上传进度 0..100；非空表示正在上传（气泡显示百分比） */
+  uploadProgress?: number;
   senderId: string;
   recipientId: string;
   senderUserName?: string;
@@ -168,23 +170,51 @@ export const useChatStore = create<ChatState>()(
 
         // 本地预览 object URL；上传/发送失败也保留，让用户看到所选内容
         const localUrl = URL.createObjectURL(file);
-        const appendMsg = (extra: Partial<ChatMessage> & { id: string; status: MessageStatus }) =>
+        // 占位气泡立即出现（含本地预览 + 进度），让用户在上传期间就看到「发送中」
+        const placeholderId = generateId();
+        const placeholderAt = Date.now();
+        set((s) => ({
+          messages: {
+            ...s.messages,
+            [peerId]: [...(s.messages[peerId] || []), {
+              id: placeholderId,
+              senderId: '__self__' as const,
+              recipientId: peerId,
+              msgType,
+              content: '',
+              localUrl,
+              timestamp: placeholderAt,
+              status: 'sending' as MessageStatus,
+              uploadProgress: 0,
+            }],
+          },
+        }));
+
+        /** 就地更新占位气泡（进度 / 失败） */
+        const patchPlaceholder = (extra: Partial<ChatMessage>) =>
           set((s) => ({
             messages: {
               ...s.messages,
-              [peerId]: [...(s.messages[peerId] || []), {
-                senderId: '__self__' as const,
-                recipientId: peerId,
-                msgType,
-                content: '',
-                localUrl,
-                timestamp: Date.now(),
-                ...extra,
-              }],
+              [peerId]: (s.messages[peerId] || []).map((m) =>
+                m.id === placeholderId ? { ...m, ...extra } : m,
+              ),
             },
           }));
 
-        const markFailed = () => appendMsg({ id: generateId(), status: 'failed' });
+        /** 上传完成：占位气泡换成真实消息（保留本地预览与时间戳，位置不跳动） */
+        const finishPlaceholder = (id: string, content: string) =>
+          set((s) => ({
+            messages: {
+              ...s.messages,
+              [peerId]: (s.messages[peerId] || []).map((m) =>
+                m.id === placeholderId
+                  ? { ...m, id, content, status: 'sending' as MessageStatus, uploadProgress: undefined }
+                  : m,
+              ),
+            },
+          }));
+
+        const markFailed = () => patchPlaceholder({ status: 'failed' as MessageStatus, uploadProgress: undefined });
 
         if (!client) {
           markFailed();
@@ -193,7 +223,10 @@ export const useChatStore = create<ChatState>()(
 
         client.requestUpload(msgType, file.name, file.size, file.type || undefined)
           .then(async (resp) => {
-            await client.putFileToPresignedUrl(resp.presignedUrl, file);
+            await client.putFileToPresignedUrl(resp.presignedUrl, file, (sent, total) => {
+              const pct = total > 0 ? Math.round((sent * 100) / total) : 0;
+              patchPlaceholder({ uploadProgress: pct });
+            });
 
             // 视频封面：本地抓帧上传为图片对象，key 写入 content.thumb，
             // 服务端读侧签名注入 thumbUrl。失败降级为无封面，不阻断发送。
@@ -217,13 +250,31 @@ export const useChatStore = create<ChatState>()(
               }
             }
 
+            // 图片缩略图：长边 ≤480 的 JPEG 小图。接收端先加载小图让消息秒出，
+            // 点开大图时才请求原图（key 存 content.thumb，服务端读侧签名注入 thumbUrl）。
+            if (msgType === MsgType.IMAGE && !thumb) {
+              try {
+                const thumbBlob = await makeImageThumbnail(file);
+                if (thumbBlob) {
+                  const thumbFile = new File([thumbBlob], `thumb-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                  const tr = await client.requestUpload(
+                    MsgType.IMAGE, thumbFile.name, thumbFile.size, thumbFile.type,
+                  );
+                  await client.putFileToPresignedUrl(tr.presignedUrl, thumbFile);
+                  thumb = tr.objectKey;
+                }
+              } catch (e) {
+                console.warn('图片缩略图上传失败，降级为原图:', e);
+              }
+            }
+
             const content = buildMediaContent({
               key: resp.objectKey, fileName: file.name, size: file.size, duration, thumb,
             });
             const finalType = reply ? MsgType.REPLY : msgType;
             const finalContent = reply ? wrapReplyContent(reply, { msgType, content }) : content;
             const msgId = sendFn({ recipientId: peerId, msgType: finalType, content: finalContent });
-            appendMsg({ id: msgId, status: 'sending', content: finalContent });
+            finishPlaceholder(msgId, finalContent);
           })
           .catch((e) => {
             console.error('媒体消息发送失败:', e);

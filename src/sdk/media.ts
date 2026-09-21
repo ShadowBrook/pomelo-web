@@ -71,6 +71,38 @@ export function formatDuration(ms?: number): string | undefined {
 }
 
 /**
+ * 生成图片缩略图（长边 ≤ 480，JPEG 0.7）。
+ * 发送时随原图一起上传，key 写入 content.thumb；接收端先加载小图让消息秒出，
+ * 点开大图时才请求原图。失败返回 null（降级为直接加载原图，不阻断发送）。
+ */
+export async function makeImageThumbnail(
+  file: File,
+  maxEdge = 480,
+  quality = 0.7,
+): Promise<Blob | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      bitmap.close?.();
+      return null;
+    }
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  } catch (e) {
+    console.warn('图片缩略图生成失败，降级为原图:', e);
+    return null;
+  }
+}
+
+/**
  * 从本地视频文件抓取封面帧：定位到 10% 处（跳过常见黑帧）绘制到 canvas。
  * 返回 JPEG Blob 与视频时长毫秒数；失败抛错（调用方降级为无封面）。
  */

@@ -45,7 +45,10 @@ describe('媒体消息签名 URL 补齐', () => {
     useChatStore.getState().sendMedia(
       'peer-1', { msgType: MsgType.VOICE, file, duration: 11000 }, () => 'local-1',
     );
+    // 占位气泡先出现（本地预览 + 进度），上传完成后 id 改写为发送队列返回的 id
     await vi.waitFor(() => expect(useChatStore.getState().messages['peer-1']).toHaveLength(1));
+    await vi.waitFor(() => expect(useChatStore.getState().messages['peer-1'][0].id).toBe('local-1'));
+    expect(useChatStore.getState().messages['peer-1'][0].uploadProgress).toBeUndefined();
     // 乐观副本此时只有 key，没有 url（这正是播放器拿不到地址的原因）
     expect(useChatStore.getState().messages['peer-1'][0].content).not.toContain('"url"');
 

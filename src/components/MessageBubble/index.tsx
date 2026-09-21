@@ -207,22 +207,28 @@ function VoiceMessage({ url, durationMs, seed }: { url?: string; durationMs?: nu
 }
 
 /** 图片点开展开全屏预览，再次点击关闭 */
-function ImageMessage({ url }: { url: string }) {
+/**
+ * 图片消息：列表内先加载缩略图（小图，消息秒出），点开大图时再请求原图。
+ * thumbUrl 缺失时（旧消息/生成失败）回退为原图。
+ */
+function ImageMessage({ url, thumbUrl }: { url: string; thumbUrl?: string }) {
   const [open, setOpen] = useState(false);
+  const previewUrl = thumbUrl || url;
   return (
     <>
       <img
-        src={url}
+        src={previewUrl}
         alt="图片"
         className="max-w-full rounded cursor-pointer object-contain"
         style={{ maxHeight: 200 }}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(true)}
       />
       {open && (
         <div
           className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center cursor-zoom-out"
           onClick={() => setOpen(false)}
         >
+          {/* 原图仅在点开时才请求 */}
           <img src={url} alt="图片预览" className="max-w-[92vw] max-h-[90vh] object-contain rounded shadow-2xl" />
         </div>
       )}
@@ -263,8 +269,8 @@ function ForwardItemBody({ it }: { it: ForwardItem }) {
   switch (it.msgType) {
     case MsgType.IMAGE:
     case MsgType.EMOJI:
-      return m.url
-        ? <img src={m.url} alt="" className="max-h-[160px] rounded" />
+      return (m.thumbUrl || m.url)
+        ? <img src={m.thumbUrl || m.url} alt="" className="max-h-[160px] rounded" />
         : <div className="text-text-sub">[图片]</div>;
     case MsgType.VIDEO:
       if (m.url) {
@@ -368,7 +374,7 @@ function renderTextWithMentions(content: string): React.ReactNode {
 }
 
 /** 按类型渲染消息正文（引用解包后递归复用） */
-function renderInner(msgType: number, content: string, url?: string): React.ReactNode {
+function renderInner(msgType: number, content: string, url?: string, thumbUrl?: string): React.ReactNode {
   switch (msgType) {
     case MsgType.TEXT:
       return <p className="whitespace-pre-wrap">{renderTextWithMentions(content)}</p>;
@@ -385,7 +391,7 @@ function renderInner(msgType: number, content: string, url?: string): React.Reac
 
     case MsgType.IMAGE:
       return url
-        ? <ImageMessage url={url} />
+        ? <ImageMessage url={url} thumbUrl={thumbUrl} />
         : <span className="text-xs text-gray-400">[图片]</span>;
 
     case MsgType.EMOJI:
@@ -437,6 +443,7 @@ function renderInner(msgType: number, content: string, url?: string): React.Reac
 
 function Body({ message }: { message: ChatMessage }) {
   const url = getMediaUrl(message);
+  const thumbUrl = parseMediaContent(message.content)?.thumbUrl;
 
   // 引用消息：解包渲染「引用块 + 原正文」，正文递归分发（可为文本/媒体/转发卡片）
   if (message.msgType === MsgType.REPLY) {
@@ -444,15 +451,22 @@ function Body({ message }: { message: ChatMessage }) {
     if (!inner) {
       return <span className="text-xs text-gray-400">[引用]</span>;
     }
+    // 内层正文若是媒体，服务端已递归签名：原图/缩略图从内层 content 取
+    const innerMedia = parseMediaContent(inner.body.content);
     return (
       <>
         <ReplyBlock reply={inner.reply} />
-        {renderInner(inner.body.msgType, inner.body.content, message.localUrl)}
+        {renderInner(
+          inner.body.msgType,
+          inner.body.content,
+          innerMedia?.url ?? message.localUrl,
+          innerMedia?.thumbUrl,
+        )}
       </>
     );
   }
 
-  return renderInner(message.msgType, message.content, url);
+  return renderInner(message.msgType, message.content, url, thumbUrl);
 }
 
 export const MessageBubble = React.memo(function MessageBubble({
@@ -502,7 +516,12 @@ export const MessageBubble = React.memo(function MessageBubble({
         <div className="flex items-start gap-1">
           {isSelf && !selecting && (
             <div className="w-6 flex justify-center items-center self-center flex-shrink-0">
-              {qos && (message.status === 'pending' || message.status === 'sending') && (
+              {isSelf && message.uploadProgress != null ? (
+                // 上传中：显示百分比（媒体上传可能持续数秒，百分比比转圈更有信息量）
+                <span className="text-[9px] text-text-sub tabular-nums leading-none">
+                  {message.uploadProgress}%
+                </span>
+              ) : qos && (message.status === 'pending' || message.status === 'sending') && (
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-text-sub animate-spin" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M12 2a10 10 0 1 1-10 10" strokeLinecap="round" />
                 </svg>

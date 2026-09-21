@@ -537,15 +537,41 @@ export class IMClient {
    * 否则 MinIO 返回 SignatureDoesNotMatch。
    * presigned URL 为 http 时改写为同源 /minio 代理（https 页面直连会被 Safari 按混合内容拦截）。
    */
-  async putFileToPresignedUrl(presignedUrl: string, file: File): Promise<void> {
-    const resp = await fetch(sameOriginMediaUrl(presignedUrl), {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type || 'application/octet-stream' },
-      body: file,
-    });
-    if (!resp.ok) {
-      throw new Error(`上传文件失败: HTTP ${resp.status}`);
+  async putFileToPresignedUrl(
+    presignedUrl: string,
+    file: File,
+    onProgress?: (sent: number, total: number) => void,
+  ): Promise<void> {
+    const url = sameOriginMediaUrl(presignedUrl);
+    const contentType = file.type || 'application/octet-stream';
+
+    if (!onProgress) {
+      const resp = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType },
+        body: file,
+      });
+      if (!resp.ok) {
+        throw new Error(`上传文件失败: HTTP ${resp.status}`);
+      }
+      return;
     }
+
+    // fetch 无法上报上传进度，需要进度时改走 XHR 的 upload.onprogress
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
+      xhr.setRequestHeader('Content-Type', contentType);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(e.loaded, e.total);
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(`上传文件失败: HTTP ${xhr.status}`));
+      };
+      xhr.onerror = () => reject(new Error('上传文件失败: 网络错误'));
+      xhr.send(file);
+    });
   }
 
   /**
