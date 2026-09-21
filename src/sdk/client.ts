@@ -561,6 +561,9 @@ export class IMClient {
     if (fields.signature !== undefined) {
       body.signature = fields.signature;
     }
+    if (Object.keys(body).length === 0) {
+      return Promise.reject(new Error('updateProfile：avatar 与 signature 至少提供一个'));
+    }
     return this._sendGroupOp(
       Cmd.CMD_PROFILE_UPDATE_REQ,
       Cmd.CMD_PROFILE_UPDATE_RESP,
