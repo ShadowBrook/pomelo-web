@@ -6,6 +6,9 @@ import { ToastHost } from '@/components/ToastHost';
 
 type View = 'login' | 'register' | 'forgot';
 
+/** 备案号（构建期注入，不入库）：未配置时不渲染该行 */
+const BEIAN = import.meta.env.VITE_ICP_BEIAN?.trim();
+
 /* ── 图标（16px 灰，输入框左侧） ── */
 const MailIcon = (
   <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -286,10 +289,25 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* 底部提示与版权 */}
+      {/* 底部提示、版权与备案号（备案号来自构建期环境变量，须保留跳转工信部的链接） */}
       <div className="absolute bottom-4 inset-x-0 text-center text-xs text-text-sub space-y-1">
         <p>确保使用 Chrome、FireFox、Safari、Edge 等新式浏览器，以便获得更好地体验。</p>
-        <p>© 2026 Pomelo Chat</p>
+        <p>
+          © 2026 Pomelo Chat
+          {BEIAN && (
+            <>
+              <span className="mx-1.5">·</span>
+              <a
+                href="https://beian.miit.gov.cn/"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:underline"
+              >
+                {BEIAN}
+              </a>
+            </>
+          )}
+        </p>
       </div>
 
       <ToastHost />
