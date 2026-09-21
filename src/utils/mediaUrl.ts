@@ -1,16 +1,19 @@
 /**
- * 对象存储 URL 的同源改写。
+ * 对象存储 URL 的同源改写 —— **仅开发机生效**。
  *
- * presigned URL 的 host 来自服务端 media.publicEndpoint（开发环境是 http://localhost:9002）。
- * https 页面直连 http 端点属于混合内容：Safari 会强制拦截（fetch 直接抛 Load failed，
- * <img> 也不渲染）；Chrome 只对 localhost 网开一面，局域网 IP 场景同样被拦。
+ * 开发环境 publicEndpoint 是 http://localhost:9002，Safari 按混合内容规则禁直连，
+ * Vite 的 /minio 代理（changeOrigin 回填签发 Host）保证 SigV4 校验通过。
  *
- * 改写为同源 /minio 代理路径后不再有混合内容问题；SigV4 签名校验的 Host 由
- * vite/nginx 代理回填为签发时的 publicEndpoint（changeOrigin），签名依然有效。
- * 端点本身是 https（生产配公网域名）时无需改写，原样返回。
+ * 生产构建不做任何改写：publicEndpoint 必须配置为浏览器可达的 https 地址
+ * （demo 拓扑即 https://oss.pomelo.host，presigned URL 直连 oss 子域）。
+ * 配置错误会显式失败（上传/图片不可用），而不是静默走兜底掩盖配置问题。
  */
 export function sameOriginMediaUrl(url: string): string {
   if (!url || typeof url !== 'string') {
+    return url;
+  }
+  // 生产构建：信任服务端下发的 URL（要求 publicEndpoint 为 https 可达地址）
+  if (!import.meta.env.DEV) {
     return url;
   }
   try {
