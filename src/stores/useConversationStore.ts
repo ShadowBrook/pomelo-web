@@ -15,6 +15,8 @@ export interface Conversation {
   lastMessageId?: string; // 最后一条消息 ID，用于去重
   unreadCount: number;
   draft?: string;
+  /** 最新未读消息 @ 了我（进会话/清零后消除） */
+  mentionedMe?: boolean;
 }
 
 interface ConversationState {
@@ -47,11 +49,11 @@ export const useConversationStore = create<ConversationState>()(
   clearUnread: (peerId) => {
     set((state) => {
       const conv = state.conversations[peerId];
-      if (!conv || conv.unreadCount === 0) return state;
+      if (!conv || (conv.unreadCount === 0 && !conv.mentionedMe)) return state;
       return {
         conversations: {
           ...state.conversations,
-          [peerId]: { ...conv, unreadCount: 0 },
+          [peerId]: { ...conv, unreadCount: 0, mentionedMe: false },
         },
       };
     });

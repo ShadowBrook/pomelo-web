@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useConnStore } from '@/stores/useConnStore';
+import { useCallStore } from '@/stores/useCallStore';
 import { toast } from '@/stores/useToastStore';
 import { mediaPreview } from '@/sdk/media';
 
@@ -103,10 +104,10 @@ export function useIMClient() {
     setKickedReason(null);
 
     const client = new IMClient({
-      // 网关地址：优先 VITE_WS_URL；否则按页面协议派生（https 页面 → wss），
-      // 端口默认 9001（服务端 TLS 启用时自动走 wss）
+      // 网关地址：优先 VITE_WS_URL；否则按页面协议派生并走同源 /ws 代理
+      // （Vite 开发代理到网关 wss，浏览器免信任自签证书；局域网手机同样适用）
       url: import.meta.env.VITE_WS_URL
-        || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:9001`,
+        || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
       maxReconnectAttempts: 10,
       heartbeatInterval: 30000,
     });
@@ -215,6 +216,9 @@ export function useIMClient() {
               lastMessageTime: msg.createdAt || Date.now(),
               lastMessageId: String(msg.id),
               unreadCount: isActive ? s.conversations[groupId].unreadCount : s.conversations[groupId].unreadCount + 1,
+              mentionedMe: msg.mentions?.includes(userIdRef.current ?? '')
+                ? true
+                : s.conversations[groupId].mentionedMe,
             },
           },
         }));
@@ -245,6 +249,28 @@ export function useIMClient() {
     });
 
     client.on('groupMemberChange', (notify: GroupMemberChangeNotify) => {
+      // 群被解散：清本地群、成员与会话（历史消息保留在服务端），关聊天窗由组件自行响应
+      if (notify.type === 'DISSOLVED') {
+        useGroupStore.getState().removeGroup(notify.groupId);
+        useGroupStore.getState().markRemoved(notify.groupId);
+        useGroupStore.getState().removeMember(notify.groupId, notify.userId);
+        useConversationStore.getState().removeConversation(notify.groupId);
+        toast('该群已被群主解散');
+        return;
+      }
+      // 群主转让：刷新群列表（ownerId）与成员角色缓存
+      if (notify.type === 'OWNER_TRANSFERRED') {
+        client.getMyGroups()
+          .then((groups) => useGroupStore.getState().setGroups(groups))
+          .catch((err) => console.error('刷新群列表失败:', err));
+        client.getGroupMembers(notify.groupId)
+          .then((members) => useGroupStore.getState().setMembers(notify.groupId, members))
+          .catch((err) => console.error('刷新群成员失败:', err));
+        if (notify.userId === userIdRef.current) {
+          toast('你现在是该群的群主了');
+        }
+        return;
+      }
       // LEFT/KICKED 移除成员；INVITED/JOINED 等刷新群成员列表
       if (notify.type === 'LEFT' || notify.type === 'KICKED') {
         useGroupStore.getState().removeMember(notify.groupId, notify.userId);
@@ -265,6 +291,11 @@ export function useIMClient() {
           .then((members) => useGroupStore.getState().setMembers(notify.groupId, members))
           .catch((err) => console.error('刷新群成员失败:', err));
       }
+    });
+
+    // 音视频通话事件（振铃/接通/结束）→ 通话状态机
+    client.on('callEvent', (event) => {
+      void useCallStore.getState().onCallEvent(event);
     });
 
     // 发起连接

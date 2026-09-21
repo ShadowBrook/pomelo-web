@@ -14,9 +14,11 @@
     "proto": "npm run proto:sync && npm run proto:gen"
   },
   "dependencies": {
+    "livekit-client": "^2.22.3",
     "protobufjs": "^8.8.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-easy-crop": "^6.2.3",
     "react-router-dom": "^6.30.4",
     "zustand": "^5.0.14"
   },

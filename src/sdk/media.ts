@@ -1,4 +1,5 @@
-import { MediaContent, MsgType, ReplySnippet } from './types';
+import { CallRecordContent, MediaContent, MsgType, ReplySnippet } from './types';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 
 /** 媒体类型判断（含图片/语音/视频/文件/自定义表情） */
 export function isMediaType(msgType: number): boolean {
@@ -15,7 +16,11 @@ export function parseMediaContent(content: string): MediaContent | null {
   try {
     const obj = JSON.parse(content);
     if (!obj || typeof obj !== 'object' || typeof obj.key !== 'string') return null;
-    return obj as MediaContent;
+    const media = obj as MediaContent;
+    // 服务端注入的 url/thumbUrl 是 http presigned 时改写为同源 /minio 代理（Safari 混合内容）
+    if (media.url) media.url = sameOriginMediaUrl(media.url);
+    if (media.thumbUrl) media.thumbUrl = sameOriginMediaUrl(media.thumbUrl);
+    return media;
   } catch {
     return null;
   }
@@ -136,6 +141,8 @@ export function mediaPreview(msgType: number, content: string): string {
       return '[引用]';
     case MsgType.FORWARD:
       return '[聊天记录]';
+    case MsgType.SYSTEM:
+      return formatCallRecord(content);
     case MsgType.FILE: {
       const c = parseMediaContent(content);
       return c?.fileName ? `[文件] ${c.fileName}` : '[文件]';
@@ -147,6 +154,44 @@ export function mediaPreview(msgType: number, content: string): string {
     default:
       return content;
   }
+}
+
+/** 解析通话记录系统消息 content；非通话记录或坏 JSON 返回 null */
+export function parseCallRecord(content: string): CallRecordContent | null {
+  try {
+    const c = JSON.parse(content);
+    if (c && typeof c === 'object' && c.kind === 'call') return c as CallRecordContent;
+  } catch { /* 非 JSON */ }
+  return null;
+}
+
+/**
+ * 通话记录气泡是否落在自己一侧（服务端按收件人写入的 outgoing 标记）。
+ * 非通话记录或旧数据无标记时返回 null，调用方回退按 senderId 判断。
+ */
+export function callRecordIsSelf(content: string): boolean | null {
+  const outgoing = parseCallRecord(content)?.outgoing;
+  return typeof outgoing === 'boolean' ? outgoing : null;
+}
+
+/**
+ * 通话记录系统消息（MSG_TYPE_SYSTEM）→ 展示文本。
+ * content: {"kind":"call","mediaType":0|1,"answered":bool,"durationMs":n,"participants":n,...}
+ * participants>2 视为群聊通话，文案带人数。
+ */
+export function formatCallRecord(content: string): string {
+  const c = parseCallRecord(content);
+  if (!c) return content;
+  const count = Number(c.participants ?? 0);
+  const media = `${Number(c.mediaType) === 1 ? '视频' : '语音'}${count > 2 ? `群聊通话（${count} 人）` : '通话'}`;
+  const durationMs = Number(c.durationMs);
+  if (c.answered && durationMs > 0) {
+    const total = Math.round(durationMs / 1000);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${media} ${m}:${String(s).padStart(2, '0')}`;
+  }
+  return `${media} 未接听`;
 }
 
 /** 引用摘要生成（客户端为唯一可信源）：按 msgType 给出占位或截断文本 */

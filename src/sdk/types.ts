@@ -67,6 +67,27 @@ export enum Cmd {
   CMD_UPLOAD_REQ = 0x00A0,
   CMD_UPLOAD_RESP = 0x00A1,
 
+  // 群转让 / 解散（0x0076~0x0079 空档）
+  CMD_GROUP_TRANSFER_REQ = 0x0076,
+  CMD_GROUP_TRANSFER_RESP = 0x0077,
+  CMD_GROUP_DISSOLVE_REQ = 0x0078,
+  CMD_GROUP_DISSOLVE_RESP = 0x0079,
+
+  // 用户资料 0x00C0-0x00C1
+  CMD_PROFILE_UPDATE_REQ = 0x00C0,
+  CMD_PROFILE_UPDATE_RESP = 0x00C1,
+
+  // 音视频通话 0x00B0-0x00B8（信令走 IM 通道，媒体直连 LiveKit SFU）
+  CALL_INVITE_REQ = 0x00B0,
+  CALL_INVITE_RESP = 0x00B1,
+  CALL_ACCEPT_REQ = 0x00B2,
+  CALL_ACCEPT_RESP = 0x00B3,
+  CALL_END_REQ = 0x00B4,
+  CALL_END_RESP = 0x00B5,
+  CALL_EVENT_PUSH = 0x00B6,
+  CALL_TOKEN_REQ = 0x00B7,
+  CALL_TOKEN_RESP = 0x00B8,
+
   // 通用错误响应
   CMD_ERROR = 0xFFFF,
 }
@@ -81,6 +102,8 @@ export enum MsgType {
   EMOJI = 6,
   FORWARD = 8,
   REPLY = 9,
+  // 系统消息（如音视频通话记录，居中灰条渲染）
+  SYSTEM = 99,
 }
 
 // ACK 类型
@@ -119,6 +142,8 @@ export interface OutgoingMessage {
   serverMessageId?: string;
   /** 消息种类：c2c 走 C2CReq 补发，group 走 C2GReq 补发（重连/认证后重发时区分编码路径） */
   kind?: 'c2c' | 'group';
+  /** 群消息扩展元数据（如 @ 提及 mentioned_user_ids），随 MessageContent.ext 透传 */
+  ext?: Record<string, string>;
 }
 
 // 接收消息（归一化）。C2C 消息用 recipientId，群消息用 groupId
@@ -129,6 +154,8 @@ export interface IncomingMessage {
   groupId?: string;
   senderUserName?: string;
   senderNickname?: string;
+  /** 被 @ 的用户 ID 列表（群消息 ext.mentioned_user_ids） */
+  mentions?: string[];
   msgType: MsgType;
   content: string;
   seq: number;
@@ -159,6 +186,64 @@ export interface IMClientEvents {
   // 群聊相关事件
   groupMessage: (msg: GroupMessage) => void;
   groupMemberChange: (notify: GroupMemberChangeNotify) => void;
+  // 音视频通话事件（S→C 的 CMD_CALL_EVENT_PUSH）
+  callEvent: (event: CallEvent) => void;
+}
+
+// ================================================================
+// 音视频通话（信令走 IM 通道，媒体直连 LiveKit SFU）
+// ================================================================
+
+/** 通话媒体类型（对应 proto CallMediaType） */
+export enum CallMediaType {
+  AUDIO = 0,
+  VIDEO = 1,
+}
+
+/** 通话结束原因（对应 proto CallEndReason，服务端按「角色×状态」裁定） */
+export const CallEndReason = {
+  UNKNOWN: 0,
+  CANCEL: 1,
+  REJECT: 2,
+  HANGUP: 3,
+  BUSY: 4,
+  TIMEOUT: 5,
+  PEER_DROP: 6,
+} as const;
+
+/** S→C 通话事件推送（CMD_CALL_EVENT_PUSH body） */
+export interface CallEvent {
+  callId: string;
+  /** 1=ringing(来电) 2=accepted(对方已接听) 3=ended(通话结束) */
+  event: 1 | 2 | 3;
+  mediaType: CallMediaType;
+  /** 对端信息：ringing 时=主叫，accepted/ended 时=操作方 */
+  peerId: string;
+  peerUserName: string;
+  peerNickname: string;
+  /** event=ended 时的结束原因 */
+  reason: number;
+  /** event=accepted 时携带主叫入会材料 */
+  room: string;
+  token: string;
+  wsUrl: string;
+  /** 振铃时的参与方总数（含主叫）：>2 即群聊通话 */
+  participantCount: number;
+}
+
+export interface CallInviteResp {
+  code: number;
+  message: string;
+  callId: string;
+}
+
+/** 接听响应 / 重连取材料响应（入会三件套相同） */
+export interface CallJoinInfo {
+  code: number;
+  message: string;
+  room: string;
+  token: string;
+  wsUrl: string;
 }
 
 // 好友相关类型
@@ -223,6 +308,8 @@ export interface GroupMessage {
   senderNickname?: string;
   msgType: number;
   content: string;
+  /** 被 @ 的用户 ID 列表（ext.mentioned_user_ids） */
+  mentions?: string[];
   seq: number;
   createdAt: number;
 }
@@ -302,6 +389,14 @@ export interface UploadResp {
   expireAt: number;
 }
 
+// 资料更新响应（CMD_PROFILE_UPDATE_RESP body）
+export interface UpdateProfileResp {
+  code: number;
+  message: string;
+  avatar: string; // 读侧预签名后的头像 URL，可直接渲染
+  signature: string; // 请求包含 signature 时回显新值
+}
+
 // 媒体消息 content 的字符串化 JSON 结构。
 // 落库只存 key + 元数据；url/thumbUrl 由服务端读侧注入（presigned GET）。
 export interface MediaContent {
@@ -315,4 +410,16 @@ export interface MediaContent {
   format?: string;
   url?: string; // 服务端注入的 presigned GET URL
   thumbUrl?: string; // 服务端注入的缩略图 URL
+}
+
+// 通话记录系统消息 content 的字符串化 JSON 结构（服务端 CallService 落库，双方各一份）
+export interface CallRecordContent {
+  kind: 'call';
+  mediaType?: number; // 0 语音 1 视频
+  answered?: boolean;
+  durationMs?: number;
+  reason?: number;
+  callId?: string;
+  outgoing?: boolean; // 相对收件人的方向：发起方那份为 true（气泡落边依据）
+  participants?: number; // 参与方总数（含主叫）：>2 为群聊通话
 }

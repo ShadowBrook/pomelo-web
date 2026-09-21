@@ -1,11 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { ChatMessage } from '@/stores/useChatStore';
+import { MsgType } from '@/sdk/types';
+import { callRecordIsSelf } from '@/sdk/media';
 import { MessageBubble } from '@/components/MessageBubble';
 import { formatMsgTime } from '@/utils/imTime';
 
 interface Props {
   messages: ChatMessage[];
   currentUserId: string;
+  /** 会话对端（单聊=对方 userId；群聊=groupId），透传给气泡解析发送者头像 */
+  peerId?: string;
   onRetry?: (messageId: string) => void;
   onLoadMore?: () => void;
   loadingHistory?: boolean;
@@ -32,6 +36,7 @@ function shouldShowTimeDivider(prev: ChatMessage | null, curr: ChatMessage): boo
 export function MessageList({
   messages,
   currentUserId,
+  peerId,
   onRetry,
   onLoadMore,
   loadingHistory = false,
@@ -105,15 +110,18 @@ export function MessageList({
       {messages.map((msg, idx) => {
         const prev = idx > 0 ? messages[idx - 1] : null;
         const showTime = shouldShowTimeDivider(prev, msg);
+        // 通话记录（SYSTEM）的气泡方向由服务端 outgoing 标记决定；
+        // 旧数据无标记（null）或普通消息回退按 senderId 判断。
         // '__self__' 是 sendText 里的占位，实际比较时需匹配当前用户
-        const isSelf = msg.senderId === currentUserId || msg.senderId === '__self__';
+        const callSelf = msg.msgType === MsgType.SYSTEM ? callRecordIsSelf(msg.content) : null;
+        const isSelf = callSelf ?? (msg.senderId === currentUserId || msg.senderId === '__self__');
 
         return (
           <div key={msg.id}>
             <div className={`mb-1 ${isSelf ? 'text-right pr-[52px]' : 'text-left pl-[52px]'}`}>
               {showTime && <span className="text-[11px] text-text-sub">{formatMsgTime(msg.timestamp)}</span>}
             </div>
-            <MessageBubble message={msg} isSelf={isSelf} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} readCount={readCounts?.[msg.seq ?? -1]} groupMemberCount={groupMemberCount} onReply={onReply} onForward={onForward} selecting={selecting} selected={selectedIds?.has(msg.id)} onToggleSelect={onToggleSelect} onStartSelect={onStartSelect} />
+            <MessageBubble message={msg} isSelf={isSelf} peerId={peerId} onRetry={onRetry} isGroup={isGroup} onReadClick={onReadClick} readCount={readCounts?.[msg.seq ?? -1]} groupMemberCount={groupMemberCount} onReply={onReply} onForward={onForward} selecting={selecting} selected={selectedIds?.has(msg.id)} onToggleSelect={onToggleSelect} onStartSelect={onStartSelect} />
           </div>
         );
       })}

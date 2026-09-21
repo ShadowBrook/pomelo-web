@@ -8,6 +8,7 @@ import { getProfile } from '@/utils/api';
 import { getIMClient } from '@/hooks/useIMClient';
 import { GridAvatar } from '@/components/GridAvatar';
 import { InviteMemberDialog } from '@/components/InviteMemberDialog';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import type { GroupMember } from '@/sdk/types';
 
 interface Props {
@@ -95,12 +96,49 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
   const friend = useFriendStore((s) => s.friends.find((f) => f.userId === peerId));
   const group = useGroupStore((s) => s.groups[peerId]);
   const members = useGroupStore((s) => s.groupMembers[peerId]);
+  // 自己与自己的会话：不按陌生人处理，也不展示加好友/删好友操作
+  const isSelf = peerId === user?.userId;
   // 陌生人资料兜底（好友数据缺头像/昵称时也拉一次）
-  const [profile, setProfile] = useState<{ nickname: string; avatar: string } | null>(null);
+  const [profile, setProfile] = useState<{ nickname: string; avatar: string; signature?: string } | null>(null);
   // 移除群成员的确认目标（null 表示无弹窗）
   const [kickTarget, setKickTarget] = useState<GroupMember | null>(null);
   const [kicking, setKicking] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  // 群主转让：目标选择弹窗；解散：二次确认
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<GroupMember | null>(null);
+  const [transferring, setTransferring] = useState(false);
+  const [dissolveConfirm, setDissolveConfirm] = useState(false);
+  const [dissolving, setDissolving] = useState(false);
+
+  const submitTransfer = async () => {
+    if (!transferTarget || transferring) return;
+    setTransferring(true);
+    try {
+      await getIMClient()!.transferGroup(peerId, transferTarget.userId);
+      toast(`已转让给 ${transferTarget.nickname || transferTarget.userName}`);
+      setTransferOpen(false);
+      setTransferTarget(null);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : '转让失败');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  const submitDissolve = async () => {
+    if (dissolving) return;
+    setDissolving(true);
+    try {
+      await getIMClient()!.dissolveGroup(peerId);
+      toast('群聊已解散');
+      setDissolveConfirm(false);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : '解散失败');
+    } finally {
+      setDissolving(false);
+    }
+  };
 
   // 群成员懒加载兜底：成员列表只在 member-change 推送时刷新，
   // 打开群聊详情时没有就主动拉一次（群主/创建者昵称、群头像都依赖它）
@@ -118,7 +156,9 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
       getProfile(peerId)
         .then((res) => {
           // 后端 ok() 把字段挂在顶层（{code, nickname, avatar, ...}），没有 data 包裹层
-          if (!cancelled && res.nickname) setProfile({ nickname: res.nickname, avatar: res.avatar });
+          if (!cancelled && res.nickname) {
+            setProfile({ nickname: res.nickname, avatar: sameOriginMediaUrl(res.avatar), signature: res.signature || '' });
+          }
         })
         .catch(() => {});
     }
@@ -131,6 +171,7 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
     ? group?.name ?? peerId
     : friend?.nickname ?? profile?.nickname ?? peerId;
   const displayAvatar = isGroup ? '' : friend?.avatar ?? profile?.avatar ?? '';
+  const displaySignature = isGroup ? '' : friend?.signature ?? profile?.signature ?? '';
 
   // 群主/创建者：从群成员里查昵称，查不到回退 ownerId
   const owner = members?.find((m) => m.userId === group?.ownerId);
@@ -196,8 +237,12 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
               )}
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-base font-medium text-text-main truncate">{displayName}</span>
-                {!friend && <span className="text-[11px] px-1.5 rounded-sm bg-warn text-white flex-shrink-0">陌生人</span>}
+                {isSelf && <span className="text-[11px] px-1.5 rounded-sm bg-primary/15 text-primary flex-shrink-0">自己</span>}
+                {!friend && !isSelf && <span className="text-[11px] px-1.5 rounded-sm bg-warn text-white flex-shrink-0">陌生人</span>}
               </div>
+              {displaySignature && (
+                <div className="text-xs text-text-sub truncate w-full">{displaySignature}</div>
+              )}
             </div>
           )}
         </div>
@@ -294,22 +339,24 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
         {/* 底部操作：群=转让/解散；好友=左下红描边删除；陌生人=右下蓝底加好友 */}
         <div className="mt-auto border-t border-line p-3">
           {isGroup ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => toast('功能开发中')}
-                className="flex-1 py-1.5 text-xs rounded border border-accent/60 text-accent hover:bg-accent/5"
-              >
-                ↻ 转让本群
-              </button>
-              <button
-                onClick={() => toast('功能开发中')}
-                className="flex-1 py-1.5 text-xs rounded border border-danger/40 text-danger hover:bg-danger/5"
-              >
-                ⃠ 解散本群
-              </button>
-            </div>
+            isSelfOwner ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setTransferOpen(true)}
+                  className="flex-1 py-1.5 text-xs rounded border border-accent/60 text-accent hover:bg-accent/5"
+                >
+                  ↻ 转让本群
+                </button>
+                <button
+                  onClick={() => setDissolveConfirm(true)}
+                  className="flex-1 py-1.5 text-xs rounded border border-danger/40 text-danger hover:bg-danger/5"
+                >
+                  ⃠ 解散本群
+                </button>
+              </div>
+            ) : null
           ) : (
-            user && <FooterAction peerId={peerId} isFriend={!!friend} />
+            user && !isSelf && <FooterAction peerId={peerId} isFriend={!!friend} />
           )}
         </div>
       </div>
@@ -339,6 +386,82 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
                 className="flex-1 py-1.5 text-xs rounded bg-danger text-white hover:opacity-90 disabled:opacity-60"
               >
                 {kicking ? '移除中…' : '移除'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 群主转让：目标成员选择 */}
+      {transferOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 z-[9999] flex items-center justify-center"
+          onClick={() => { if (!transferring) setTransferOpen(false); }}
+        >
+          <div className="bg-panel rounded-lg shadow-xl w-[240px] max-h-[360px] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">选择新群主</div>
+            <div className="flex-1 overflow-y-auto p-1">
+              {(members ?? [])
+                .filter((m) => m.userId !== user?.userId)
+                .map((m) => (
+                  <div
+                    key={m.userId}
+                    onClick={() => setTransferTarget(m)}
+                    className={`flex items-center gap-2 px-2 py-2 rounded cursor-pointer hover:bg-bg-page ${transferTarget?.userId === m.userId ? 'bg-bg-page' : ''}`}
+                  >
+                    <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs flex-shrink-0 overflow-hidden">
+                      {m.avatar ? <img src={sameOriginMediaUrl(m.avatar)} alt="" className="w-full h-full object-cover" /> : (m.nickname || m.userName).charAt(0).toUpperCase()}
+                    </div>
+                    <span className="flex-1 min-w-0 text-sm text-text-main truncate">{m.nickname || m.userName}</span>
+                    {transferTarget?.userId === m.userId && <span className="text-xs text-primary">✓</span>}
+                  </div>
+                ))}
+            </div>
+            <div className="border-t border-line p-3 flex justify-end gap-2">
+              <button
+                onClick={() => setTransferOpen(false)}
+                disabled={transferring}
+                className="px-3 py-1.5 text-xs rounded border border-line text-text-sub hover:text-text-main disabled:opacity-60"
+              >
+                取消
+              </button>
+              <button
+                onClick={submitTransfer}
+                disabled={!transferTarget || transferring}
+                className="px-3 py-1.5 text-xs rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {transferring ? '转让中…' : '确认转让'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 解散群聊二次确认 */}
+      {dissolveConfirm && (
+        <div
+          className="fixed inset-0 bg-black/20 z-[9999] flex items-center justify-center"
+          onClick={() => { if (!dissolving) setDissolveConfirm(false); }}
+        >
+          <div className="bg-panel rounded-lg shadow-xl w-[240px] p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-medium text-text-main mb-1">解散群聊</div>
+            <div className="text-xs text-text-sub mb-4">
+              解散后所有成员将被移出，本群不再可用（聊天记录保留在服务端）。确定解散？
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDissolveConfirm(false)}
+                disabled={dissolving}
+                className="flex-1 py-1.5 text-xs rounded border border-line text-text-sub hover:text-text-main disabled:opacity-60"
+              >
+                取消
+              </button>
+              <button
+                onClick={submitDissolve}
+                disabled={dissolving}
+                className="flex-1 py-1.5 text-xs rounded bg-danger text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {dissolving ? '解散中…' : '确认解散'}
               </button>
             </div>
           </div>

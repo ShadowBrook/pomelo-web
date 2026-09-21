@@ -1,5 +1,6 @@
 import { encode, decode, generateId } from './protocol';
 import { enc, plain, text, im } from './pbcodec';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import {
   Cmd,
   MsgType,
@@ -22,6 +23,11 @@ import {
   GroupReadStateResp,
   GroupMemberChangeNotify,
   UploadResp,
+  UpdateProfileResp,
+  CallEvent,
+  CallInviteResp,
+  CallJoinInfo,
+  CallMediaType,
 } from './types';
 
 // MessageContent.content 是 protobuf bytes 字段，发送时必须传 utf8 编码的字节（不能直接传字符串，字符串会被当 base64）
@@ -35,6 +41,7 @@ const GROUP_MEMBER_CHANGE_NAMES = [
   'KICKED',
   'ADMIN_SET',
   'OWNER_TRANSFERRED',
+  'DISSOLVED',
 ] as const;
 
 interface IMClientOptions {
@@ -405,6 +412,61 @@ export class IMClient {
     );
   }
 
+  // ================================================================
+  // Call Operations（音视频通话信令；媒体直连 LiveKit，不经 IM 通道）
+  // ================================================================
+
+  /**
+   * 发起通话，成功返回 callId。
+   * 传数组即群聊通话（peer_ids，不含主叫；人数上限由服务端约束）；
+   * groupId 为群聊通话的归属群，>0 时通话记录落群会话而非双方收件箱。
+   */
+  inviteCall(peerId: string | string[], mediaType: CallMediaType, groupId?: string): Promise<CallInviteResp> {
+    const body = Array.isArray(peerId)
+      ? { peerId: peerId[0], mediaType, peerIds: peerId.map((id) => Number(id)), groupId: Number(groupId ?? 0) }
+      : { peerId, mediaType };
+    return this._sendFriendOp<CallInviteResp>(
+      Cmd.CALL_INVITE_REQ,
+      Cmd.CALL_INVITE_RESP,
+      enc(im.call.CallInviteReq, body),
+      'call-invite',
+      10000,
+    );
+  }
+
+  /** 接听，返回入会三件套（room/token/wsUrl） */
+  acceptCall(callId: string): Promise<CallJoinInfo> {
+    return this._sendFriendOp<CallJoinInfo>(
+      Cmd.CALL_ACCEPT_REQ,
+      Cmd.CALL_ACCEPT_RESP,
+      enc(im.call.CallAcceptReq, { callId }),
+      'call-accept',
+      10000,
+    );
+  }
+
+  /** 结束通话（reason 由服务端按角色×状态裁定，客户端上报值仅参考） */
+  endCall(callId: string, reason: number): Promise<FriendOpResp> {
+    return this._sendFriendOp<FriendOpResp>(
+      Cmd.CALL_END_REQ,
+      Cmd.CALL_END_RESP,
+      enc(im.call.CallEndReq, { callId, reason }),
+      'call-end',
+      5000,
+    );
+  }
+
+  /** 断线重连：重新获取入会材料 */
+  requestCallToken(callId: string): Promise<CallJoinInfo> {
+    return this._sendFriendOp<CallJoinInfo>(
+      Cmd.CALL_TOKEN_REQ,
+      Cmd.CALL_TOKEN_RESP,
+      enc(im.call.CallTokenReq, { callId }),
+      'call-token',
+      10000,
+    );
+  }
+
   /**
    * 拉取会话历史消息（通过 PULL_REQ/PULL_RESP，与离线拉取共用协议）。
    * 后端根据 varHeader 中是否有 peerId 区分：
@@ -473,9 +535,10 @@ export class IMClient {
    * 文件字节直传 presigned PUT URL。
    * Content-Type 必须与预签名时的 content-type 完全一致（SigV4 签名包含该 header），
    * 否则 MinIO 返回 SignatureDoesNotMatch。
+   * presigned URL 为 http 时改写为同源 /minio 代理（https 页面直连会被 Safari 按混合内容拦截）。
    */
   async putFileToPresignedUrl(presignedUrl: string, file: File): Promise<void> {
-    const resp = await fetch(presignedUrl, {
+    const resp = await fetch(sameOriginMediaUrl(presignedUrl), {
       method: 'PUT',
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
@@ -483,6 +546,49 @@ export class IMClient {
     if (!resp.ok) {
       throw new Error(`上传文件失败: HTTP ${resp.status}`);
     }
+  }
+
+  /**
+   * 更新资料（CMD_PROFILE_UPDATE_REQ/RESP）。proto3 optional 语义：
+   * 只传需要更新的字段（avatar 为先经 requestUpload/putFileToPresignedUrl
+   * 直传的服务端对象 key，空串=清除）；响应回显读侧预签名后的值。
+   */
+  updateProfile(fields: { avatar?: string; signature?: string }): Promise<UpdateProfileResp> {
+    const body: Record<string, string> = {};
+    if (fields.avatar !== undefined) {
+      body.avatar = fields.avatar;
+    }
+    if (fields.signature !== undefined) {
+      body.signature = fields.signature;
+    }
+    return this._sendGroupOp(
+      Cmd.CMD_PROFILE_UPDATE_REQ,
+      Cmd.CMD_PROFILE_UPDATE_RESP,
+      enc(im.profile.ProfileUpdateReq, body),
+    ).then((raw: any) => ({
+      code: raw?.code ?? 0,
+      message: raw?.message ?? '',
+      avatar: raw?.avatar || '',
+      signature: raw?.signature || '',
+    }));
+  }
+
+  /** 转让群主（仅群主；目标须为成员）。成员会收到 OWNER_TRANSFERRED 推送 */
+  transferGroup(groupId: string, targetUserId: string): Promise<GroupOpResp> {
+    return this._sendGroupOp(
+      Cmd.CMD_GROUP_TRANSFER_REQ,
+      Cmd.CMD_GROUP_TRANSFER_RESP,
+      enc(im.group.TransferGroupReq, { groupId, targetUserId }),
+    ).then((raw: any) => ({ code: raw?.code ?? 0, message: raw?.message ?? '' }));
+  }
+
+  /** 解散群聊（仅群主）。成员会收到 DISSOLVED 推送；历史消息保留 */
+  dissolveGroup(groupId: string): Promise<GroupOpResp> {
+    return this._sendGroupOp(
+      Cmd.CMD_GROUP_DISSOLVE_REQ,
+      Cmd.CMD_GROUP_DISSOLVE_RESP,
+      enc(im.group.DissolveGroupReq, { groupId }),
+    ).then((raw: any) => ({ code: raw?.code ?? 0, message: raw?.message ?? '' }));
   }
 
   // ================================================================
@@ -510,7 +616,7 @@ export class IMClient {
     );
   }
 
-  sendGroupMessage(groupId: string, msgType: MsgType, content: string): string {
+  sendGroupMessage(groupId: string, msgType: MsgType, content: string, ext?: Record<string, string>): string {
     if (!this.connected) throw new Error('Not connected');
     const msgId = generateId();
     // 与 C2C 一致走发送队列：认证未完成时延迟发送，断线重连后自动补发
@@ -524,6 +630,7 @@ export class IMClient {
       createdAt: Date.now(),
       retryCount: 0,
       kind: 'group',
+      ext,
     };
     this.pendingQueue.set(msgId, msg);
     this._flush();
@@ -766,9 +873,13 @@ export class IMClient {
     msg.status = 'sending';
 
     const isGroup = msg.kind === 'group';
+    const messageFields: Record<string, unknown> = { msgType: msg.msgType, content: utf8(msg.content) };
+    if (msg.ext && Object.keys(msg.ext).length > 0) {
+      messageFields.ext = msg.ext;
+    }
     const bodyBytes = isGroup
-      ? enc(im.group.C2GReq, { groupId: msg.recipientId, messageId: msg.id, message: { msgType: msg.msgType, content: utf8(msg.content) } })
-      : enc(im.chat.C2CReq, { senderId: this.userId, recipientId: msg.recipientId, messageId: msg.id, message: { msgType: msg.msgType, content: utf8(msg.content) } });
+      ? enc(im.group.C2GReq, { groupId: msg.recipientId, messageId: msg.id, message: messageFields })
+      : enc(im.chat.C2CReq, { senderId: this.userId, recipientId: msg.recipientId, messageId: msg.id, message: messageFields });
 
     // 将 userName / nickname 放入 varHeaders，供后端填充 Notify 的 senderNickname
     const buf = encode(isGroup ? Cmd.C2G_REQ : Cmd.C2C_REQ, msg.id, bodyBytes, this.userId, {
@@ -1011,9 +1122,18 @@ export class IMClient {
       senderNickname: ext.senderNickname,
       msgType: mc.msgType != null && Number(mc.msgType) !== 0 ? (Number(mc.msgType) as MsgType) : MsgType.TEXT,
       content: mc.content ? text(mc.content) : '',
+      mentions: this._mentionsOf(ext),
       seq: Number(meta?.seq != null ? meta.seq : (ext.seq || 0)) || 0,
       createdAt,
     };
+  }
+
+  /** ext.mentioned_user_ids（逗号分隔 uid）→ string[] */
+  private _mentionsOf(ext: Record<string, string>): string[] | undefined {
+    const raw = ext.mentioned_user_ids;
+    if (!raw) return undefined;
+    const ids = raw.split(',').map((x) => x.trim()).filter(Boolean);
+    return ids.length > 0 ? ids : undefined;
   }
 
   /** C2GNotify → GroupMessage（display 名取自 message.ext，id 优先取外层 messageId） */
@@ -1032,6 +1152,7 @@ export class IMClient {
       senderNickname: ext.senderNickname,
       msgType: mc.msgType != null && Number(mc.msgType) !== 0 ? (Number(mc.msgType) as number) : MsgType.TEXT,
       content: mc.content ? text(mc.content) : '',
+      mentions: this._mentionsOf(ext),
       seq: g.seq != null ? Number(g.seq) : 0,
       createdAt: (mc.timestamp != null ? Number(mc.timestamp) : 0) || Date.now(),
     };
@@ -1081,7 +1202,7 @@ export class IMClient {
       userId: String(n.userId ?? ''),
       userName: n.userName || '',
       nickname: n.nickname || '',
-      avatar: n.avatar || '',
+      avatar: sameOriginMediaUrl(n.avatar || ''),
     };
   }
 
@@ -1222,6 +1343,46 @@ export class IMClient {
         break;
       }
 
+      // 群转让/解散响应
+      case Cmd.CMD_GROUP_TRANSFER_RESP:
+      case Cmd.CMD_GROUP_DISSOLVE_RESP: {
+        const raw = plain(im.group.TransferGroupResp, body);
+        const resp: GroupOpResp = { code: raw?.code ?? 0, message: raw?.message ?? '' };
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          if (resp.code === 0) {
+            pending.resolve(resp);
+          } else {
+            pending.reject(new Error(resp.message));
+          }
+        }
+        break;
+      }
+
+      // 资料更新响应
+      case Cmd.CMD_PROFILE_UPDATE_RESP: {
+        const raw = plain(im.profile.ProfileUpdateResp, body);
+        const resp: UpdateProfileResp = {
+          code: raw?.code ?? 0,
+          message: raw?.message ?? '',
+          avatar: raw?.avatar || '',
+          signature: raw?.signature || '',
+        };
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          if (resp.code === 0) {
+            pending.resolve(resp);
+          } else {
+            pending.reject(new Error(resp.message));
+          }
+        }
+        break;
+      }
+
       // 好友操作响应
       case Cmd.FRIEND_SEARCH_RESP: {
         const u = plain(im.relation.SearchUserResp, body);
@@ -1232,7 +1393,7 @@ export class IMClient {
             userId: String(x.userId ?? ''),
             userName: x.userName || '',
             nickname: x.nickname || '',
-            avatar: x.avatar || '',
+            avatar: sameOriginMediaUrl(x.avatar || ''),
           })),
         };
         // 关联到 pendingFriendOps（通过 messageId）
@@ -1282,6 +1443,51 @@ export class IMClient {
         const n = plain(im.relation.FriendDeleteNotify, body);
         const notify: FriendDeleteNotify = { userId: n?.userId != null ? String(n.userId) : '' };
         this._emit('friendDeleted', notify);
+        break;
+      }
+
+      case Cmd.CALL_INVITE_RESP:
+      case Cmd.CALL_ACCEPT_RESP:
+      case Cmd.CALL_END_RESP:
+      case Cmd.CALL_TOKEN_RESP: {
+        const cls =
+          cmd === Cmd.CALL_INVITE_RESP
+            ? im.call.CallInviteResp
+            : cmd === Cmd.CALL_ACCEPT_RESP
+              ? im.call.CallAcceptResp
+              : cmd === Cmd.CALL_END_RESP
+                ? im.call.CallEndResp
+                : im.call.CallTokenResp;
+        const raw = plain(cls, body);
+        const pending = this.pendingFriendOps.get(messageId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingFriendOps.delete(messageId);
+          if (raw?.code === 0) {
+            pending.resolve(raw);
+          } else {
+            pending.reject(new Error(raw?.message || '通话操作失败'));
+          }
+        }
+        break;
+      }
+
+      case Cmd.CALL_EVENT_PUSH: {
+        const p = plain(im.call.CallEventPush, body);
+        const event: CallEvent = {
+          callId: p?.callId ?? '',
+          event: (p?.event ?? 0) as CallEvent['event'],
+          mediaType: p?.mediaType ?? 0,
+          peerId: p?.peerId != null ? String(p.peerId) : '',
+          peerUserName: p?.peerUserName || '',
+          peerNickname: p?.peerNickname || '',
+          reason: p?.reason ?? 0,
+          room: p?.room ?? '',
+          token: p?.token ?? '',
+          wsUrl: p?.wsUrl ?? '',
+          participantCount: p?.participantCount ?? 0,
+        };
+        this._emit('callEvent', event);
         break;
       }
 

@@ -491,6 +491,18 @@ export namespace im {
             /** CMD_GROUP_KICK_RESP value */
             CMD_GROUP_KICK_RESP = 117,
 
+            /** CMD_GROUP_TRANSFER_REQ value */
+            CMD_GROUP_TRANSFER_REQ = 118,
+
+            /** CMD_GROUP_TRANSFER_RESP value */
+            CMD_GROUP_TRANSFER_RESP = 119,
+
+            /** CMD_GROUP_DISSOLVE_REQ value */
+            CMD_GROUP_DISSOLVE_REQ = 120,
+
+            /** CMD_GROUP_DISSOLVE_RESP value */
+            CMD_GROUP_DISSOLVE_RESP = 121,
+
             /** CMD_GROUP_GET_INFO_REQ value */
             CMD_GROUP_GET_INFO_REQ = 134,
 
@@ -541,6 +553,39 @@ export namespace im {
 
             /** CMD_UPLOAD_RESP value */
             CMD_UPLOAD_RESP = 161,
+
+            /** CMD_CALL_INVITE_REQ value */
+            CMD_CALL_INVITE_REQ = 176,
+
+            /** CMD_CALL_INVITE_RESP value */
+            CMD_CALL_INVITE_RESP = 177,
+
+            /** CMD_CALL_ACCEPT_REQ value */
+            CMD_CALL_ACCEPT_REQ = 178,
+
+            /** CMD_CALL_ACCEPT_RESP value */
+            CMD_CALL_ACCEPT_RESP = 179,
+
+            /** CMD_CALL_END_REQ value */
+            CMD_CALL_END_REQ = 180,
+
+            /** CMD_CALL_END_RESP value */
+            CMD_CALL_END_RESP = 181,
+
+            /** CMD_CALL_EVENT_PUSH value */
+            CMD_CALL_EVENT_PUSH = 182,
+
+            /** CMD_CALL_TOKEN_REQ value */
+            CMD_CALL_TOKEN_REQ = 183,
+
+            /** CMD_CALL_TOKEN_RESP value */
+            CMD_CALL_TOKEN_RESP = 184,
+
+            /** CMD_PROFILE_UPDATE_REQ value */
+            CMD_PROFILE_UPDATE_REQ = 192,
+
+            /** CMD_PROFILE_UPDATE_RESP value */
+            CMD_PROFILE_UPDATE_RESP = 193,
 
             /** CMD_ERROR value */
             CMD_ERROR = 65535
@@ -1360,6 +1405,1248 @@ export namespace im {
 
             /** Shape of a LogoutResp. */
             type $Shape = im.auth.LogoutResp.$Properties;
+        }
+    }
+
+    /** Namespace call. */
+    namespace call {
+
+        /** CallMediaType enum. */
+        enum CallMediaType {
+
+            /** CALL_MEDIA_AUDIO value */
+            CALL_MEDIA_AUDIO = 0,
+
+            /** CALL_MEDIA_VIDEO value */
+            CALL_MEDIA_VIDEO = 1
+        }
+
+        /** CallEndReason enum. */
+        enum CallEndReason {
+
+            /** END_REASON_UNKNOWN value */
+            END_REASON_UNKNOWN = 0,
+
+            /** END_REASON_CANCEL value */
+            END_REASON_CANCEL = 1,
+
+            /** END_REASON_REJECT value */
+            END_REASON_REJECT = 2,
+
+            /** END_REASON_HANGUP value */
+            END_REASON_HANGUP = 3,
+
+            /** END_REASON_BUSY value */
+            END_REASON_BUSY = 4,
+
+            /** END_REASON_TIMEOUT value */
+            END_REASON_TIMEOUT = 5,
+
+            /** END_REASON_PEER_DROP value */
+            END_REASON_PEER_DROP = 6
+        }
+
+        /**
+         * Properties of a CallInviteReq.
+         * @deprecated Use im.call.CallInviteReq.$Properties instead.
+         */
+        interface ICallInviteReq extends im.call.CallInviteReq.$Properties {
+        }
+
+        /** Represents a CallInviteReq. */
+        class CallInviteReq {
+
+            /**
+             * Constructs a new CallInviteReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallInviteReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallInviteReq peerId. */
+            peerId: (number|Long);
+
+            /** CallInviteReq mediaType. */
+            mediaType: im.call.CallMediaType;
+
+            /** CallInviteReq peerIds. */
+            peerIds: (number|Long)[];
+
+            /** CallInviteReq groupId. */
+            groupId: (number|Long);
+
+            /**
+             * Creates a new CallInviteReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallInviteReq instance
+             */
+            static create(properties: im.call.CallInviteReq.$Shape): im.call.CallInviteReq & im.call.CallInviteReq.$Shape;
+            static create(properties?: im.call.CallInviteReq.$Properties): im.call.CallInviteReq;
+
+            /**
+             * Encodes the specified CallInviteReq message. Does not implicitly {@link im.call.CallInviteReq.verify|verify} messages.
+             * @param message CallInviteReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallInviteReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallInviteReq message, length delimited. Does not implicitly {@link im.call.CallInviteReq.verify|verify} messages.
+             * @param message CallInviteReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallInviteReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallInviteReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallInviteReq & im.call.CallInviteReq.$Shape} CallInviteReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallInviteReq & im.call.CallInviteReq.$Shape;
+
+            /**
+             * Decodes a CallInviteReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallInviteReq & im.call.CallInviteReq.$Shape} CallInviteReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallInviteReq & im.call.CallInviteReq.$Shape;
+
+            /**
+             * Verifies a CallInviteReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallInviteReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallInviteReq
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallInviteReq;
+
+            /**
+             * Creates a plain object from a CallInviteReq message. Also converts values to other types if specified.
+             * @param message CallInviteReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallInviteReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallInviteReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallInviteReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallInviteReq {
+
+            /** Properties of a CallInviteReq. */
+            interface $Properties {
+
+                /** CallInviteReq peerId */
+                peerId?: (number|Long|null);
+
+                /** CallInviteReq mediaType */
+                mediaType?: (im.call.CallMediaType|null);
+
+                /** CallInviteReq peerIds */
+                peerIds?: ((number|Long)[]|null);
+
+                /** CallInviteReq groupId */
+                groupId?: (number|Long|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallInviteReq. */
+            type $Shape = im.call.CallInviteReq.$Properties;
+        }
+
+        /**
+         * Properties of a CallInviteResp.
+         * @deprecated Use im.call.CallInviteResp.$Properties instead.
+         */
+        interface ICallInviteResp extends im.call.CallInviteResp.$Properties {
+        }
+
+        /** Represents a CallInviteResp. */
+        class CallInviteResp {
+
+            /**
+             * Constructs a new CallInviteResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallInviteResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallInviteResp code. */
+            code: number;
+
+            /** CallInviteResp message. */
+            message: string;
+
+            /** CallInviteResp callId. */
+            callId: string;
+
+            /**
+             * Creates a new CallInviteResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallInviteResp instance
+             */
+            static create(properties: im.call.CallInviteResp.$Shape): im.call.CallInviteResp & im.call.CallInviteResp.$Shape;
+            static create(properties?: im.call.CallInviteResp.$Properties): im.call.CallInviteResp;
+
+            /**
+             * Encodes the specified CallInviteResp message. Does not implicitly {@link im.call.CallInviteResp.verify|verify} messages.
+             * @param message CallInviteResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallInviteResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallInviteResp message, length delimited. Does not implicitly {@link im.call.CallInviteResp.verify|verify} messages.
+             * @param message CallInviteResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallInviteResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallInviteResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallInviteResp & im.call.CallInviteResp.$Shape} CallInviteResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallInviteResp & im.call.CallInviteResp.$Shape;
+
+            /**
+             * Decodes a CallInviteResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallInviteResp & im.call.CallInviteResp.$Shape} CallInviteResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallInviteResp & im.call.CallInviteResp.$Shape;
+
+            /**
+             * Verifies a CallInviteResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallInviteResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallInviteResp
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallInviteResp;
+
+            /**
+             * Creates a plain object from a CallInviteResp message. Also converts values to other types if specified.
+             * @param message CallInviteResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallInviteResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallInviteResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallInviteResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallInviteResp {
+
+            /** Properties of a CallInviteResp. */
+            interface $Properties {
+
+                /** CallInviteResp code */
+                code?: (number|null);
+
+                /** CallInviteResp message */
+                message?: (string|null);
+
+                /** CallInviteResp callId */
+                callId?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallInviteResp. */
+            type $Shape = im.call.CallInviteResp.$Properties;
+        }
+
+        /**
+         * Properties of a CallAcceptReq.
+         * @deprecated Use im.call.CallAcceptReq.$Properties instead.
+         */
+        interface ICallAcceptReq extends im.call.CallAcceptReq.$Properties {
+        }
+
+        /** Represents a CallAcceptReq. */
+        class CallAcceptReq {
+
+            /**
+             * Constructs a new CallAcceptReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallAcceptReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallAcceptReq callId. */
+            callId: string;
+
+            /**
+             * Creates a new CallAcceptReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallAcceptReq instance
+             */
+            static create(properties: im.call.CallAcceptReq.$Shape): im.call.CallAcceptReq & im.call.CallAcceptReq.$Shape;
+            static create(properties?: im.call.CallAcceptReq.$Properties): im.call.CallAcceptReq;
+
+            /**
+             * Encodes the specified CallAcceptReq message. Does not implicitly {@link im.call.CallAcceptReq.verify|verify} messages.
+             * @param message CallAcceptReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallAcceptReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallAcceptReq message, length delimited. Does not implicitly {@link im.call.CallAcceptReq.verify|verify} messages.
+             * @param message CallAcceptReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallAcceptReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallAcceptReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallAcceptReq & im.call.CallAcceptReq.$Shape} CallAcceptReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallAcceptReq & im.call.CallAcceptReq.$Shape;
+
+            /**
+             * Decodes a CallAcceptReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallAcceptReq & im.call.CallAcceptReq.$Shape} CallAcceptReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallAcceptReq & im.call.CallAcceptReq.$Shape;
+
+            /**
+             * Verifies a CallAcceptReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallAcceptReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallAcceptReq
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallAcceptReq;
+
+            /**
+             * Creates a plain object from a CallAcceptReq message. Also converts values to other types if specified.
+             * @param message CallAcceptReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallAcceptReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallAcceptReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallAcceptReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallAcceptReq {
+
+            /** Properties of a CallAcceptReq. */
+            interface $Properties {
+
+                /** CallAcceptReq callId */
+                callId?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallAcceptReq. */
+            type $Shape = im.call.CallAcceptReq.$Properties;
+        }
+
+        /**
+         * Properties of a CallAcceptResp.
+         * @deprecated Use im.call.CallAcceptResp.$Properties instead.
+         */
+        interface ICallAcceptResp extends im.call.CallAcceptResp.$Properties {
+        }
+
+        /** Represents a CallAcceptResp. */
+        class CallAcceptResp {
+
+            /**
+             * Constructs a new CallAcceptResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallAcceptResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallAcceptResp code. */
+            code: number;
+
+            /** CallAcceptResp message. */
+            message: string;
+
+            /** CallAcceptResp room. */
+            room: string;
+
+            /** CallAcceptResp token. */
+            token: string;
+
+            /** CallAcceptResp wsUrl. */
+            wsUrl: string;
+
+            /**
+             * Creates a new CallAcceptResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallAcceptResp instance
+             */
+            static create(properties: im.call.CallAcceptResp.$Shape): im.call.CallAcceptResp & im.call.CallAcceptResp.$Shape;
+            static create(properties?: im.call.CallAcceptResp.$Properties): im.call.CallAcceptResp;
+
+            /**
+             * Encodes the specified CallAcceptResp message. Does not implicitly {@link im.call.CallAcceptResp.verify|verify} messages.
+             * @param message CallAcceptResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallAcceptResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallAcceptResp message, length delimited. Does not implicitly {@link im.call.CallAcceptResp.verify|verify} messages.
+             * @param message CallAcceptResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallAcceptResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallAcceptResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallAcceptResp & im.call.CallAcceptResp.$Shape} CallAcceptResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallAcceptResp & im.call.CallAcceptResp.$Shape;
+
+            /**
+             * Decodes a CallAcceptResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallAcceptResp & im.call.CallAcceptResp.$Shape} CallAcceptResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallAcceptResp & im.call.CallAcceptResp.$Shape;
+
+            /**
+             * Verifies a CallAcceptResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallAcceptResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallAcceptResp
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallAcceptResp;
+
+            /**
+             * Creates a plain object from a CallAcceptResp message. Also converts values to other types if specified.
+             * @param message CallAcceptResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallAcceptResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallAcceptResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallAcceptResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallAcceptResp {
+
+            /** Properties of a CallAcceptResp. */
+            interface $Properties {
+
+                /** CallAcceptResp code */
+                code?: (number|null);
+
+                /** CallAcceptResp message */
+                message?: (string|null);
+
+                /** CallAcceptResp room */
+                room?: (string|null);
+
+                /** CallAcceptResp token */
+                token?: (string|null);
+
+                /** CallAcceptResp wsUrl */
+                wsUrl?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallAcceptResp. */
+            type $Shape = im.call.CallAcceptResp.$Properties;
+        }
+
+        /**
+         * Properties of a CallEndReq.
+         * @deprecated Use im.call.CallEndReq.$Properties instead.
+         */
+        interface ICallEndReq extends im.call.CallEndReq.$Properties {
+        }
+
+        /** Represents a CallEndReq. */
+        class CallEndReq {
+
+            /**
+             * Constructs a new CallEndReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallEndReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallEndReq callId. */
+            callId: string;
+
+            /** CallEndReq reason. */
+            reason: im.call.CallEndReason;
+
+            /**
+             * Creates a new CallEndReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallEndReq instance
+             */
+            static create(properties: im.call.CallEndReq.$Shape): im.call.CallEndReq & im.call.CallEndReq.$Shape;
+            static create(properties?: im.call.CallEndReq.$Properties): im.call.CallEndReq;
+
+            /**
+             * Encodes the specified CallEndReq message. Does not implicitly {@link im.call.CallEndReq.verify|verify} messages.
+             * @param message CallEndReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallEndReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallEndReq message, length delimited. Does not implicitly {@link im.call.CallEndReq.verify|verify} messages.
+             * @param message CallEndReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallEndReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallEndReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallEndReq & im.call.CallEndReq.$Shape} CallEndReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallEndReq & im.call.CallEndReq.$Shape;
+
+            /**
+             * Decodes a CallEndReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallEndReq & im.call.CallEndReq.$Shape} CallEndReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallEndReq & im.call.CallEndReq.$Shape;
+
+            /**
+             * Verifies a CallEndReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallEndReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallEndReq
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallEndReq;
+
+            /**
+             * Creates a plain object from a CallEndReq message. Also converts values to other types if specified.
+             * @param message CallEndReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallEndReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallEndReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallEndReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallEndReq {
+
+            /** Properties of a CallEndReq. */
+            interface $Properties {
+
+                /** CallEndReq callId */
+                callId?: (string|null);
+
+                /** CallEndReq reason */
+                reason?: (im.call.CallEndReason|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallEndReq. */
+            type $Shape = im.call.CallEndReq.$Properties;
+        }
+
+        /**
+         * Properties of a CallEndResp.
+         * @deprecated Use im.call.CallEndResp.$Properties instead.
+         */
+        interface ICallEndResp extends im.call.CallEndResp.$Properties {
+        }
+
+        /** Represents a CallEndResp. */
+        class CallEndResp {
+
+            /**
+             * Constructs a new CallEndResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallEndResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallEndResp code. */
+            code: number;
+
+            /** CallEndResp message. */
+            message: string;
+
+            /**
+             * Creates a new CallEndResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallEndResp instance
+             */
+            static create(properties: im.call.CallEndResp.$Shape): im.call.CallEndResp & im.call.CallEndResp.$Shape;
+            static create(properties?: im.call.CallEndResp.$Properties): im.call.CallEndResp;
+
+            /**
+             * Encodes the specified CallEndResp message. Does not implicitly {@link im.call.CallEndResp.verify|verify} messages.
+             * @param message CallEndResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallEndResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallEndResp message, length delimited. Does not implicitly {@link im.call.CallEndResp.verify|verify} messages.
+             * @param message CallEndResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallEndResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallEndResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallEndResp & im.call.CallEndResp.$Shape} CallEndResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallEndResp & im.call.CallEndResp.$Shape;
+
+            /**
+             * Decodes a CallEndResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallEndResp & im.call.CallEndResp.$Shape} CallEndResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallEndResp & im.call.CallEndResp.$Shape;
+
+            /**
+             * Verifies a CallEndResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallEndResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallEndResp
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallEndResp;
+
+            /**
+             * Creates a plain object from a CallEndResp message. Also converts values to other types if specified.
+             * @param message CallEndResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallEndResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallEndResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallEndResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallEndResp {
+
+            /** Properties of a CallEndResp. */
+            interface $Properties {
+
+                /** CallEndResp code */
+                code?: (number|null);
+
+                /** CallEndResp message */
+                message?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallEndResp. */
+            type $Shape = im.call.CallEndResp.$Properties;
+        }
+
+        /**
+         * Properties of a CallEventPush.
+         * @deprecated Use im.call.CallEventPush.$Properties instead.
+         */
+        interface ICallEventPush extends im.call.CallEventPush.$Properties {
+        }
+
+        /** Represents a CallEventPush. */
+        class CallEventPush {
+
+            /**
+             * Constructs a new CallEventPush.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallEventPush.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallEventPush callId. */
+            callId: string;
+
+            /** CallEventPush event. */
+            event: number;
+
+            /** CallEventPush mediaType. */
+            mediaType: im.call.CallMediaType;
+
+            /** CallEventPush peerId. */
+            peerId: (number|Long);
+
+            /** CallEventPush peerUserName. */
+            peerUserName: string;
+
+            /** CallEventPush peerNickname. */
+            peerNickname: string;
+
+            /** CallEventPush reason. */
+            reason: im.call.CallEndReason;
+
+            /** CallEventPush room. */
+            room: string;
+
+            /** CallEventPush token. */
+            token: string;
+
+            /** CallEventPush wsUrl. */
+            wsUrl: string;
+
+            /** CallEventPush participantCount. */
+            participantCount: number;
+
+            /**
+             * Creates a new CallEventPush instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallEventPush instance
+             */
+            static create(properties: im.call.CallEventPush.$Shape): im.call.CallEventPush & im.call.CallEventPush.$Shape;
+            static create(properties?: im.call.CallEventPush.$Properties): im.call.CallEventPush;
+
+            /**
+             * Encodes the specified CallEventPush message. Does not implicitly {@link im.call.CallEventPush.verify|verify} messages.
+             * @param message CallEventPush message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallEventPush.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallEventPush message, length delimited. Does not implicitly {@link im.call.CallEventPush.verify|verify} messages.
+             * @param message CallEventPush message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallEventPush.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallEventPush message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallEventPush & im.call.CallEventPush.$Shape} CallEventPush
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallEventPush & im.call.CallEventPush.$Shape;
+
+            /**
+             * Decodes a CallEventPush message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallEventPush & im.call.CallEventPush.$Shape} CallEventPush
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallEventPush & im.call.CallEventPush.$Shape;
+
+            /**
+             * Verifies a CallEventPush message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallEventPush message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallEventPush
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallEventPush;
+
+            /**
+             * Creates a plain object from a CallEventPush message. Also converts values to other types if specified.
+             * @param message CallEventPush
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallEventPush, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallEventPush to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallEventPush
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallEventPush {
+
+            /** Properties of a CallEventPush. */
+            interface $Properties {
+
+                /** CallEventPush callId */
+                callId?: (string|null);
+
+                /** CallEventPush event */
+                event?: (number|null);
+
+                /** CallEventPush mediaType */
+                mediaType?: (im.call.CallMediaType|null);
+
+                /** CallEventPush peerId */
+                peerId?: (number|Long|null);
+
+                /** CallEventPush peerUserName */
+                peerUserName?: (string|null);
+
+                /** CallEventPush peerNickname */
+                peerNickname?: (string|null);
+
+                /** CallEventPush reason */
+                reason?: (im.call.CallEndReason|null);
+
+                /** CallEventPush room */
+                room?: (string|null);
+
+                /** CallEventPush token */
+                token?: (string|null);
+
+                /** CallEventPush wsUrl */
+                wsUrl?: (string|null);
+
+                /** CallEventPush participantCount */
+                participantCount?: (number|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallEventPush. */
+            type $Shape = im.call.CallEventPush.$Properties;
+        }
+
+        /**
+         * Properties of a CallTokenReq.
+         * @deprecated Use im.call.CallTokenReq.$Properties instead.
+         */
+        interface ICallTokenReq extends im.call.CallTokenReq.$Properties {
+        }
+
+        /** Represents a CallTokenReq. */
+        class CallTokenReq {
+
+            /**
+             * Constructs a new CallTokenReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallTokenReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallTokenReq callId. */
+            callId: string;
+
+            /**
+             * Creates a new CallTokenReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallTokenReq instance
+             */
+            static create(properties: im.call.CallTokenReq.$Shape): im.call.CallTokenReq & im.call.CallTokenReq.$Shape;
+            static create(properties?: im.call.CallTokenReq.$Properties): im.call.CallTokenReq;
+
+            /**
+             * Encodes the specified CallTokenReq message. Does not implicitly {@link im.call.CallTokenReq.verify|verify} messages.
+             * @param message CallTokenReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallTokenReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallTokenReq message, length delimited. Does not implicitly {@link im.call.CallTokenReq.verify|verify} messages.
+             * @param message CallTokenReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallTokenReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallTokenReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallTokenReq & im.call.CallTokenReq.$Shape} CallTokenReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallTokenReq & im.call.CallTokenReq.$Shape;
+
+            /**
+             * Decodes a CallTokenReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallTokenReq & im.call.CallTokenReq.$Shape} CallTokenReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallTokenReq & im.call.CallTokenReq.$Shape;
+
+            /**
+             * Verifies a CallTokenReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallTokenReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallTokenReq
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallTokenReq;
+
+            /**
+             * Creates a plain object from a CallTokenReq message. Also converts values to other types if specified.
+             * @param message CallTokenReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallTokenReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallTokenReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallTokenReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallTokenReq {
+
+            /** Properties of a CallTokenReq. */
+            interface $Properties {
+
+                /** CallTokenReq callId */
+                callId?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallTokenReq. */
+            type $Shape = im.call.CallTokenReq.$Properties;
+        }
+
+        /**
+         * Properties of a CallTokenResp.
+         * @deprecated Use im.call.CallTokenResp.$Properties instead.
+         */
+        interface ICallTokenResp extends im.call.CallTokenResp.$Properties {
+        }
+
+        /** Represents a CallTokenResp. */
+        class CallTokenResp {
+
+            /**
+             * Constructs a new CallTokenResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.call.CallTokenResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** CallTokenResp code. */
+            code: number;
+
+            /** CallTokenResp message. */
+            message: string;
+
+            /** CallTokenResp room. */
+            room: string;
+
+            /** CallTokenResp token. */
+            token: string;
+
+            /** CallTokenResp wsUrl. */
+            wsUrl: string;
+
+            /**
+             * Creates a new CallTokenResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns CallTokenResp instance
+             */
+            static create(properties: im.call.CallTokenResp.$Shape): im.call.CallTokenResp & im.call.CallTokenResp.$Shape;
+            static create(properties?: im.call.CallTokenResp.$Properties): im.call.CallTokenResp;
+
+            /**
+             * Encodes the specified CallTokenResp message. Does not implicitly {@link im.call.CallTokenResp.verify|verify} messages.
+             * @param message CallTokenResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.call.CallTokenResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified CallTokenResp message, length delimited. Does not implicitly {@link im.call.CallTokenResp.verify|verify} messages.
+             * @param message CallTokenResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.call.CallTokenResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a CallTokenResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.call.CallTokenResp & im.call.CallTokenResp.$Shape} CallTokenResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.call.CallTokenResp & im.call.CallTokenResp.$Shape;
+
+            /**
+             * Decodes a CallTokenResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.call.CallTokenResp & im.call.CallTokenResp.$Shape} CallTokenResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.call.CallTokenResp & im.call.CallTokenResp.$Shape;
+
+            /**
+             * Verifies a CallTokenResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a CallTokenResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns CallTokenResp
+             */
+            static fromObject(object: { [k: string]: any }): im.call.CallTokenResp;
+
+            /**
+             * Creates a plain object from a CallTokenResp message. Also converts values to other types if specified.
+             * @param message CallTokenResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.call.CallTokenResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this CallTokenResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for CallTokenResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace CallTokenResp {
+
+            /** Properties of a CallTokenResp. */
+            interface $Properties {
+
+                /** CallTokenResp code */
+                code?: (number|null);
+
+                /** CallTokenResp message */
+                message?: (string|null);
+
+                /** CallTokenResp room */
+                room?: (string|null);
+
+                /** CallTokenResp token */
+                token?: (string|null);
+
+                /** CallTokenResp wsUrl */
+                wsUrl?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a CallTokenResp. */
+            type $Shape = im.call.CallTokenResp.$Properties;
         }
     }
 
@@ -4573,8 +5860,497 @@ export namespace im {
                 ADMIN_SET = 4,
 
                 /** OWNER_TRANSFERRED value */
-                OWNER_TRANSFERRED = 5
+                OWNER_TRANSFERRED = 5,
+
+                /** DISSOLVED value */
+                DISSOLVED = 6
             }
+        }
+
+        /**
+         * Properties of a TransferGroupReq.
+         * @deprecated Use im.group.TransferGroupReq.$Properties instead.
+         */
+        interface ITransferGroupReq extends im.group.TransferGroupReq.$Properties {
+        }
+
+        /** Represents a TransferGroupReq. */
+        class TransferGroupReq {
+
+            /**
+             * Constructs a new TransferGroupReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.TransferGroupReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** TransferGroupReq groupId. */
+            groupId: (number|Long);
+
+            /** TransferGroupReq targetUserId. */
+            targetUserId: (number|Long);
+
+            /**
+             * Creates a new TransferGroupReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns TransferGroupReq instance
+             */
+            static create(properties: im.group.TransferGroupReq.$Shape): im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape;
+            static create(properties?: im.group.TransferGroupReq.$Properties): im.group.TransferGroupReq;
+
+            /**
+             * Encodes the specified TransferGroupReq message. Does not implicitly {@link im.group.TransferGroupReq.verify|verify} messages.
+             * @param message TransferGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.TransferGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified TransferGroupReq message, length delimited. Does not implicitly {@link im.group.TransferGroupReq.verify|verify} messages.
+             * @param message TransferGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.TransferGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a TransferGroupReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape} TransferGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape;
+
+            /**
+             * Decodes a TransferGroupReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape} TransferGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.TransferGroupReq & im.group.TransferGroupReq.$Shape;
+
+            /**
+             * Verifies a TransferGroupReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a TransferGroupReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns TransferGroupReq
+             */
+            static fromObject(object: { [k: string]: any }): im.group.TransferGroupReq;
+
+            /**
+             * Creates a plain object from a TransferGroupReq message. Also converts values to other types if specified.
+             * @param message TransferGroupReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.TransferGroupReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this TransferGroupReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for TransferGroupReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace TransferGroupReq {
+
+            /** Properties of a TransferGroupReq. */
+            interface $Properties {
+
+                /** TransferGroupReq groupId */
+                groupId?: (number|Long|null);
+
+                /** TransferGroupReq targetUserId */
+                targetUserId?: (number|Long|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a TransferGroupReq. */
+            type $Shape = im.group.TransferGroupReq.$Properties;
+        }
+
+        /**
+         * Properties of a TransferGroupResp.
+         * @deprecated Use im.group.TransferGroupResp.$Properties instead.
+         */
+        interface ITransferGroupResp extends im.group.TransferGroupResp.$Properties {
+        }
+
+        /** Represents a TransferGroupResp. */
+        class TransferGroupResp {
+
+            /**
+             * Constructs a new TransferGroupResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.TransferGroupResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** TransferGroupResp code. */
+            code: number;
+
+            /** TransferGroupResp message. */
+            message: string;
+
+            /**
+             * Creates a new TransferGroupResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns TransferGroupResp instance
+             */
+            static create(properties: im.group.TransferGroupResp.$Shape): im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape;
+            static create(properties?: im.group.TransferGroupResp.$Properties): im.group.TransferGroupResp;
+
+            /**
+             * Encodes the specified TransferGroupResp message. Does not implicitly {@link im.group.TransferGroupResp.verify|verify} messages.
+             * @param message TransferGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.TransferGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified TransferGroupResp message, length delimited. Does not implicitly {@link im.group.TransferGroupResp.verify|verify} messages.
+             * @param message TransferGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.TransferGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a TransferGroupResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape} TransferGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape;
+
+            /**
+             * Decodes a TransferGroupResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape} TransferGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.TransferGroupResp & im.group.TransferGroupResp.$Shape;
+
+            /**
+             * Verifies a TransferGroupResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a TransferGroupResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns TransferGroupResp
+             */
+            static fromObject(object: { [k: string]: any }): im.group.TransferGroupResp;
+
+            /**
+             * Creates a plain object from a TransferGroupResp message. Also converts values to other types if specified.
+             * @param message TransferGroupResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.TransferGroupResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this TransferGroupResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for TransferGroupResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace TransferGroupResp {
+
+            /** Properties of a TransferGroupResp. */
+            interface $Properties {
+
+                /** TransferGroupResp code */
+                code?: (number|null);
+
+                /** TransferGroupResp message */
+                message?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a TransferGroupResp. */
+            type $Shape = im.group.TransferGroupResp.$Properties;
+        }
+
+        /**
+         * Properties of a DissolveGroupReq.
+         * @deprecated Use im.group.DissolveGroupReq.$Properties instead.
+         */
+        interface IDissolveGroupReq extends im.group.DissolveGroupReq.$Properties {
+        }
+
+        /** Represents a DissolveGroupReq. */
+        class DissolveGroupReq {
+
+            /**
+             * Constructs a new DissolveGroupReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.DissolveGroupReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** DissolveGroupReq groupId. */
+            groupId: (number|Long);
+
+            /**
+             * Creates a new DissolveGroupReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns DissolveGroupReq instance
+             */
+            static create(properties: im.group.DissolveGroupReq.$Shape): im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape;
+            static create(properties?: im.group.DissolveGroupReq.$Properties): im.group.DissolveGroupReq;
+
+            /**
+             * Encodes the specified DissolveGroupReq message. Does not implicitly {@link im.group.DissolveGroupReq.verify|verify} messages.
+             * @param message DissolveGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.DissolveGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified DissolveGroupReq message, length delimited. Does not implicitly {@link im.group.DissolveGroupReq.verify|verify} messages.
+             * @param message DissolveGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.DissolveGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a DissolveGroupReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape} DissolveGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape;
+
+            /**
+             * Decodes a DissolveGroupReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape} DissolveGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.DissolveGroupReq & im.group.DissolveGroupReq.$Shape;
+
+            /**
+             * Verifies a DissolveGroupReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a DissolveGroupReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns DissolveGroupReq
+             */
+            static fromObject(object: { [k: string]: any }): im.group.DissolveGroupReq;
+
+            /**
+             * Creates a plain object from a DissolveGroupReq message. Also converts values to other types if specified.
+             * @param message DissolveGroupReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.DissolveGroupReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this DissolveGroupReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for DissolveGroupReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace DissolveGroupReq {
+
+            /** Properties of a DissolveGroupReq. */
+            interface $Properties {
+
+                /** DissolveGroupReq groupId */
+                groupId?: (number|Long|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a DissolveGroupReq. */
+            type $Shape = im.group.DissolveGroupReq.$Properties;
+        }
+
+        /**
+         * Properties of a DissolveGroupResp.
+         * @deprecated Use im.group.DissolveGroupResp.$Properties instead.
+         */
+        interface IDissolveGroupResp extends im.group.DissolveGroupResp.$Properties {
+        }
+
+        /** Represents a DissolveGroupResp. */
+        class DissolveGroupResp {
+
+            /**
+             * Constructs a new DissolveGroupResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.DissolveGroupResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** DissolveGroupResp code. */
+            code: number;
+
+            /** DissolveGroupResp message. */
+            message: string;
+
+            /**
+             * Creates a new DissolveGroupResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns DissolveGroupResp instance
+             */
+            static create(properties: im.group.DissolveGroupResp.$Shape): im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape;
+            static create(properties?: im.group.DissolveGroupResp.$Properties): im.group.DissolveGroupResp;
+
+            /**
+             * Encodes the specified DissolveGroupResp message. Does not implicitly {@link im.group.DissolveGroupResp.verify|verify} messages.
+             * @param message DissolveGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.DissolveGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified DissolveGroupResp message, length delimited. Does not implicitly {@link im.group.DissolveGroupResp.verify|verify} messages.
+             * @param message DissolveGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.DissolveGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a DissolveGroupResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape} DissolveGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape;
+
+            /**
+             * Decodes a DissolveGroupResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape} DissolveGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.DissolveGroupResp & im.group.DissolveGroupResp.$Shape;
+
+            /**
+             * Verifies a DissolveGroupResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a DissolveGroupResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns DissolveGroupResp
+             */
+            static fromObject(object: { [k: string]: any }): im.group.DissolveGroupResp;
+
+            /**
+             * Creates a plain object from a DissolveGroupResp message. Also converts values to other types if specified.
+             * @param message DissolveGroupResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.DissolveGroupResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this DissolveGroupResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for DissolveGroupResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace DissolveGroupResp {
+
+            /** Properties of a DissolveGroupResp. */
+            interface $Properties {
+
+                /** DissolveGroupResp code */
+                code?: (number|null);
+
+                /** DissolveGroupResp message */
+                message?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a DissolveGroupResp. */
+            type $Shape = im.group.DissolveGroupResp.$Properties;
         }
 
         /**
@@ -6778,6 +8554,268 @@ export namespace im {
 
             /** Shape of an UploadResp. */
             type $Shape = im.upload.UploadResp.$Properties;
+        }
+    }
+
+    /** Namespace profile. */
+    namespace profile {
+
+        /**
+         * Properties of a ProfileUpdateReq.
+         * @deprecated Use im.profile.ProfileUpdateReq.$Properties instead.
+         */
+        interface IProfileUpdateReq extends im.profile.ProfileUpdateReq.$Properties {
+        }
+
+        /** Represents a ProfileUpdateReq. */
+        class ProfileUpdateReq {
+
+            /**
+             * Constructs a new ProfileUpdateReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.profile.ProfileUpdateReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** ProfileUpdateReq avatar. */
+            avatar?: (string|null);
+
+            /** ProfileUpdateReq signature. */
+            signature?: (string|null);
+
+            /**
+             * Creates a new ProfileUpdateReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns ProfileUpdateReq instance
+             */
+            static create(properties: im.profile.ProfileUpdateReq.$Shape): im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape;
+            static create(properties?: im.profile.ProfileUpdateReq.$Properties): im.profile.ProfileUpdateReq;
+
+            /**
+             * Encodes the specified ProfileUpdateReq message. Does not implicitly {@link im.profile.ProfileUpdateReq.verify|verify} messages.
+             * @param message ProfileUpdateReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.profile.ProfileUpdateReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified ProfileUpdateReq message, length delimited. Does not implicitly {@link im.profile.ProfileUpdateReq.verify|verify} messages.
+             * @param message ProfileUpdateReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.profile.ProfileUpdateReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a ProfileUpdateReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape} ProfileUpdateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape;
+
+            /**
+             * Decodes a ProfileUpdateReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape} ProfileUpdateReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.profile.ProfileUpdateReq & im.profile.ProfileUpdateReq.$Shape;
+
+            /**
+             * Verifies a ProfileUpdateReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a ProfileUpdateReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns ProfileUpdateReq
+             */
+            static fromObject(object: { [k: string]: any }): im.profile.ProfileUpdateReq;
+
+            /**
+             * Creates a plain object from a ProfileUpdateReq message. Also converts values to other types if specified.
+             * @param message ProfileUpdateReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.profile.ProfileUpdateReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this ProfileUpdateReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for ProfileUpdateReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace ProfileUpdateReq {
+
+            /** Properties of a ProfileUpdateReq. */
+            interface $Properties {
+
+                /** ProfileUpdateReq avatar */
+                avatar?: (string|null);
+
+                /** ProfileUpdateReq signature */
+                signature?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a ProfileUpdateReq. */
+            type $Shape = im.profile.ProfileUpdateReq.$Properties;
+        }
+
+        /**
+         * Properties of a ProfileUpdateResp.
+         * @deprecated Use im.profile.ProfileUpdateResp.$Properties instead.
+         */
+        interface IProfileUpdateResp extends im.profile.ProfileUpdateResp.$Properties {
+        }
+
+        /** Represents a ProfileUpdateResp. */
+        class ProfileUpdateResp {
+
+            /**
+             * Constructs a new ProfileUpdateResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.profile.ProfileUpdateResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** ProfileUpdateResp code. */
+            code: number;
+
+            /** ProfileUpdateResp message. */
+            message: string;
+
+            /** ProfileUpdateResp avatar. */
+            avatar: string;
+
+            /** ProfileUpdateResp signature. */
+            signature: string;
+
+            /**
+             * Creates a new ProfileUpdateResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns ProfileUpdateResp instance
+             */
+            static create(properties: im.profile.ProfileUpdateResp.$Shape): im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape;
+            static create(properties?: im.profile.ProfileUpdateResp.$Properties): im.profile.ProfileUpdateResp;
+
+            /**
+             * Encodes the specified ProfileUpdateResp message. Does not implicitly {@link im.profile.ProfileUpdateResp.verify|verify} messages.
+             * @param message ProfileUpdateResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.profile.ProfileUpdateResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified ProfileUpdateResp message, length delimited. Does not implicitly {@link im.profile.ProfileUpdateResp.verify|verify} messages.
+             * @param message ProfileUpdateResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.profile.ProfileUpdateResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a ProfileUpdateResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape} ProfileUpdateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape;
+
+            /**
+             * Decodes a ProfileUpdateResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape} ProfileUpdateResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.profile.ProfileUpdateResp & im.profile.ProfileUpdateResp.$Shape;
+
+            /**
+             * Verifies a ProfileUpdateResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a ProfileUpdateResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns ProfileUpdateResp
+             */
+            static fromObject(object: { [k: string]: any }): im.profile.ProfileUpdateResp;
+
+            /**
+             * Creates a plain object from a ProfileUpdateResp message. Also converts values to other types if specified.
+             * @param message ProfileUpdateResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.profile.ProfileUpdateResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this ProfileUpdateResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for ProfileUpdateResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace ProfileUpdateResp {
+
+            /** Properties of a ProfileUpdateResp. */
+            interface $Properties {
+
+                /** ProfileUpdateResp code */
+                code?: (number|null);
+
+                /** ProfileUpdateResp message */
+                message?: (string|null);
+
+                /** ProfileUpdateResp avatar */
+                avatar?: (string|null);
+
+                /** ProfileUpdateResp signature */
+                signature?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of a ProfileUpdateResp. */
+            type $Shape = im.profile.ProfileUpdateResp.$Properties;
         }
     }
 

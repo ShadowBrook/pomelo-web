@@ -7,9 +7,14 @@ import {
   getMediaThumbUrl,
   formatBytes,
   formatDuration,
+  formatCallRecord,
+  parseCallRecord,
   unwrapReplyContent,
 } from '@/sdk/media';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useFriendStore } from '@/stores/useFriendStore';
+import { useGroupStore } from '@/stores/useGroupStore';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 
 /** 视频消息：封面缩略图 + 播放浮层 + 时长角标，点击弹出全屏播放页 */
 function VideoMessage({ url, thumbUrl, durationMs }: { url?: string; thumbUrl?: string; durationMs?: number }) {
@@ -319,6 +324,8 @@ function ForwardCard({ content }: { content: string }) {
 interface Props {
   message: ChatMessage;
   isSelf: boolean;
+  /** 会话对端（单聊=对方 userId；群聊=groupId），用于解析发送者头像 */
+  peerId?: string;
   onRetry?: (messageId: string) => void;
   isGroup?: boolean;
   onReadClick?: (messageId: string, seq: number) => void;
@@ -334,11 +341,47 @@ interface Props {
   onStartSelect?: (m: ChatMessage) => void;
 }
 
+/** 通话记录图标：语音 = 听筒，视频 = 摄像机 */
+function CallRecordIcon({ video }: { video: boolean }) {
+  return video ? (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="currentColor" aria-hidden="true">
+      <path d="M4 6.5h9.5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zm13.5 3.7 4.5-2.7v9l-4.5-2.7v-3.6z" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="currentColor" aria-hidden="true">
+      <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.85 21 3 13.15 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z" />
+    </svg>
+  );
+}
+
+/** 文本中的 @提及 高亮（@token 以空白/结尾为界；无 @ 时直接返回原文） */
+function renderTextWithMentions(content: string): React.ReactNode {
+  if (!content.includes('@')) {
+    return content;
+  }
+  const parts = content.split(/(@[^\s@]+)/g);
+  return parts.map((part, i) =>
+    part.startsWith('@') && part.length > 1
+      ? <span key={i} className="text-primary">{part}</span>
+      : part,
+  );
+}
+
 /** 按类型渲染消息正文（引用解包后递归复用） */
 function renderInner(msgType: number, content: string, url?: string): React.ReactNode {
   switch (msgType) {
     case MsgType.TEXT:
-      return <p className="whitespace-pre-wrap">{content}</p>;
+      return <p className="whitespace-pre-wrap">{renderTextWithMentions(content)}</p>;
+
+    case MsgType.SYSTEM: {
+      // 通话记录：气泡文案带类型图标；左右侧由 MessageList 按服务端 outgoing 标记决定
+      return (
+        <span className="flex items-center gap-1.5">
+          <CallRecordIcon video={parseCallRecord(content)?.mediaType === 1} />
+          {formatCallRecord(content)}
+        </span>
+      );
+    }
 
     case MsgType.IMAGE:
       return url
@@ -413,10 +456,18 @@ function Body({ message }: { message: ChatMessage }) {
 }
 
 export const MessageBubble = React.memo(function MessageBubble({
-  message, isSelf, onRetry, isGroup, onReadClick, readCount, groupMemberCount, onReply, onForward, selecting, selected, onToggleSelect, onStartSelect,
+  message, isSelf, peerId, onRetry, isGroup, onReadClick, readCount, groupMemberCount, onReply, onForward, selecting, selected, onToggleSelect, onStartSelect,
 }: Props) {
   const avatar = useAuthStore((s) => s.user?.avatar);
   const selfChar = useAuthStore((s) => s.user?.nickname?.charAt(0).toUpperCase() || '我');
+  // 对方头像：单聊查好友资料，群聊按发送者查成员缓存（均已在入库时做过同源改写）
+  const friend = useFriendStore((s) => s.friends.find((f) => f.userId === peerId));
+  const groupMembers = useGroupStore((s) => s.groupMembers[peerId ?? '']);
+  const senderMember = groupMembers?.find((m) => m.userId === message.senderId);
+  const peerName = isGroup
+    ? senderMember?.nickname || message.senderNickname || message.senderUserName || message.senderId
+    : friend?.nickname || friend?.userName || message.senderNickname || message.senderUserName || message.senderId;
+  const peerAvatar = sameOriginMediaUrl((isGroup ? senderMember?.avatar : friend?.avatar) || '');
 
   const qos = isSelf && !isGroup && (message.status === 'pending' || message.status === 'sending' || message.status === 'failed');
   // 全部已读：除自己外的成员都已读（成员数含自己）
@@ -440,7 +491,9 @@ export const MessageBubble = React.memo(function MessageBubble({
 
       {!isSelf && (
         <div className="w-9 h-9 rounded-md bg-primary/15 flex-shrink-0 flex items-center justify-center text-primary text-xs mr-2 overflow-hidden">
-          {(message.senderNickname || message.senderUserName || message.senderId).charAt(0).toUpperCase()}
+          {peerAvatar
+            ? <img src={peerAvatar} alt={peerName} className="w-full h-full object-cover" />
+            : peerName.charAt(0).toUpperCase()}
         </div>
       )}
 
@@ -488,8 +541,8 @@ export const MessageBubble = React.memo(function MessageBubble({
             <Body message={message} />
           </div>
         </div>
-        {/* hover 操作：引用 / 转发 / 多选（多选模式下隐藏） */}
-        {!selecting && (
+        {/* hover 操作：引用 / 转发 / 多选（多选模式与通话记录等系统消息下隐藏） */}
+        {!selecting && message.msgType !== MsgType.SYSTEM && (
           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-text-sub px-1 mt-0.5">
             <span className="cursor-pointer hover:text-primary" onClick={(e) => { e.stopPropagation(); onReply?.(message); }}>引用</span>
             <span className="cursor-pointer hover:text-primary" onClick={(e) => { e.stopPropagation(); onForward?.(message); }}>转发</span>
@@ -500,7 +553,7 @@ export const MessageBubble = React.memo(function MessageBubble({
 
       {isSelf && (
         <div className="w-9 h-9 rounded-md bg-primary/15 flex-shrink-0 flex items-center justify-center text-primary text-xs ml-2 overflow-hidden">
-          {avatar ? <img src={avatar} alt="me" className="w-full h-full object-cover" /> : selfChar}
+          {avatar ? <img src={sameOriginMediaUrl(avatar)} alt="me" className="w-full h-full object-cover" /> : selfChar}
         </div>
       )}
     </div>

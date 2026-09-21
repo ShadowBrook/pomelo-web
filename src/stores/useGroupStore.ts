@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { GroupInfo, GroupMember } from '@/sdk/types';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 
 interface GroupState {
   groups: Record<string, GroupInfo>;
@@ -30,7 +31,9 @@ export const useGroupStore = create<GroupState>()((set, get) => ({
   removedGroups: {},
   groupsLoaded: false,
 
-  setGroups: (groups) => {
+  setGroups: (rawGroups) => {
+    // 群头像 URL 同源改写（http presigned → /minio 代理）
+    const groups = rawGroups.map((g) => ({ ...g, avatar: sameOriginMediaUrl(g.avatar) }));
     const map: Record<string, GroupInfo> = {};
     for (const g of groups) map[g.groupId] = g;
     // 群列表来自服务端，说明仍在这些群里，移出标记整体失效
@@ -69,7 +72,9 @@ export const useGroupStore = create<GroupState>()((set, get) => ({
     });
   },
 
-  setMembers: (groupId, members) => {
+  setMembers: (groupId, rawMembers) => {
+    // 成员头像 URL 同源改写（http presigned → /minio 代理）
+    const members = rawMembers.map((m) => ({ ...m, avatar: sameOriginMediaUrl(m.avatar) }));
     set((s) => ({ groupMembers: { ...s.groupMembers, [groupId]: members } }));
   },
 

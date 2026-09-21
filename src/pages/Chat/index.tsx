@@ -9,8 +9,8 @@ import { useGroupStore } from '@/stores/useGroupStore';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useConnStore } from '@/stores/useConnStore';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
-import { TopNavBar } from '@/components/TopNavBar';
 import { IMShell } from '@/components/IMShell';
+import { CallOverlay } from '@/components/CallOverlay';
 import { ToastHost } from '@/components/ToastHost';
 
 export default function ChatPage() {
@@ -30,7 +30,7 @@ export default function ChatPage() {
     }
   }, [user, token, connect]);
 
-  // 进入工作台：IM 界面可见 + 最近一个会话（参考 v9 登录即展示）
+  // 进入工作台：默认打开最近一个会话
   useEffect(() => {
     openMostRecentConversation();
   }, []);
@@ -77,27 +77,25 @@ export default function ChatPage() {
   }, [handleLogout]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative bg-bg-page">
-      {/* 背景装饰层（预留业务嵌入） */}
-      <div className="absolute inset-0 bg-gradient-to-br from-bg-deco-from via-bg-page to-bg-deco-to" />
-
-      <TopNavBar />
-
+    <div className="h-screen w-screen overflow-hidden bg-panel">
       {/* 错误提示 toast */}
       {errorMessage && (
-        <div className="fixed top-16 right-4 bg-danger text-white px-4 py-2 rounded-lg shadow-lg z-[9999]">
+        <div className="fixed top-4 right-4 bg-danger text-white px-4 py-2 rounded-lg shadow-lg z-[9999]">
           {errorMessage}
         </div>
       )}
       {/* 被踢下线提示 */}
       {kickedReason && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-warn text-white px-4 py-2 rounded-lg shadow-lg z-[9999]">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-warn text-white px-4 py-2 rounded-lg shadow-lg z-[9999]">
           已下线：{kickedReason}
         </div>
       )}
 
-      {/* IM 复合窗 */}
+      {/* 聊天界面填满整个视口 */}
       <IMShell />
+
+      {/* 音视频通话浮层（来电/呼出/通话中） */}
+      <CallOverlay />
 
       <ToastHost />
     </div>

@@ -1,12 +1,19 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useChatSession } from '@/hooks/useChatSession';
 import { useGroupReadCounts } from '@/hooks/useGroupReadCounts';
+import { useBrowserFullscreen } from '@/hooks/useBrowserFullscreen';
 import { useWindowStore } from '@/stores/useWindowStore';
+import { useCallStore } from '@/stores/useCallStore';
+import { useConversationStore } from '@/stores/useConversationStore';
+import { CallMediaType } from '@/sdk/types';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { toast } from '@/stores/useToastStore';
+import * as api from '@/utils/api';
+import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { ChatWindowHeader } from '@/components/ChatWindowHeader';
+import { GroupCallDialog } from '@/components/GroupCallDialog';
 import type { ChatMessage } from '@/stores/useChatStore';
 import { DetailTabs, detailLabel } from '@/components/DetailTabs';
 import { ChatDetailPanel } from '@/components/ChatDetailPanel';
@@ -24,7 +31,51 @@ interface ReadStatus {
 
 export function ChatWindowContent({ peerId }: { peerId: string }) {
   const s = useChatSession(peerId);
+  const { isFullscreen, toggle: toggleFullscreen } = useBrowserFullscreen();
   const [detailOpen, setDetailOpen] = useState(true);
+
+  // 头像懒刷新：进入单聊时拉一次最新资料（服务端读侧签名），回填好友与会话缓存。
+  // 不做变更扇出推送；群聊成员头像由 ChatDetailPanel 打开时的 getGroupMembers 刷新。
+  useEffect(() => {
+    if (s.isGroup) return;
+    let cancelled = false;
+    api.getProfile(peerId).then((p) => {
+      if (cancelled || !p || p.code !== 0 || !p.avatar) return;
+      const avatar = sameOriginMediaUrl(p.avatar);
+      const friendState = useFriendStore.getState();
+      if (friendState.friends.some((f) => f.userId === peerId && f.avatar !== avatar)) {
+        useFriendStore.setState({
+          friends: friendState.friends.map((f) => (f.userId === peerId ? { ...f, avatar } : f)),
+        });
+      }
+      const convState = useConversationStore.getState();
+      const conv = convState.conversations[peerId];
+      if (conv && conv.avatar !== avatar) {
+        useConversationStore.setState({
+          conversations: { ...convState.conversations, [peerId]: { ...conv, avatar } },
+        });
+      }
+    }).catch(() => {
+      // 资料拉取失败不影响聊天：沿用缓存里的旧头像
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [peerId, s.isGroup]);
+
+  // 通话入口：单聊直接拨给对端；群聊先选人（多选上限见 GroupCallDialog）再发起群聊通话
+  const startCall = (mediaType: CallMediaType) => {
+    if (s.isGroup) {
+      setCallPick(mediaType);
+      return;
+    }
+    const conv = useConversationStore.getState().conversations[peerId];
+    const name = conv?.nickname || s.conversation?.nickname || peerId;
+    void useCallStore.getState().startCall(peerId, name, mediaType);
+  };
+
+  const [callPick, setCallPick] = useState<CallMediaType | null>(null);
+
   const [soundOn, setSoundOn] = useState(true);
   const [readStatus, setReadStatus] = useState<ReadStatus | null>(null);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
@@ -38,6 +89,8 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
   const kicked = s.isGroup && (removedByPush || missingFromMyGroups);
   const readCounts = useGroupReadCounts(peerId, s.isGroup && !kicked, s.messages, s.currentUserId);
   const groupStoreMemberCount = useGroupStore((st) => st.groups[peerId]?.memberCount);
+  // 群成员缓存（订阅式）：@ 提及选择列表数据源
+  const groupMembersForMention = useGroupStore((st) => st.groupMembers[peerId]);
   const groupReadState = useChatStore((st) => st.groupReadStates[peerId]);
   // 成员数优先用已读游标表的实际行数（更准），回退群列表快照
   const groupMemberCount = s.isGroup
@@ -88,6 +141,25 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
         <ChatWindowHeader peerId={peerId} />
         <div className="flex-1" />
         <div className="h-full flex items-start justify-end gap-1 px-2 pt-1 flex-shrink-0">
+          {/* 通话入口：单聊 1:1，群聊选人发起群聊通话（服务端 call.maxParticipants 限人数） */}
+          <button
+            onClick={() => startCall(CallMediaType.AUDIO)}
+            title="语音通话"
+            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => startCall(CallMediaType.VIDEO)}
+            title="视频通话"
+            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM16 10l5-3v10l-5-3" />
+            </svg>
+          </button>
           <button
             onClick={() => { setSoundOn((v) => !v); toast(soundOn ? '提示音已关' : '提示音已开'); }}
             title={soundOn ? '关闭提示音' : '开启提示音'}
@@ -99,8 +171,8 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
             </svg>
           </button>
           <button
-            onClick={() => useWindowStore.getState().toggleFullscreen()}
-            title={useWindowStore.getState().fullscreen ? '还原' : '全屏'}
+            onClick={toggleFullscreen}
+            title={isFullscreen ? '退出全屏' : '全屏（Esc 退出）'}
             className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -108,8 +180,8 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
             </svg>
           </button>
           <button
-            onClick={() => useWindowStore.getState().hideIM()}
-            title="关闭"
+            onClick={() => useWindowStore.getState().closeChat()}
+            title="关闭会话"
             className="w-7 h-7 rounded text-white/85 hover:bg-danger flex items-center justify-center"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -134,6 +206,7 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           <MessageList
             messages={s.messages}
             currentUserId={s.currentUserId}
+            peerId={peerId}
             onRetry={s.retrySend}
             loadingHistory={s.loadingHistory}
             hasMore={s.hasMore}
@@ -152,13 +225,14 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           <MessageInput
             peerId={peerId}
             disabled={kicked}
+            members={s.isGroup ? groupMembersForMention : undefined}
             draft={s.draft}
             replyPreview={s.replyTo ? {
               senderName: s.replyTo.senderNickname || s.replyTo.senderUserName || s.replyTo.senderId,
               snippet: buildReplySnippet(s.replyTo),
             } : undefined}
             onCancelReply={() => s.setReplyTo(null)}
-            onSendText={s.sendText}
+            onSendText={(text, mentionIds) => s.sendText(text, mentionIds)}
             onSendImage={s.sendImage}
             onSendFile={s.sendFile}
             onSendVoice={s.sendVoice}
@@ -199,6 +273,18 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           source={forwardMsg}
           onForward={(target) => s.forwardTo(target, forwardMsg)}
           onClose={() => setForwardMsg(null)}
+        />
+      )}
+
+      {/* 群聊通话选人弹窗 */}
+      {callPick && (
+        <GroupCallDialog
+          groupId={peerId}
+          onClose={() => setCallPick(null)}
+          onStart={(peerIds, names) => {
+            void useCallStore.getState().startGroupCall(peerIds, names, callPick, peerId);
+            setCallPick(null);
+          }}
         />
       )}
 
