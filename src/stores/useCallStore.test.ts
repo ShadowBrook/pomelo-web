@@ -73,7 +73,7 @@ describe('useCallStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useCallStore.getState().reset();
-    useFriendStore.setState({ friends: [{ userId: '200', userName: 'yz', nickname: '老 Y', avatar: 'http://a/200.png', online: true, friendedAt: 0 }] });
+    useFriendStore.setState({ friends: [{ userId: '200', userName: 'yz', nickname: '老 Y', avatar: 'http://a/200.png', signature: '', online: true, friendedAt: 0 }] });
   });
 
   it('主叫：startCall 进入 outgoing 并拿到 callId', async () => {
