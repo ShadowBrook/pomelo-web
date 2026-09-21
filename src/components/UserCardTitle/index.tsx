@@ -71,7 +71,7 @@ export function UserCardTitle() {
     try {
       const up = await client.requestUpload(MsgType.IMAGE, file.name || 'avatar.png', file.size, file.type);
       await client.putFileToPresignedUrl(up.presignedUrl, file);
-      const upd = await client.updateProfile(up.objectKey);
+      const upd = await client.updateProfile({ avatar: up.objectKey });
       useAuthStore.getState().updateAvatar(upd.avatar);
       toast('头像已更新');
     } catch (e) {
