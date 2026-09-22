@@ -342,6 +342,21 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
               <section>
                 <SectionTitle text="基本信息" />
                 <InfoRow
+                  label="群名称"
+                  value={
+                    <span className="inline-flex items-center gap-1.5 min-w-0">
+                      <span className="truncate">{displayName}</span>
+                      {canRename ? (
+                        <button onClick={openRename} className="flex-shrink-0 text-primary hover:underline">
+                          修改
+                        </button>
+                      ) : (
+                        <span className="flex-shrink-0 text-text-sub">（群主/管理员可修改）</span>
+                      )}
+                    </span>
+                  }
+                />
+                <InfoRow
                   label="当前群主"
                   value={
                     <span className="inline-flex items-center">
