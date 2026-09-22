@@ -548,6 +548,12 @@ export namespace im {
             /** CMD_GROUP_READ_STATE_RESP value */
             CMD_GROUP_READ_STATE_RESP = 155,
 
+            /** CMD_GROUP_UPDATE_REQ value */
+            CMD_GROUP_UPDATE_REQ = 156,
+
+            /** CMD_GROUP_UPDATE_RESP value */
+            CMD_GROUP_UPDATE_RESP = 157,
+
             /** CMD_UPLOAD_REQ value */
             CMD_UPLOAD_REQ = 160,
 
@@ -5744,6 +5750,9 @@ export namespace im {
             /** GroupMemberChangeNotify nickname. */
             nickname: string;
 
+            /** GroupMemberChangeNotify name. */
+            name?: (string|null);
+
             /**
              * Creates a new GroupMemberChangeNotify instance using the specified properties.
              * @param [properties] Properties to set
@@ -5846,6 +5855,9 @@ export namespace im {
                 /** GroupMemberChangeNotify nickname */
                 nickname?: (string|null);
 
+                /** GroupMemberChangeNotify name */
+                name?: (string|null);
+
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
@@ -5875,8 +5887,257 @@ export namespace im {
                 OWNER_TRANSFERRED = 5,
 
                 /** DISSOLVED value */
-                DISSOLVED = 6
+                DISSOLVED = 6,
+
+                /** INFO_UPDATED value */
+                INFO_UPDATED = 7
             }
+        }
+
+        /**
+         * Properties of an UpdateGroupReq.
+         * @deprecated Use im.group.UpdateGroupReq.$Properties instead.
+         */
+        interface IUpdateGroupReq extends im.group.UpdateGroupReq.$Properties {
+        }
+
+        /** Represents an UpdateGroupReq. */
+        class UpdateGroupReq {
+
+            /**
+             * Constructs a new UpdateGroupReq.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.UpdateGroupReq.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** UpdateGroupReq groupId. */
+            groupId: (number|Long);
+
+            /** UpdateGroupReq name. */
+            name: string;
+
+            /**
+             * Creates a new UpdateGroupReq instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns UpdateGroupReq instance
+             */
+            static create(properties: im.group.UpdateGroupReq.$Shape): im.group.UpdateGroupReq & im.group.UpdateGroupReq.$Shape;
+            static create(properties?: im.group.UpdateGroupReq.$Properties): im.group.UpdateGroupReq;
+
+            /**
+             * Encodes the specified UpdateGroupReq message. Does not implicitly {@link im.group.UpdateGroupReq.verify|verify} messages.
+             * @param message UpdateGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.UpdateGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified UpdateGroupReq message, length delimited. Does not implicitly {@link im.group.UpdateGroupReq.verify|verify} messages.
+             * @param message UpdateGroupReq message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.UpdateGroupReq.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes an UpdateGroupReq message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.UpdateGroupReq & im.group.UpdateGroupReq.$Shape} UpdateGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.UpdateGroupReq & im.group.UpdateGroupReq.$Shape;
+
+            /**
+             * Decodes an UpdateGroupReq message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.UpdateGroupReq & im.group.UpdateGroupReq.$Shape} UpdateGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.UpdateGroupReq & im.group.UpdateGroupReq.$Shape;
+
+            /**
+             * Verifies an UpdateGroupReq message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates an UpdateGroupReq message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns UpdateGroupReq
+             */
+            static fromObject(object: { [k: string]: any }): im.group.UpdateGroupReq;
+
+            /**
+             * Creates a plain object from an UpdateGroupReq message. Also converts values to other types if specified.
+             * @param message UpdateGroupReq
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.UpdateGroupReq, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this UpdateGroupReq to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for UpdateGroupReq
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace UpdateGroupReq {
+
+            /** Properties of an UpdateGroupReq. */
+            interface $Properties {
+
+                /** UpdateGroupReq groupId */
+                groupId?: (number|Long|null);
+
+                /** UpdateGroupReq name */
+                name?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of an UpdateGroupReq. */
+            type $Shape = im.group.UpdateGroupReq.$Properties;
+        }
+
+        /**
+         * Properties of an UpdateGroupResp.
+         * @deprecated Use im.group.UpdateGroupResp.$Properties instead.
+         */
+        interface IUpdateGroupResp extends im.group.UpdateGroupResp.$Properties {
+        }
+
+        /** Represents an UpdateGroupResp. */
+        class UpdateGroupResp {
+
+            /**
+             * Constructs a new UpdateGroupResp.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: im.group.UpdateGroupResp.$Properties);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+
+            /** UpdateGroupResp code. */
+            code: number;
+
+            /** UpdateGroupResp message. */
+            message: string;
+
+            /**
+             * Creates a new UpdateGroupResp instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns UpdateGroupResp instance
+             */
+            static create(properties: im.group.UpdateGroupResp.$Shape): im.group.UpdateGroupResp & im.group.UpdateGroupResp.$Shape;
+            static create(properties?: im.group.UpdateGroupResp.$Properties): im.group.UpdateGroupResp;
+
+            /**
+             * Encodes the specified UpdateGroupResp message. Does not implicitly {@link im.group.UpdateGroupResp.verify|verify} messages.
+             * @param message UpdateGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encode(message: im.group.UpdateGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified UpdateGroupResp message, length delimited. Does not implicitly {@link im.group.UpdateGroupResp.verify|verify} messages.
+             * @param message UpdateGroupResp message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            static encodeDelimited(message: im.group.UpdateGroupResp.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes an UpdateGroupResp message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns {im.group.UpdateGroupResp & im.group.UpdateGroupResp.$Shape} UpdateGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): im.group.UpdateGroupResp & im.group.UpdateGroupResp.$Shape;
+
+            /**
+             * Decodes an UpdateGroupResp message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns {im.group.UpdateGroupResp & im.group.UpdateGroupResp.$Shape} UpdateGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): im.group.UpdateGroupResp & im.group.UpdateGroupResp.$Shape;
+
+            /**
+             * Verifies an UpdateGroupResp message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates an UpdateGroupResp message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns UpdateGroupResp
+             */
+            static fromObject(object: { [k: string]: any }): im.group.UpdateGroupResp;
+
+            /**
+             * Creates a plain object from an UpdateGroupResp message. Also converts values to other types if specified.
+             * @param message UpdateGroupResp
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            static toObject(message: im.group.UpdateGroupResp, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this UpdateGroupResp to JSON.
+             * @returns JSON object
+             */
+            toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the type url for UpdateGroupResp
+             * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns The type url
+             */
+            static getTypeUrl(prefix?: string): string;
+        }
+
+        namespace UpdateGroupResp {
+
+            /** Properties of an UpdateGroupResp. */
+            interface $Properties {
+
+                /** UpdateGroupResp code */
+                code?: (number|null);
+
+                /** UpdateGroupResp message */
+                message?: (string|null);
+
+                /** Unknown fields preserved while decoding when enabled */
+                $unknowns?: Uint8Array[];
+            }
+
+            /** Shape of an UpdateGroupResp. */
+            type $Shape = im.group.UpdateGroupResp.$Properties;
         }
 
         /**

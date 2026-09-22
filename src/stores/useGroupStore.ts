@@ -13,6 +13,8 @@ interface GroupState {
 
   setGroups: (groups: GroupInfo[]) => void;
   addGroup: (group: GroupInfo) => void;
+  /** 就地更新群信息（如 INFO_UPDATED 推送的群名），群不存在时忽略 */
+  updateGroup: (groupId: string, patch: Partial<GroupInfo>) => void;
   removeGroup: (groupId: string) => void;
   markRemoved: (groupId: string) => void;
   clearRemoved: (groupId: string) => void;
@@ -45,6 +47,14 @@ export const useGroupStore = create<GroupState>()((set, get) => ({
       const removed = { ...s.removedGroups };
       delete removed[group.groupId];
       return { groups: { ...s.groups, [group.groupId]: group }, removedGroups: removed };
+    });
+  },
+
+  updateGroup: (groupId, patch) => {
+    set((s) => {
+      const cur = s.groups[groupId];
+      if (!cur) return s;
+      return { groups: { ...s.groups, [groupId]: { ...cur, ...patch } } };
     });
   },
 

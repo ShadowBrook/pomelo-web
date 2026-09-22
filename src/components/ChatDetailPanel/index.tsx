@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { useConversationStore } from '@/stores/useConversationStore';
 import { toast } from '@/stores/useToastStore';
 import { getProfile } from '@/utils/api';
 import { getIMClient } from '@/hooks/useIMClient';
@@ -108,6 +109,10 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
   const [kickTarget, setKickTarget] = useState<GroupMember | null>(null);
   const [kicking, setKicking] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  // 群名修改：弹窗 + 输入 + 提交中
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameInput, setRenameInput] = useState('');
+  const [renaming, setRenaming] = useState(false);
   // 群主转让：目标选择弹窗；解散：二次确认
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<GroupMember | null>(null);
@@ -194,6 +199,41 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
   const myRole = members?.find((m) => m.userId === user?.userId)?.role ?? -1;
   const canRemove = (m: GroupMember) =>
     myRole >= 1 && m.userId !== user?.userId && m.role !== 2 && myRole > m.role;
+  // 群名修改同权限：群主/管理员
+  const canRename = myRole >= 1;
+
+  const openRename = () => {
+    setRenameInput(group?.name ?? '');
+    setRenameOpen(true);
+  };
+
+  const applyGroupName = (name: string) => {
+    useGroupStore.getState().updateGroup(peerId, { name });
+    // 会话昵称镜像群名（聊天窗标题、会话列表都读它）
+    useConversationStore.setState((s) => {
+      const conv = s.conversations[peerId];
+      if (!conv) return s;
+      return { conversations: { ...s.conversations, [peerId]: { ...conv, nickname: name } } };
+    });
+  };
+
+  const submitRename = async () => {
+    const name = renameInput.trim();
+    const client = getIMClient();
+    if (!name || !client || renaming) return;
+    setRenaming(true);
+    try {
+      await client.updateGroupName(peerId, name);
+      applyGroupName(name);
+      toast('群名已修改');
+      setRenameOpen(false);
+      // INFO_UPDATED 推送稍后到达（含本机），与本地乐观更新幂等
+    } catch (e) {
+      toast(e instanceof Error ? e.message : '修改失败');
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   const confirmKick = async () => {
     const target = kickTarget;
@@ -226,7 +266,21 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
             <div className="flex items-center gap-3">
               <GridAvatar name={displayName} members={members} className="w-12 h-12" />
               <div className="flex-1 min-w-0">
-                <div className="text-base font-medium text-text-main truncate">{displayName}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base font-medium text-text-main truncate">{displayName}</span>
+                  {canRename && (
+                    <button
+                      onClick={openRename}
+                      title="修改群名"
+                      className="w-5 h-5 flex-shrink-0 rounded flex items-center justify-center text-text-sub hover:text-primary hover:bg-primary/10"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
                 <div className="text-xs text-text-sub truncate">群ID: {peerId}</div>
               </div>
             </div>
@@ -469,6 +523,43 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
                 className="flex-1 py-1.5 text-xs rounded bg-danger text-white hover:opacity-90 disabled:opacity-60"
               >
                 {dissolving ? '解散中…' : '确认解散'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 修改群名弹窗 */}
+      {renameOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 z-[9999] flex items-center justify-center"
+          onClick={() => { if (!renaming) setRenameOpen(false); }}
+        >
+          <div className="bg-panel rounded-lg shadow-xl w-[240px] p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-medium text-text-main mb-3">修改群名</div>
+            <input
+              autoFocus
+              value={renameInput}
+              onChange={(e) => setRenameInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void submitRename(); }}
+              maxLength={32}
+              placeholder="输入新的群名"
+              className="w-full px-2 py-1.5 mb-4 text-xs rounded border border-line bg-bg-page text-text-main focus:outline-none focus:border-primary"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRenameOpen(false)}
+                disabled={renaming}
+                className="flex-1 py-1.5 text-xs rounded border border-line text-text-sub hover:text-text-main disabled:opacity-60"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => void submitRename()}
+                disabled={renaming || !renameInput.trim()}
+                className="flex-1 py-1.5 text-xs rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {renaming ? '保存中…' : '保存'}
               </button>
             </div>
           </div>

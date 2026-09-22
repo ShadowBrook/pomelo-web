@@ -280,6 +280,22 @@ export function useIMClient() {
         toast('该群已被群主解散');
         return;
       }
+      // 群信息修改（群名等）：通知扇出到全体成员的各端（含操作者自己的其他端），
+      // 就地刷新群名与会话昵称，多端即时回显
+      if (notify.type === 'INFO_UPDATED' && notify.name) {
+        useGroupStore.getState().updateGroup(notify.groupId, { name: notify.name });
+        useConversationStore.setState((s) => {
+          const conv = s.conversations[notify.groupId];
+          if (!conv) return s;
+          return {
+            conversations: {
+              ...s.conversations,
+              [notify.groupId]: { ...conv, nickname: notify.name! },
+            },
+          };
+        });
+        return;
+      }
       // 群主转让：刷新群列表（ownerId）与成员角色缓存
       if (notify.type === 'OWNER_TRANSFERRED') {
         client.getMyGroups()
