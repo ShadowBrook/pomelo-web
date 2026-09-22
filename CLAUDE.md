@@ -23,7 +23,7 @@ Pomelo Web is a React SPA instant-messaging client with a WeChat-style UI. It co
 - **Vite 8** (build/bundler) with `@` → `src/` path alias
 - **Tailwind CSS 4** with WeChat-themed `@theme` tokens in `src/index.css`
 - **Zustand 5** for state management
-- **React Router 6** with lazy-loaded pages
+- **React Router 7** with lazy-loaded pages
 - **Vitest 4** for testing
 
 ### WebSocket Protocol (`src/sdk/`)

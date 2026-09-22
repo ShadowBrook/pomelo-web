@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import type { ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 const LoginPage = lazy(() => import('@/pages/Login'))
