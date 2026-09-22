@@ -151,6 +151,8 @@ export interface IncomingMessage {
   id: string;
   senderId: string;
   recipientId?: string;
+  /** 客户端消息 ID（多端回推时与本地乐观气泡按此合并去重） */
+  clientMsgId?: string;
   groupId?: string;
   senderUserName?: string;
   senderNickname?: string;
@@ -303,6 +305,8 @@ export interface GroupMessage {
   id: string;
   senderId: string;
   groupId: string;
+  /** 客户端消息 ID（多端回推时与本地乐观气泡按此合并去重） */
+  clientMsgId?: string;
   name?: string;
   senderUserName?: string;
   senderNickname?: string;

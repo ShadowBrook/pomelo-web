@@ -84,6 +84,8 @@ export const useConversationStore = create<ConversationState>()(
       // 去重：如果最后一条消息 ID 相同，不更新（避免重复消息导致未读数重复计数）
       if (existing && existing.lastMessageId === msg.id) return state;
       const isSelfActive = state.activePeerId === peerId;
+      // 自己（另一端）发的消息回推不是「未读来信」，不增计数
+      const isSelfMessage = msg.senderId === selfUserId;
 
       const conv: Conversation = existing
         ? {
@@ -91,7 +93,7 @@ export const useConversationStore = create<ConversationState>()(
             lastMessage,
             lastMessageTime,
             lastMessageId: msg.id,
-            unreadCount: isSelfActive ? existing.unreadCount : existing.unreadCount + 1,
+            unreadCount: isSelfActive || isSelfMessage ? existing.unreadCount : existing.unreadCount + 1,
           }
         : {
             peerId,
@@ -101,7 +103,7 @@ export const useConversationStore = create<ConversationState>()(
             lastMessage,
             lastMessageTime,
             lastMessageId: msg.id,
-            unreadCount: isSelfActive ? 0 : 1,
+            unreadCount: isSelfActive || isSelfMessage ? 0 : 1,
           };
 
       return {

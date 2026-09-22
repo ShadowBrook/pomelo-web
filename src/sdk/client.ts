@@ -1039,10 +1039,14 @@ export class IMClient {
     if (this.receivedMessageIds.has(msg.id)) return;
     this.receivedMessageIds.add(msg.id);
 
-    if (msg.seq > this.lastSeq) this.lastSeq = msg.seq;
+    // 多端回推（senderId == 本机账号）：seq 属于对方信箱，推进本机收件水位会
+    // 跳过自己未收的消息；对端 ACK 也只对收件人信箱有意义，二者均跳过
+    const isOwnEcho = !!msg.senderId && msg.senderId === this.userId;
+    if (!isOwnEcho && msg.seq > this.lastSeq) this.lastSeq = msg.seq;
 
     this._emit('message', msg);
 
+    if (isOwnEcho) return;
     // Fix 6：Set 去重聚合
     this.receivedBuffer.add(msg.id);
     this._scheduleBatchAck();
@@ -1133,7 +1137,7 @@ export class IMClient {
    */
   private _messageContentToIncoming(
     mc: any,
-    meta?: { id?: string | number; senderId?: string | number; recipientId?: string | number; seq?: string | number },
+    meta?: { id?: string | number; senderId?: string | number; recipientId?: string | number; seq?: string | number; clientMsgId?: string | number },
   ): IncomingMessage {
     mc = mc || {};
     const ext: Record<string, string> = mc.ext || {};
@@ -1146,6 +1150,13 @@ export class IMClient {
           ? String(meta.recipientId)
           : ext.recipientId
             ? String(ext.recipientId)
+            : undefined,
+      // 服务端回带的 clientMsgId（notify 外层字段或 pull 的 ext），"0" 为缺省
+      clientMsgId:
+        meta?.clientMsgId != null && String(meta.clientMsgId) !== '0'
+          ? String(meta.clientMsgId)
+          : ext.clientMsgId && ext.clientMsgId !== '0'
+            ? String(ext.clientMsgId)
             : undefined,
       senderUserName: ext.senderUserName,
       senderNickname: ext.senderNickname,
@@ -1176,6 +1187,9 @@ export class IMClient {
       id: String(id || ''),
       senderId: String(g.senderId ?? ext.senderId ?? ''),
       groupId: String(g.groupId ?? ext.groupId ?? ''),
+      // 多端回推时与本地乐观气泡合并去重（"0" 为 proto3 缺省，视为无）
+      clientMsgId:
+        g.clientMsgId != null && String(g.clientMsgId) !== '0' ? String(g.clientMsgId) : undefined,
       name: g.name ?? ext.name,
       senderUserName: ext.senderUserName,
       senderNickname: ext.senderNickname,
@@ -1302,6 +1316,7 @@ export class IMClient {
           senderId: n?.senderId,
           recipientId: n?.recipientId,
           seq: n?.seq,
+          clientMsgId: n?.clientMsgId,
         });
         this._onMessageReceived(msg);
         break;
@@ -1342,7 +1357,18 @@ export class IMClient {
 
       case Cmd.CTRL_NOTIFY: {
         const ctrl = plain(im.ctrl.CtrlNotify, body);
-        this._emit('kicked', ctrl?.reason ?? '被踢下线');
+        const ctrlType = Number(ctrl?.ctrlType ?? 0);
+        if (ctrlType === im.ctrl.CtrlType.CTRL_TYPE_KICK_OFFLINE
+          || ctrlType === im.ctrl.CtrlType.CTRL_TYPE_FORCE_LOGOUT) {
+          // 顶号下线：先置主动断开标志停止重连，再交上层登出回登录页；
+          // 服务端随后会关闭连接，onclose 看到 intentionallyDisconnected 不会重连
+          this.disconnect();
+          this._emit('kicked', ctrl?.reason || '账号在其他设备登录，本会话已下线');
+        } else if (ctrlType === im.ctrl.CtrlType.CTRL_TYPE_SYNC) {
+          // 多端同步信号：从本机收件水位增量拉取（幂等，重复触发由去重兜底）
+          this._pullOfflineMessages();
+        }
+        // CTRL_TYPE_NOTIFY 等其余类型暂不处理
         break;
       }
 

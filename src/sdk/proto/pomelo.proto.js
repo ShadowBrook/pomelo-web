@@ -7642,6 +7642,7 @@ export const im = $root.im = (() => {
              * @property {im.common.MessageContent.$Properties|null} [message] C2CNotify message
              * @property {number|Long|null} [seq] C2CNotify seq
              * @property {number|Long|null} [messageId] C2CNotify messageId
+             * @property {number|Long|null} [clientMsgId] C2CNotify clientMsgId
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -7713,6 +7714,14 @@ export const im = $root.im = (() => {
              */
             C2CNotify.prototype.messageId = null;
 
+            /**
+             * C2CNotify clientMsgId.
+             * @member {number|Long|null|undefined} clientMsgId
+             * @memberof im.chat.C2CNotify
+             * @instance
+             */
+            C2CNotify.prototype.clientMsgId = null;
+
             // OneOf field names bound to virtual getters and setters
             let $oneOfFields;
 
@@ -7725,6 +7734,12 @@ export const im = $root.im = (() => {
             // Virtual OneOf for proto3 optional field
             $Object.defineProperty(C2CNotify.prototype, "_messageId", {
                 get: $util.oneOfGetter($oneOfFields = ["messageId"]),
+                set: $util.oneOfSetter($oneOfFields)
+            });
+
+            // Virtual OneOf for proto3 optional field
+            $Object.defineProperty(C2CNotify.prototype, "_clientMsgId", {
+                get: $util.oneOfGetter($oneOfFields = ["clientMsgId"]),
                 set: $util.oneOfSetter($oneOfFields)
             });
 
@@ -7770,6 +7785,8 @@ export const im = $root.im = (() => {
                     writer.uint32(/* id 4, wireType 0 =*/32).int64(message.seq);
                 if (message.messageId != null && $Object.hasOwnProperty.call(message, "messageId"))
                     writer.uint32(/* id 5, wireType 0 =*/40).int64(message.messageId);
+                if (message.clientMsgId != null && $Object.hasOwnProperty.call(message, "clientMsgId"))
+                    writer.uint32(/* id 6, wireType 0 =*/48).int64(message.clientMsgId);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -7865,6 +7882,13 @@ export const im = $root.im = (() => {
                             message._messageId = "messageId";
                             continue;
                         }
+                    case 6: {
+                            if (wireType !== 0)
+                                break;
+                            message.clientMsgId = reader.int64();
+                            message._clientMsgId = "clientMsgId";
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -7935,6 +7959,11 @@ export const im = $root.im = (() => {
                     if (!$util.isInteger(message.messageId) && !(message.messageId && $util.isInteger(message.messageId.low) && $util.isInteger(message.messageId.high)))
                         return "messageId: integer|Long expected";
                 }
+                if (message.clientMsgId != null && $Object.hasOwnProperty.call(message, "clientMsgId")) {
+                    properties._clientMsgId = 1;
+                    if (!$util.isInteger(message.clientMsgId) && !(message.clientMsgId && $util.isInteger(message.clientMsgId.low) && $util.isInteger(message.clientMsgId.high)))
+                        return "clientMsgId: integer|Long expected";
+                }
                 return null;
             };
 
@@ -7999,6 +8028,15 @@ export const im = $root.im = (() => {
                         message.messageId = object.messageId;
                     else if (typeof object.messageId === "object")
                         message.messageId = new $util.LongBits(object.messageId.low >>> 0, object.messageId.high >>> 0).toNumber();
+                if (object.clientMsgId != null)
+                    if ($util.Long)
+                        message.clientMsgId = $util.Long.fromValue(object.clientMsgId, false);
+                    else if (typeof object.clientMsgId === "string")
+                        message.clientMsgId = $parseInt(object.clientMsgId, 10);
+                    else if (typeof object.clientMsgId === "number")
+                        message.clientMsgId = object.clientMsgId;
+                    else if (typeof object.clientMsgId === "object")
+                        message.clientMsgId = new $util.LongBits(object.clientMsgId.low >>> 0, object.clientMsgId.high >>> 0).toNumber();
                 return message;
             };
 
@@ -8062,6 +8100,13 @@ export const im = $root.im = (() => {
                         object.messageId = options.longs === $String ? $String(message.messageId) : message.messageId;
                     else
                         object.messageId = options.longs === $String ? $util.Long.prototype.toString.call(message.messageId) : options.longs === $Number ? new $util.LongBits(message.messageId.low >>> 0, message.messageId.high >>> 0).toNumber() : message.messageId;
+                if (message.clientMsgId != null && $Object.hasOwnProperty.call(message, "clientMsgId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.clientMsgId = typeof message.clientMsgId === "number" ? $BigInt(message.clientMsgId) : $util.Long.fromBits(message.clientMsgId.low >>> 0, message.clientMsgId.high >>> 0, false).toBigInt();
+                    else if (typeof message.clientMsgId === "number")
+                        object.clientMsgId = options.longs === $String ? $String(message.clientMsgId) : message.clientMsgId;
+                    else
+                        object.clientMsgId = options.longs === $String ? $util.Long.prototype.toString.call(message.clientMsgId) : options.longs === $Number ? new $util.LongBits(message.clientMsgId.low >>> 0, message.clientMsgId.high >>> 0).toNumber() : message.clientMsgId;
                 return object;
             };
 
@@ -10126,6 +10171,7 @@ export const im = $root.im = (() => {
              * @property {string|null} [name] C2GNotify name
              * @property {number|Long|null} [seq] C2GNotify seq
              * @property {number|Long|null} [messageId] C2GNotify messageId
+             * @property {number|Long|null} [clientMsgId] C2GNotify clientMsgId
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -10205,6 +10251,14 @@ export const im = $root.im = (() => {
              */
             C2GNotify.prototype.messageId = null;
 
+            /**
+             * C2GNotify clientMsgId.
+             * @member {number|Long|null|undefined} clientMsgId
+             * @memberof im.group.C2GNotify
+             * @instance
+             */
+            C2GNotify.prototype.clientMsgId = null;
+
             // OneOf field names bound to virtual getters and setters
             let $oneOfFields;
 
@@ -10223,6 +10277,12 @@ export const im = $root.im = (() => {
             // Virtual OneOf for proto3 optional field
             $Object.defineProperty(C2GNotify.prototype, "_messageId", {
                 get: $util.oneOfGetter($oneOfFields = ["messageId"]),
+                set: $util.oneOfSetter($oneOfFields)
+            });
+
+            // Virtual OneOf for proto3 optional field
+            $Object.defineProperty(C2GNotify.prototype, "_clientMsgId", {
+                get: $util.oneOfGetter($oneOfFields = ["clientMsgId"]),
                 set: $util.oneOfSetter($oneOfFields)
             });
 
@@ -10270,6 +10330,8 @@ export const im = $root.im = (() => {
                     writer.uint32(/* id 5, wireType 0 =*/40).int64(message.seq);
                 if (message.messageId != null && $Object.hasOwnProperty.call(message, "messageId"))
                     writer.uint32(/* id 6, wireType 0 =*/48).int64(message.messageId);
+                if (message.clientMsgId != null && $Object.hasOwnProperty.call(message, "clientMsgId"))
+                    writer.uint32(/* id 7, wireType 0 =*/56).int64(message.clientMsgId);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -10372,6 +10434,13 @@ export const im = $root.im = (() => {
                             message._messageId = "messageId";
                             continue;
                         }
+                    case 7: {
+                            if (wireType !== 0)
+                                break;
+                            message.clientMsgId = reader.int64();
+                            message._clientMsgId = "clientMsgId";
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -10447,6 +10516,11 @@ export const im = $root.im = (() => {
                     if (!$util.isInteger(message.messageId) && !(message.messageId && $util.isInteger(message.messageId.low) && $util.isInteger(message.messageId.high)))
                         return "messageId: integer|Long expected";
                 }
+                if (message.clientMsgId != null && $Object.hasOwnProperty.call(message, "clientMsgId")) {
+                    properties._clientMsgId = 1;
+                    if (!$util.isInteger(message.clientMsgId) && !(message.clientMsgId && $util.isInteger(message.clientMsgId.low) && $util.isInteger(message.clientMsgId.high)))
+                        return "clientMsgId: integer|Long expected";
+                }
                 return null;
             };
 
@@ -10513,6 +10587,15 @@ export const im = $root.im = (() => {
                         message.messageId = object.messageId;
                     else if (typeof object.messageId === "object")
                         message.messageId = new $util.LongBits(object.messageId.low >>> 0, object.messageId.high >>> 0).toNumber();
+                if (object.clientMsgId != null)
+                    if ($util.Long)
+                        message.clientMsgId = $util.Long.fromValue(object.clientMsgId, false);
+                    else if (typeof object.clientMsgId === "string")
+                        message.clientMsgId = $parseInt(object.clientMsgId, 10);
+                    else if (typeof object.clientMsgId === "number")
+                        message.clientMsgId = object.clientMsgId;
+                    else if (typeof object.clientMsgId === "object")
+                        message.clientMsgId = new $util.LongBits(object.clientMsgId.low >>> 0, object.clientMsgId.high >>> 0).toNumber();
                 return message;
             };
 
@@ -10578,6 +10661,13 @@ export const im = $root.im = (() => {
                         object.messageId = options.longs === $String ? $String(message.messageId) : message.messageId;
                     else
                         object.messageId = options.longs === $String ? $util.Long.prototype.toString.call(message.messageId) : options.longs === $Number ? new $util.LongBits(message.messageId.low >>> 0, message.messageId.high >>> 0).toNumber() : message.messageId;
+                if (message.clientMsgId != null && $Object.hasOwnProperty.call(message, "clientMsgId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.clientMsgId = typeof message.clientMsgId === "number" ? $BigInt(message.clientMsgId) : $util.Long.fromBits(message.clientMsgId.low >>> 0, message.clientMsgId.high >>> 0, false).toBigInt();
+                    else if (typeof message.clientMsgId === "number")
+                        object.clientMsgId = options.longs === $String ? $String(message.clientMsgId) : message.clientMsgId;
+                    else
+                        object.clientMsgId = options.longs === $String ? $util.Long.prototype.toString.call(message.clientMsgId) : options.longs === $Number ? new $util.LongBits(message.clientMsgId.low >>> 0, message.clientMsgId.high >>> 0).toNumber() : message.clientMsgId;
                 return object;
             };
 

@@ -2963,6 +2963,9 @@ export namespace im {
             /** C2CNotify messageId. */
             messageId?: (number|Long|null);
 
+            /** C2CNotify clientMsgId. */
+            clientMsgId?: (number|Long|null);
+
             /**
              * Creates a new C2CNotify instance using the specified properties.
              * @param [properties] Properties to set
@@ -3061,6 +3064,9 @@ export namespace im {
 
                 /** C2CNotify messageId */
                 messageId?: (number|Long|null);
+
+                /** C2CNotify clientMsgId */
+                clientMsgId?: (number|Long|null);
 
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
@@ -3803,6 +3809,9 @@ export namespace im {
             /** C2GNotify messageId. */
             messageId?: (number|Long|null);
 
+            /** C2GNotify clientMsgId. */
+            clientMsgId?: (number|Long|null);
+
             /**
              * Creates a new C2GNotify instance using the specified properties.
              * @param [properties] Properties to set
@@ -3904,6 +3913,9 @@ export namespace im {
 
                 /** C2GNotify messageId */
                 messageId?: (number|Long|null);
+
+                /** C2GNotify clientMsgId */
+                clientMsgId?: (number|Long|null);
 
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
