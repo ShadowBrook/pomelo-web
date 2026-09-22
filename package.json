@@ -19,7 +19,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-easy-crop": "^6.2.3",
-    "react-router-dom": "^6.30.4",
+    "react-router": "^7.18.4",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
@@ -34,5 +34,10 @@
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "protobufjs-cli": {
+      "glob": "^13.0.0"
+    }
   }
 }
