@@ -42,6 +42,7 @@ const GROUP_MEMBER_CHANGE_NAMES = [
   'ADMIN_SET',
   'OWNER_TRANSFERRED',
   'DISSOLVED',
+  'INFO_UPDATED',
 ] as const;
 
 interface IMClientOptions {
@@ -617,6 +618,15 @@ export class IMClient {
       Cmd.CMD_GROUP_DISSOLVE_REQ,
       Cmd.CMD_GROUP_DISSOLVE_RESP,
       enc(im.group.DissolveGroupReq, { groupId }),
+    ).then((raw: any) => ({ code: raw?.code ?? 0, message: raw?.message ?? '' }));
+  }
+
+  /** 修改群名（群主/管理员）。全体成员的各端会收到 INFO_UPDATED 推送（含操作者自己的其他端） */
+  updateGroupName(groupId: string, name: string): Promise<GroupOpResp> {
+    return this._sendGroupOp(
+      Cmd.CMD_GROUP_UPDATE_REQ,
+      Cmd.CMD_GROUP_UPDATE_RESP,
+      enc(im.group.UpdateGroupReq, { groupId, name }),
     ).then((raw: any) => ({ code: raw?.code ?? 0, message: raw?.message ?? '' }));
   }
 
@@ -1398,9 +1408,10 @@ export class IMClient {
         break;
       }
 
-      // 群转让/解散响应
+      // 群转让/解散/改名响应
       case Cmd.CMD_GROUP_TRANSFER_RESP:
-      case Cmd.CMD_GROUP_DISSOLVE_RESP: {
+      case Cmd.CMD_GROUP_DISSOLVE_RESP:
+      case Cmd.CMD_GROUP_UPDATE_RESP: {
         const raw = plain(im.group.TransferGroupResp, body);
         const resp: GroupOpResp = { code: raw?.code ?? 0, message: raw?.message ?? '' };
         const pending = this.pendingFriendOps.get(messageId);
@@ -1579,6 +1590,7 @@ export class IMClient {
           operatorId: n?.operatorId != null ? String(n.operatorId) : undefined,
           userName: n?.userName,
           nickname: n?.nickname,
+          name: n?.name || undefined,
         };
         this._emit('groupMemberChange', notify);
         break;

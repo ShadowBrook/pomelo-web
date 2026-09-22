@@ -1075,6 +1075,8 @@ export const im = $root.im = (() => {
          * @property {number} CMD_GROUP_MSG_READ_RESP=153 CMD_GROUP_MSG_READ_RESP value
          * @property {number} CMD_GROUP_READ_STATE_REQ=154 CMD_GROUP_READ_STATE_REQ value
          * @property {number} CMD_GROUP_READ_STATE_RESP=155 CMD_GROUP_READ_STATE_RESP value
+         * @property {number} CMD_GROUP_UPDATE_REQ=156 CMD_GROUP_UPDATE_REQ value
+         * @property {number} CMD_GROUP_UPDATE_RESP=157 CMD_GROUP_UPDATE_RESP value
          * @property {number} CMD_UPLOAD_REQ=160 CMD_UPLOAD_REQ value
          * @property {number} CMD_UPLOAD_RESP=161 CMD_UPLOAD_RESP value
          * @property {number} CMD_CALL_INVITE_REQ=176 CMD_CALL_INVITE_REQ value
@@ -1149,6 +1151,8 @@ export const im = $root.im = (() => {
             values[valuesById[153] = "CMD_GROUP_MSG_READ_RESP"] = 153;
             values[valuesById[154] = "CMD_GROUP_READ_STATE_REQ"] = 154;
             values[valuesById[155] = "CMD_GROUP_READ_STATE_RESP"] = 155;
+            values[valuesById[156] = "CMD_GROUP_UPDATE_REQ"] = 156;
+            values[valuesById[157] = "CMD_GROUP_UPDATE_RESP"] = 157;
             values[valuesById[160] = "CMD_UPLOAD_REQ"] = 160;
             values[valuesById[161] = "CMD_UPLOAD_RESP"] = 161;
             values[valuesById[176] = "CMD_CALL_INVITE_REQ"] = 176;
@@ -15469,6 +15473,7 @@ export const im = $root.im = (() => {
              * @property {number|Long|null} [operatorId] GroupMemberChangeNotify operatorId
              * @property {string|null} [userName] GroupMemberChangeNotify userName
              * @property {string|null} [nickname] GroupMemberChangeNotify nickname
+             * @property {string|null} [name] GroupMemberChangeNotify name
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -15549,6 +15554,23 @@ export const im = $root.im = (() => {
             GroupMemberChangeNotify.prototype.nickname = "";
 
             /**
+             * GroupMemberChangeNotify name.
+             * @member {string|null|undefined} name
+             * @memberof im.group.GroupMemberChangeNotify
+             * @instance
+             */
+            GroupMemberChangeNotify.prototype.name = null;
+
+            // OneOf field names bound to virtual getters and setters
+            let $oneOfFields;
+
+            // Virtual OneOf for proto3 optional field
+            $Object.defineProperty(GroupMemberChangeNotify.prototype, "_name", {
+                get: $util.oneOfGetter($oneOfFields = ["name"]),
+                set: $util.oneOfSetter($oneOfFields)
+            });
+
+            /**
              * Creates a new GroupMemberChangeNotify instance using the specified properties.
              * @function create
              * @memberof im.group.GroupMemberChangeNotify
@@ -15592,6 +15614,8 @@ export const im = $root.im = (() => {
                     writer.uint32(/* id 5, wireType 2 =*/42).string(message.userName);
                 if (message.nickname != null && $Object.hasOwnProperty.call(message, "nickname") && message.nickname !== "")
                     writer.uint32(/* id 6, wireType 2 =*/50).string(message.nickname);
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
+                    writer.uint32(/* id 7, wireType 2 =*/58).string(message.name);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -15703,6 +15727,13 @@ export const im = $root.im = (() => {
                                 delete message.nickname;
                             continue;
                         }
+                    case 7: {
+                            if (wireType !== 2)
+                                break;
+                            message.name = reader.stringVerify();
+                            message._name = "name";
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -15751,6 +15782,7 @@ export const im = $root.im = (() => {
                     _depth = 0;
                 if (_depth > $util.recursionLimit)
                     return "max depth exceeded";
+                let properties = {};
                 if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
                     if (!$util.isInteger(message.groupId) && !(message.groupId && $util.isInteger(message.groupId.low) && $util.isInteger(message.groupId.high)))
                         return "groupId: integer|Long expected";
@@ -15769,6 +15801,11 @@ export const im = $root.im = (() => {
                 if (message.nickname != null && $Object.hasOwnProperty.call(message, "nickname"))
                     if (!$util.isString(message.nickname))
                         return "nickname: string expected";
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name")) {
+                    properties._name = 1;
+                    if (!$util.isString(message.name))
+                        return "name: string expected";
+                }
                 return null;
             };
 
@@ -15830,6 +15867,10 @@ export const im = $root.im = (() => {
                     case 6:
                         message.type = 6;
                         break;
+                    case "INFO_UPDATED":
+                    case 7:
+                        message.type = 7;
+                        break;
                     default:
                         if (typeof object.type === "number" && (object.type | 0) === object.type)
                             message.type = object.type;
@@ -15860,6 +15901,8 @@ export const im = $root.im = (() => {
                 if (object.nickname != null)
                     if (typeof object.nickname !== "string" || object.nickname.length)
                         message.nickname = $String(object.nickname);
+                if (object.name != null)
+                    message.name = $String(object.name);
                 return message;
             };
 
@@ -15927,6 +15970,8 @@ export const im = $root.im = (() => {
                     object.userName = message.userName;
                 if (message.nickname != null && $Object.hasOwnProperty.call(message, "nickname"))
                     object.nickname = message.nickname;
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
+                    object.name = message.name;
                 return object;
             };
 
@@ -15966,6 +16011,7 @@ export const im = $root.im = (() => {
              * @property {number} ADMIN_SET=4 ADMIN_SET value
              * @property {number} OWNER_TRANSFERRED=5 OWNER_TRANSFERRED value
              * @property {number} DISSOLVED=6 DISSOLVED value
+             * @property {number} INFO_UPDATED=7 INFO_UPDATED value
              */
             GroupMemberChangeNotify.ChangeType = (function() {
                 const valuesById = $Object.create(null), values = $Object.create(valuesById);
@@ -15976,10 +16022,637 @@ export const im = $root.im = (() => {
                 values[valuesById[4] = "ADMIN_SET"] = 4;
                 values[valuesById[5] = "OWNER_TRANSFERRED"] = 5;
                 values[valuesById[6] = "DISSOLVED"] = 6;
+                values[valuesById[7] = "INFO_UPDATED"] = 7;
                 return values;
             })();
 
             return GroupMemberChangeNotify;
+        })();
+
+        group.UpdateGroupReq = (function() {
+
+            /**
+             * Properties of an UpdateGroupReq.
+             * @typedef {Object} im.group.UpdateGroupReq.$Properties
+             * @property {number|Long|null} [groupId] UpdateGroupReq groupId
+             * @property {string|null} [name] UpdateGroupReq name
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of an UpdateGroupReq.
+             * @memberof im.group
+             * @interface IUpdateGroupReq
+             * @augments im.group.UpdateGroupReq.$Properties
+             * @deprecated Use im.group.UpdateGroupReq.$Properties instead.
+             */
+
+            /**
+             * Shape of an UpdateGroupReq.
+             * @typedef {im.group.UpdateGroupReq.$Properties} im.group.UpdateGroupReq.$Shape
+             */
+
+            /**
+             * Constructs a new UpdateGroupReq.
+             * @memberof im.group
+             * @classdesc Represents an UpdateGroupReq.
+             * @constructor
+             * @param {im.group.UpdateGroupReq.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const UpdateGroupReq = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * UpdateGroupReq groupId.
+             * @member {number|Long} groupId
+             * @memberof im.group.UpdateGroupReq
+             * @instance
+             */
+            UpdateGroupReq.prototype.groupId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * UpdateGroupReq name.
+             * @member {string} name
+             * @memberof im.group.UpdateGroupReq
+             * @instance
+             */
+            UpdateGroupReq.prototype.name = "";
+
+            /**
+             * Creates a new UpdateGroupReq instance using the specified properties.
+             * @function create
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {im.group.UpdateGroupReq.$Properties=} [properties] Properties to set
+             * @returns {im.group.UpdateGroupReq} UpdateGroupReq instance
+             * @type {{
+             *   (properties: im.group.UpdateGroupReq.$Shape): im.group.UpdateGroupReq & im.group.UpdateGroupReq.$Shape;
+             *   (properties?: im.group.UpdateGroupReq.$Properties): im.group.UpdateGroupReq;
+             * }}
+             */
+            UpdateGroupReq.create = function(properties) {
+                return new UpdateGroupReq(properties);
+            };
+
+            /**
+             * Encodes the specified UpdateGroupReq message. Does not implicitly {@link im.group.UpdateGroupReq.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {im.group.UpdateGroupReq.$Properties} message UpdateGroupReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            UpdateGroupReq.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId") && (typeof message.groupId === "object" ? message.groupId.low || message.groupId.high : message.groupId !== 0))
+                    writer.uint32(/* id 1, wireType 0 =*/8).int64(message.groupId);
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name") && message.name !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.name);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified UpdateGroupReq message, length delimited. Does not implicitly {@link im.group.UpdateGroupReq.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {im.group.UpdateGroupReq.$Properties} message UpdateGroupReq message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            UpdateGroupReq.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes an UpdateGroupReq message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.UpdateGroupReq & im.group.UpdateGroupReq.$Shape} UpdateGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            UpdateGroupReq.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.UpdateGroupReq();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                                message.groupId = value;
+                            else
+                                delete message.groupId;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.name = value;
+                            else
+                                delete message.name;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes an UpdateGroupReq message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.UpdateGroupReq & im.group.UpdateGroupReq.$Shape} UpdateGroupReq
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            UpdateGroupReq.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies an UpdateGroupReq message.
+             * @function verify
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            UpdateGroupReq.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (!$util.isInteger(message.groupId) && !(message.groupId && $util.isInteger(message.groupId.low) && $util.isInteger(message.groupId.high)))
+                        return "groupId: integer|Long expected";
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
+                    if (!$util.isString(message.name))
+                        return "name: string expected";
+                return null;
+            };
+
+            /**
+             * Creates an UpdateGroupReq message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.UpdateGroupReq} UpdateGroupReq
+             */
+            UpdateGroupReq.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.UpdateGroupReq)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.UpdateGroupReq: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.UpdateGroupReq();
+                if (object.groupId != null)
+                    if (typeof object.groupId === "object" ? object.groupId.low || object.groupId.high : $Number(object.groupId) !== 0)
+                        if ($util.Long)
+                            message.groupId = $util.Long.fromValue(object.groupId, false);
+                        else if (typeof object.groupId === "string")
+                            message.groupId = $parseInt(object.groupId, 10);
+                        else if (typeof object.groupId === "number")
+                            message.groupId = object.groupId;
+                        else if (typeof object.groupId === "object")
+                            message.groupId = new $util.LongBits(object.groupId.low >>> 0, object.groupId.high >>> 0).toNumber();
+                if (object.name != null)
+                    if (typeof object.name !== "string" || object.name.length)
+                        message.name = $String(object.name);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from an UpdateGroupReq message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {im.group.UpdateGroupReq} message UpdateGroupReq
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            UpdateGroupReq.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.groupId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                    } else
+                        object.groupId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                    object.name = "";
+                }
+                if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
+                    if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                        object.groupId = typeof message.groupId === "number" ? $BigInt(message.groupId) : $util.Long.fromBits(message.groupId.low >>> 0, message.groupId.high >>> 0, false).toBigInt();
+                    else if (typeof message.groupId === "number")
+                        object.groupId = options.longs === $String ? $String(message.groupId) : message.groupId;
+                    else
+                        object.groupId = options.longs === $String ? $util.Long.prototype.toString.call(message.groupId) : options.longs === $Number ? new $util.LongBits(message.groupId.low >>> 0, message.groupId.high >>> 0).toNumber() : message.groupId;
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
+                    object.name = message.name;
+                return object;
+            };
+
+            /**
+             * Converts this UpdateGroupReq to JSON.
+             * @function toJSON
+             * @memberof im.group.UpdateGroupReq
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            UpdateGroupReq.prototype.toJSON = function() {
+                return UpdateGroupReq.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for UpdateGroupReq
+             * @function getTypeUrl
+             * @memberof im.group.UpdateGroupReq
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            UpdateGroupReq.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.UpdateGroupReq";
+            };
+
+            return UpdateGroupReq;
+        })();
+
+        group.UpdateGroupResp = (function() {
+
+            /**
+             * Properties of an UpdateGroupResp.
+             * @typedef {Object} im.group.UpdateGroupResp.$Properties
+             * @property {number|null} [code] UpdateGroupResp code
+             * @property {string|null} [message] UpdateGroupResp message
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+
+            /**
+             * Properties of an UpdateGroupResp.
+             * @memberof im.group
+             * @interface IUpdateGroupResp
+             * @augments im.group.UpdateGroupResp.$Properties
+             * @deprecated Use im.group.UpdateGroupResp.$Properties instead.
+             */
+
+            /**
+             * Shape of an UpdateGroupResp.
+             * @typedef {im.group.UpdateGroupResp.$Properties} im.group.UpdateGroupResp.$Shape
+             */
+
+            /**
+             * Constructs a new UpdateGroupResp.
+             * @memberof im.group
+             * @classdesc Represents an UpdateGroupResp.
+             * @constructor
+             * @param {im.group.UpdateGroupResp.$Properties=} [properties] Properties to set
+             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+             */
+            const UpdateGroupResp = function (properties) {
+                if (properties)
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                            this[keys[i]] = properties[keys[i]];
+            };
+
+            /**
+             * UpdateGroupResp code.
+             * @member {number} code
+             * @memberof im.group.UpdateGroupResp
+             * @instance
+             */
+            UpdateGroupResp.prototype.code = 0;
+
+            /**
+             * UpdateGroupResp message.
+             * @member {string} message
+             * @memberof im.group.UpdateGroupResp
+             * @instance
+             */
+            UpdateGroupResp.prototype.message = "";
+
+            /**
+             * Creates a new UpdateGroupResp instance using the specified properties.
+             * @function create
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {im.group.UpdateGroupResp.$Properties=} [properties] Properties to set
+             * @returns {im.group.UpdateGroupResp} UpdateGroupResp instance
+             * @type {{
+             *   (properties: im.group.UpdateGroupResp.$Shape): im.group.UpdateGroupResp & im.group.UpdateGroupResp.$Shape;
+             *   (properties?: im.group.UpdateGroupResp.$Properties): im.group.UpdateGroupResp;
+             * }}
+             */
+            UpdateGroupResp.create = function(properties) {
+                return new UpdateGroupResp(properties);
+            };
+
+            /**
+             * Encodes the specified UpdateGroupResp message. Does not implicitly {@link im.group.UpdateGroupResp.verify|verify} messages.
+             * @function encode
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {im.group.UpdateGroupResp.$Properties} message UpdateGroupResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            UpdateGroupResp.encode = function (message, writer, _depth) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code") && message.code !== 0)
+                    writer.uint32(/* id 1, wireType 0 =*/8).int32(message.code);
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message") && message.message !== "")
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.message);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                        writer.raw(message.$unknowns[i]);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified UpdateGroupResp message, length delimited. Does not implicitly {@link im.group.UpdateGroupResp.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {im.group.UpdateGroupResp.$Properties} message UpdateGroupResp message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            UpdateGroupResp.encodeDelimited = function(message, writer) {
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+            };
+
+            /**
+             * Decodes an UpdateGroupResp message from the specified reader or buffer.
+             * @function decode
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {im.group.UpdateGroupResp & im.group.UpdateGroupResp.$Shape} UpdateGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            UpdateGroupResp.decode = function (reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.im.group.UpdateGroupResp();
+                while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                        _end = $undefined;
+                        break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                    case 1: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.int32())
+                                message.code = value;
+                            else
+                                delete message.code;
+                            continue;
+                        }
+                    case 2: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.stringVerify()).length)
+                                message.message = value;
+                            else
+                                delete message.message;
+                            continue;
+                        }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                        $util.makeProp(message, "$unknowns", false);
+                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
+                if (_end !== $undefined)
+                    throw $Error("missing end group");
+                return message;
+            };
+
+            /**
+             * Decodes an UpdateGroupResp message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {im.group.UpdateGroupResp & im.group.UpdateGroupResp.$Shape} UpdateGroupResp
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            UpdateGroupResp.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies an UpdateGroupResp message.
+             * @function verify
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            UpdateGroupResp.verify = function (message, _depth) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    return "max depth exceeded";
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    if (!$util.isInteger(message.code))
+                        return "code: integer expected";
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    if (!$util.isString(message.message))
+                        return "message: string expected";
+                return null;
+            };
+
+            /**
+             * Creates an UpdateGroupResp message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {im.group.UpdateGroupResp} UpdateGroupResp
+             */
+            UpdateGroupResp.fromObject = function (object, _depth) {
+                if (object instanceof $root.im.group.UpdateGroupResp)
+                    return object;
+                if (!$util.isObject(object))
+                    throw $TypeError(".im.group.UpdateGroupResp: object expected");
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let message = new $root.im.group.UpdateGroupResp();
+                if (object.code != null)
+                    if ($Number(object.code) !== 0)
+                        message.code = object.code | 0;
+                if (object.message != null)
+                    if (typeof object.message !== "string" || object.message.length)
+                        message.message = $String(object.message);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from an UpdateGroupResp message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {im.group.UpdateGroupResp} message UpdateGroupResp
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            UpdateGroupResp.toObject = function (message, options, _depth) {
+                if (!options)
+                    options = {};
+                if (_depth === $undefined)
+                    _depth = 0;
+                if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                let object = {};
+                if (options.defaults) {
+                    object.code = 0;
+                    object.message = "";
+                }
+                if (message.code != null && $Object.hasOwnProperty.call(message, "code"))
+                    object.code = message.code;
+                if (message.message != null && $Object.hasOwnProperty.call(message, "message"))
+                    object.message = message.message;
+                return object;
+            };
+
+            /**
+             * Converts this UpdateGroupResp to JSON.
+             * @function toJSON
+             * @memberof im.group.UpdateGroupResp
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            UpdateGroupResp.prototype.toJSON = function() {
+                return UpdateGroupResp.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the type url for UpdateGroupResp
+             * @function getTypeUrl
+             * @memberof im.group.UpdateGroupResp
+             * @static
+             * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+             * @returns {string} The type url
+             */
+            UpdateGroupResp.getTypeUrl = function(prefix) {
+                if (prefix === $undefined)
+                    prefix = "type.googleapis.com";
+                return prefix + "/im.group.UpdateGroupResp";
+            };
+
+            return UpdateGroupResp;
         })();
 
         group.TransferGroupReq = (function() {
@@ -21636,6 +22309,14 @@ export const im = $root.im = (() => {
                     case "CMD_GROUP_READ_STATE_RESP":
                     case 155:
                         message.cmd = 155;
+                        break;
+                    case "CMD_GROUP_UPDATE_REQ":
+                    case 156:
+                        message.cmd = 156;
+                        break;
+                    case "CMD_GROUP_UPDATE_RESP":
+                    case 157:
+                        message.cmd = 157;
                         break;
                     case "CMD_UPLOAD_REQ":
                     case 160:

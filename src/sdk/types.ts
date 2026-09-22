@@ -63,6 +63,10 @@ export enum Cmd {
   GROUP_READ_STATE_REQ = 0x009A,
   GROUP_READ_STATE_RESP = 0x009B,
 
+  // 群信息修改（群名等，群主/管理员）
+  CMD_GROUP_UPDATE_REQ = 0x009C,
+  CMD_GROUP_UPDATE_RESP = 0x009D,
+
   // 媒体上传 0x00A0-0x00A1
   CMD_UPLOAD_REQ = 0x00A0,
   CMD_UPLOAD_RESP = 0x00A1,
@@ -325,6 +329,8 @@ export interface GroupMemberChangeNotify {
   operatorId?: string;
   userName?: string;
   nickname?: string;
+  /** INFO_UPDATED 时为修改后的群名 */
+  name?: string;
 }
 
 export interface GroupOpResp {
