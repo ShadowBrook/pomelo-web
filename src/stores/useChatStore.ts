@@ -291,15 +291,38 @@ export const useChatStore = create<ChatState>()(
       },
 
       onIncomingMessage: (msg: IncomingMessage) => {
+        // 多端同步：senderId == 本机账号 的是「自己消息的回推」（另一端发送/服务端回推），
+        // 归档到收件人（即对端）会话，其余按发送者归档
+        const selfId = useAuthStore.getState().user?.userId;
+        const isOwnEcho = !!msg.senderId && msg.senderId === selfId;
+        const peerId = isOwnEcho ? (msg.recipientId || msg.senderId) : msg.senderId;
         const chatMsg: ChatMessage = {
           id: msg.id, senderId: msg.senderId, recipientId: msg.recipientId ?? '',
           senderUserName: msg.senderUserName, senderNickname: msg.senderNickname,
           msgType: msg.msgType, content: msg.content, status: 'delivered',
           timestamp: msg.createdAt || Date.now(), seq: msg.seq,
         };
-        const peerId = msg.senderId;
         set((state) => {
           const existing = state.messages[peerId] || [];
+          // 按 id 或 clientMsgId 合并：clientMsgId 命中说明本地乐观气泡已在
+          // （服务端回推先于 C2C_RESP 到达的竞态），原地替换 id，不新增气泡
+          const idx = existing.findIndex(
+            (m) => m.id === msg.id
+              || (!!msg.clientMsgId && (m.id === msg.clientMsgId || m.clientMsgId === msg.clientMsgId)),
+          );
+          if (idx !== -1) {
+            const cur = existing[idx];
+            const merged: ChatMessage = {
+              ...cur,
+              id: msg.id,
+              clientMsgId: cur.clientMsgId ?? msg.clientMsgId,
+              seq: msg.seq || cur.seq,
+              status: cur.status === 'sending' ? 'sent' : cur.status,
+            };
+            const next = [...existing];
+            next[idx] = merged;
+            return { messages: { ...state.messages, [peerId]: next } };
+          }
           if (existing.some(m => m.id === msg.id)) return state;
           return { messages: { ...state.messages, [peerId]: [...existing, chatMsg].sort((a, b) => a.timestamp - b.timestamp) } };
         });

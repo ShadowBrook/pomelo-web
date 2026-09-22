@@ -198,6 +198,8 @@ export function useIMClient() {
       const conv = state.conversations[groupId];
       // 群名优先用推送携带的 name，其次群列表缓存；都没有才回退 groupId
       const groupName = msg.name || useGroupStore.getState().groups[groupId]?.name || msg.groupId;
+      // 自己（另一端）发的消息回推：更新预览但不加未读
+      const isSelfMessage = !!msg.senderId && msg.senderId === userIdRef.current;
       if (!conv) {
         useConversationStore.getState().createConversation(groupId,
           groupName, '', 'group');
@@ -215,7 +217,9 @@ export function useIMClient() {
               lastMessage,
               lastMessageTime: msg.createdAt || Date.now(),
               lastMessageId: String(msg.id),
-              unreadCount: isActive ? s.conversations[groupId].unreadCount : s.conversations[groupId].unreadCount + 1,
+              unreadCount: isActive || isSelfMessage
+                ? s.conversations[groupId].unreadCount
+                : s.conversations[groupId].unreadCount + 1,
               mentionedMe: msg.mentions?.includes(userIdRef.current ?? '')
                 ? true
                 : s.conversations[groupId].mentionedMe,
@@ -226,7 +230,25 @@ export function useIMClient() {
       // 写入消息到 chat store（key = groupId，不走 addMessage 避免 peerId 算成 sender）
       useChatStore.setState((s) => {
         const existing = s.messages[groupId] || [];
-        if (existing.some((m) => m.id === String(msg.id))) return s;
+        // 按 id 或 clientMsgId 合并：本机乐观气泡已在时（多端回推先于
+        // C2G_RESP 到达的竞态）原地替换 id，不新增气泡
+        const idx = existing.findIndex(
+          (m) => m.id === String(msg.id)
+            || (!!msg.clientMsgId && (m.id === msg.clientMsgId || m.clientMsgId === msg.clientMsgId)),
+        );
+        if (idx !== -1) {
+          const cur = existing[idx];
+          const merged = {
+            ...cur,
+            id: String(msg.id),
+            clientMsgId: cur.clientMsgId ?? msg.clientMsgId,
+            seq: msg.seq || cur.seq,
+            status: cur.status === 'sending' ? ('sent' as const) : cur.status,
+          };
+          const next = [...existing];
+          next[idx] = merged;
+          return { messages: { ...s.messages, [groupId]: next } };
+        }
         const newMsg = {
           id: String(msg.id),
           senderId: msg.senderId,
