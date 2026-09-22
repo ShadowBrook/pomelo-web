@@ -44,9 +44,21 @@ Four Zustand stores, all vanilla (no React Context needed). Event callbacks use 
 | Store | Key State | Notes |
 |---|---|---|
 | `useAuthStore` | `user`, `token`, `isLoggedIn` | Persisted to `localStorage` via Zustand `persist` middleware. Login and register both use the backend `/api/user/register` endpoint (409 = already exists → treated as login) |
-| `useChatStore` | `messages: Record<peerId, ChatMessage[]>` | Messages bucketed by peer ID, sorted by `timestamp` (createdAt). `senderId: '__self__'` for outgoing messages. `loadMoreHistory(peerId)` fetches an older page via WebSocket (`IMClient.pullHistory(peerId, oldestTimestamp)` — time cursor, not seq) and prepends, merging by id dedup. `retryMessage()` creates a new message ID for retries |
+| `useChatStore` | `messages: Record<peerId, ChatMessage[]>` | Messages bucketed by peer ID, sorted by `timestamp` (createdAt). `senderId: '__self__'` for outgoing messages. `hydrateFromDb()` restores the last page per conversation from IndexedDB at login; `loadMoreHistory(peerId)` pages locally first (IndexedDB) and only falls back to the server after the local store runs out. `retryMessage()` creates a new message ID for retries |
 | `useConversationStore` | `conversations: Record<peerId, Conversation>`, `activePeerId` | Tracks unread counts (increments for incoming messages unless that peer is active), last message preview (truncated at 50 chars), and per-conversation drafts. Sorted by `lastMessageTime` descending |
 | `useFriendStore` | `friends`, `pendingRequests`, `searchResults` | Friend operations call `getIMClient()` (singleton accessor) to use WebSocket SDK. Notify events (`onFriendRequestReceived`, `onFriendAccepted`, `onFriendDeleted`) bridge real-time updates |
+
+### 本地缓存（IndexedDB）
+
+浏览器的会话数据落在 IndexedDB（`pomelo-web` 库），刷新/重开不再重新拉历史与头像：
+
+- `src/utils/idb.ts` — 底层访问层，三个 store：`messages`（主键 `[peerId, id]` + `byPeerTime` 时间索引）、`media`（blob，`byAt` LRU 索引）、`kv`（快照/结论）。无 IDB 环境（Node 单测、隐私模式）统一降级为「无缓存」，调用方退回服务端路径。
+- `src/utils/chatCache.ts` — 会话缓存域层：`hydrateChat`（登录时每会话恢复最近 `HYDRATE_PAGE=60` 条）、`persistMessagesDiff`（按行增量写，靠对象引用比较找变更行，删除只针对「上一状态有、这一状态没了」的行）、`loadOlderFromDb`（本地翻页，`LOCAL_PAGE=50`）、老数据迁移（一次性把 localStorage 的 `pomelo-chat` 搬进 IDB）、`cache:owner` 归属人（换账号清库防串号）。
+- 写入时机：`useChatStore` 订阅自身变更后增量落库（上传中的占位气泡不落库）。
+- 增量游标：C2C 离线水位 = 本地收到的最大 seq（`localInboxWatermark` → `IMClient.setSyncSeq` → `pullPending(seq > 水位)`）；群聊 = `groupPullCursor`（本地最大 seq，本地为空才拉最近一页）。都以「本地最大 seq」为准：已读水位可能被其他端推到本地消息之前，拿它当游标会永久跳过缺口。
+- 翻页策略：`loadMoreHistory` 本地优先，本地到底才回落服务端；服务端确认「没有更早历史」的结论落库（`snap:serverExhausted`），刷新后不再重复询问。恢复页之外本地还有更早消息时，`hasMoreHistory` 保持 true 以便继续本地上翻。
+- 媒体：`src/utils/mediaCache.ts` 内存 blob URL + IDB blob 两级缓存，缓存键是「去掉预签名查询串的 origin+path」（换头像 = 换对象路径 = 新键，预签名 URL 每次不同故不能直接作键），LRU 上限 2000 条 / 120MB，单条 >8MB 不落盘。
+- 登出：清消息与快照（共用电脑不串号），媒体缓存保留（按对象路径寻址，不含会话内容）。
 
 ### Hook: `useIMClient` (`src/hooks/useIMClient.ts`)
 

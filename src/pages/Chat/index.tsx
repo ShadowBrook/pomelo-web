@@ -20,14 +20,26 @@ export default function ChatPage() {
   const { totalUnread } = useUnreadCount();
 
   // 页面加载时连接 IM（useIMClient 仅此处调用——它有卸载断连副作用）
-  // 会话列表从 localStorage 恢复，但好友列表不持久化——必须在登录时拉取，
-  // 否则未进过"好友"页签前所有会话都命中陌生人兜底
+  // 顺序：先把 IndexedDB 里的本地缓存（消息/群/好友/已读水位）恢复出来，再连网关。
+  // 这样首屏直接用本地数据渲染，网关侧只需要拉「本地最大 seq 之后」的增量；
+  // 好友列表仍以服务端为准，本地只是首屏兜底（未进过"好友"页签也不会命中陌生人兜底）。
   useEffect(() => {
-    if (user && token) {
+    if (!user || !token) return;
+    let cancelled = false;
+    void (async () => {
+      await Promise.all([
+        useChatStore.getState().hydrateFromDb(),
+        useGroupStore.getState().hydrateFromDb(),
+        useFriendStore.getState().hydrateFromDb(),
+      ]);
+      if (cancelled) return;
       connect(user.userId, token, user.userName, user.nickname);
       useFriendStore.getState().loadFriends(user.userId);
       useFriendStore.getState().loadPendingRequests(user.userId);
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user, token, connect]);
 
   // 进入工作台：默认打开最近一个会话

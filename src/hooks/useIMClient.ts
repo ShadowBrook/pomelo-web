@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { IMClient } from '@/sdk/client';
 import { ConnectionState, IncomingMessage, StatusUpdate, MsgType } from '@/sdk/types';
 import type { FriendNotify, FriendDeleteNotify, GroupMessage, GroupMemberChangeNotify } from '@/sdk/types';
-import { useChatStore } from '@/stores/useChatStore';
+import { useChatStore, groupPullCursor, localInboxWatermark } from '@/stores/useChatStore';
 import { useConversationStore } from '@/stores/useConversationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useFriendStore } from '@/stores/useFriendStore';
@@ -11,6 +11,7 @@ import { useConnStore } from '@/stores/useConnStore';
 import { useCallStore } from '@/stores/useCallStore';
 import { toast } from '@/stores/useToastStore';
 import { mediaPreview } from '@/sdk/media';
+import { whenHydrated } from '@/utils/chatCache';
 
 // 模块级单例
 let clientInstance: IMClient | null = null;
@@ -26,64 +27,79 @@ export function getIMClient(): IMClient | null {
 }
 
 /**
- * 群聊离线增量同步：用已读水位拉取 seq > lastReadSeq 的新消息。
+ * 群聊离线增量同步：**以本地最大 seq 作游标**拉 seq 之后的增量。
+ *
  * 在重连/首次上线后对每个已加入的群调用（C2C 离线由 client 内部 _pullOfflineMessages 处理）。
+ * 游标口径见 useChatStore.groupPullCursor：本地最大 seq 只会重复不会漏，重复的按 id 去重；
+ * 若响应还有更多（离线期间攒了多页），继续往后拉，最多 MAX_CATCHUP_PAGES 页。
  * 不推进已读水位——已读回执由群 ACK 在用户查看消息后更新。
  */
+const MAX_CATCHUP_PAGES = 20;
+
 export function syncGroupMessages(groupId: string): void {
-  const client = getIMClient();
-  if (!client) return;
-  const lastReadSeq = useGroupStore.getState().getLastReadSeq(groupId);
-  // 无水位（从未同步过）时拉最近历史，否则拉 seq > lastReadSeq 的增量
-  const backward = lastReadSeq <= 0;
-  const cursor = backward ? 0 : lastReadSeq;
-  client.pullGroupMessages(groupId, cursor, 50, backward)
-    .then((res) => {
-      if (!res || !res.messages || res.messages.length === 0) return;
-      const state = useChatStore.getState();
-      const existing = state.messages[groupId] || [];
+  void (async () => {
+    // 等本地恢复完成：游标是「本地最大 seq」，本地还没读出来时会误判成首次同步
+    await whenHydrated();
+    const client = getIMClient();
+    if (!client) return;
+    const state = useChatStore.getState();
+    const known = state.messages[groupId] || [];
+    const start = groupPullCursor(known);
+    let cursor = start.cursor;
+    let backward = start.backward;
+
+    for (let page = 0; page < MAX_CATCHUP_PAGES; page++) {
+      const res = await client.pullGroupMessages(groupId, cursor, 50, backward);
+      const batch = res?.messages || [];
+      if (batch.length === 0) return;
+
+      const existing = useChatStore.getState().messages[groupId] || [];
       const existingIds = new Set(existing.map((m) => m.id));
-      const fresh = res.messages.filter((m) => !existingIds.has(String(m.id)));
-      if (fresh.length === 0) return;
-      const newMsgs = fresh.map((m) => ({
-        id: String(m.id),
-        senderId: m.senderId,
-        recipientId: groupId,
-        senderUserName: m.senderUserName,
-        senderNickname: m.senderNickname,
-        msgType: m.msgType as any,
-        content: m.content || '',
-        status: 'delivered' as const,
-        timestamp: m.createdAt || Date.now(),
-        seq: m.seq,
-      }));
-      useChatStore.setState({
-        messages: {
-          ...state.messages,
-          [groupId]: [...existing, ...newMsgs].sort((a, b) => a.timestamp - b.timestamp),
-        },
-      });
-      // 更新会话最后一条消息 + 未读数
-      useConversationStore.setState((s) => {
-        const conv = s.conversations[groupId];
-        if (!conv) return s;
-        const isActive = s.activePeerId === groupId;
-        const last = newMsgs[newMsgs.length - 1];
-        return {
-          conversations: {
-            ...s.conversations,
-            [groupId]: {
-              ...conv,
-              lastMessage: mediaPreview(last?.msgType, last?.content || ''),
-              lastMessageTime: last?.timestamp || Date.now(),
-              lastMessageId: last?.id || '',
-              unreadCount: isActive ? 0 : conv.unreadCount + newMsgs.length,
+      const fresh = batch.filter((m) => !existingIds.has(String(m.id)));
+      if (fresh.length > 0) {
+        const incoming = fresh.map((m) => ({
+          id: String(m.id),
+          senderId: m.senderId,
+          recipientId: groupId,
+          senderUserName: m.senderUserName,
+          senderNickname: m.senderNickname,
+          msgType: m.msgType as MsgType,
+          content: m.content || '',
+          status: 'delivered' as const,
+          timestamp: m.createdAt || Date.now(),
+          seq: m.seq,
+        }));
+        const merged = [...existing, ...incoming].sort((a, b) => a.timestamp - b.timestamp);
+        useChatStore.setState({ messages: { ...useChatStore.getState().messages, [groupId]: merged } });
+        // 更新会话最后一条消息 + 未读数（按最大时间选预览，backward 返回的是倒序）
+        const newest = incoming.reduce((a, b) => (b.timestamp > a.timestamp ? b : a));
+        useConversationStore.setState((s) => {
+          const conv = s.conversations[groupId];
+          if (!conv) return s;
+          const isActive = s.activePeerId === groupId;
+          return {
+            conversations: {
+              ...s.conversations,
+              [groupId]: {
+                ...conv,
+                lastMessage: mediaPreview(newest.msgType, newest.content || ''),
+                lastMessageTime: newest.timestamp,
+                lastMessageId: newest.id,
+                unreadCount: isActive ? 0 : conv.unreadCount + incoming.length,
+              },
             },
-          },
-        };
-      });
-    })
-    .catch((err) => console.error(`群聊离线同步失败 groupId=${groupId}:`, err));
+          };
+        });
+      }
+
+      // 拉最近一页（backward）只拉一次；正向拉取在还有更多时继续往后追
+      if (backward || !res.hasMore) return;
+      const maxSeq = batch.reduce((max, m) => Math.max(max, m.seq || 0), 0);
+      if (maxSeq <= cursor) return;
+      cursor = maxSeq;
+      backward = false;
+    }
+  })().catch((err) => console.error(`群聊离线同步失败 groupId=${groupId}:`, err));
 }
 
 export function useIMClient() {
@@ -111,6 +127,10 @@ export function useIMClient() {
       maxReconnectAttempts: 10,
       heartbeatInterval: 30000,
     });
+
+    // C2C 离线水位 = 本地已存消息里最大的收件箱 seq：登录后只拉这之后的，
+    // 不再把收件箱（最多 50 条一页）从头同步一遍
+    client.setSyncSeq(localInboxWatermark(userId));
 
     // 注册事件监听 —— 使用 getState() 避免闭包捕获旧 state
     client.on('message', (msg: IncomingMessage) => {

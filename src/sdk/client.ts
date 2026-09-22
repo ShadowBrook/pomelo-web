@@ -338,6 +338,22 @@ export class IMClient {
     return this.state;
   }
 
+  /**
+   * 设置离线同步水位（收件箱 seq）：登录时把本地已存消息的最大 seq 交进来，
+   * pullPending 就从这里往后拉，而不是每次刷新都把收件箱从头拉一遍。
+   * 只抬不降——重连时内存里的水位已经更高，不能被本地库的估算值拉回去。
+   */
+  setSyncSeq(seq: number): void {
+    if (seq > this.lastSeq) {
+      this.lastSeq = seq;
+    }
+  }
+
+  /** 当前同步水位（排查/日志用） */
+  getSyncSeq(): number {
+    return this.lastSeq;
+  }
+
   // ================================================================
   // Friend Operations
   // ================================================================

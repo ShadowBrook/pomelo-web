@@ -1,10 +1,20 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { IncomingMessage, StatusUpdate, MsgType, MessageStatus, MemberReadState } from '@/sdk/types';
 import { generateId } from '@/sdk/protocol';
 import { getIMClient } from '@/hooks/useIMClient';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useConversationStore } from '@/stores/useConversationStore';
+import {
+  LOCAL_PAGE,
+  hydrateChat,
+  loadOlderFromDb,
+  markHydration,
+  persistMessagesDiff,
+  saveSnapshot,
+  seedPersisted,
+  wipeChatCache,
+} from '@/utils/chatCache';
 import { buildMediaContent, captureVideoPoster, contentNeedsSignedUrl, isMediaType, makeImageThumbnail } from '@/sdk/media';
 import { wrapReplyContent } from '@/sdk/media';
 import type { ReplySnippet } from '@/sdk/types';
@@ -65,6 +75,8 @@ interface ChatState {
   openConversation: (peerId: string, type?: 'c2c' | 'group') => Promise<void>;
   /** 滚动到顶加载更早历史 */
   loadMoreHistory: (peerId: string, type?: 'c2c' | 'group') => Promise<void>;
+  /** 登录后从 IndexedDB 恢复各会话最近一页（先本地、后网络） */
+  hydrateFromDb: () => Promise<void>;
 }
 
 /** 归一化拉取回来的消息为 ChatMessage（群聊无 recipientId 字段，fallback 到 peerId） */
@@ -111,9 +123,70 @@ export function sanitizePersistedMessages(
   return { messages: cleaned, changed };
 }
 
+/**
+ * 群聊增量同步游标：**本地最大 seq**。
+ *
+ * 不用服务端已读水位做游标：水位是「读到哪里」，可能被别的端推进到本地消息之前，
+ * 一旦水位 > 本地最大 seq，中间的缺口会被永久跳过（安卓那边踩过这个坑）。
+ * 本地最大 seq 是「我手里有什么」，从它往后拉只会重复、不会漏；本地没有则拉最近一页
+ * （forward 从 0 会拿到群最早的消息，不是想要的）。
+ */
+export function groupPullCursor(messages: ChatMessage[]): { cursor: number; backward: boolean } {
+  const localMax = messages.reduce((max, m) => Math.max(max, m.seq || 0), 0);
+  return localMax > 0 ? { cursor: localMax, backward: false } : { cursor: 0, backward: true };
+}
+
+/**
+ * 账号级离线水位：本地收到的消息里最大的 seq（**收件箱 seq 是按收件人单调分配的**，
+ * 所以这个最大值就是「我同步到哪里」）。登录时交给 SDK 作 pullPending 的起始游标，
+ * 刷新页面后不必把收件箱从第一条拉一遍。
+ *
+ * 注意排除自己发的消息：自己的消息 seq 是「给对方分配的序号」，不属于我的收件箱。
+ */
+export function localInboxWatermark(myUserId: string): number {
+  const { messages } = useChatStore.getState();
+  const conversations = useConversationStore.getState().conversations;
+  let max = 0;
+  for (const [peerId, list] of Object.entries(messages)) {
+    // 群消息 seq 是群内计数，与账号收件箱无关
+    if (conversations[peerId]?.type === 'group') continue;
+    for (const msg of list) {
+      if (!msg.seq || msg.seq <= max) continue;
+      if (msg.senderId === myUserId || msg.senderId === '__self__') continue;
+      max = msg.seq;
+    }
+  }
+  return max;
+}
+
+/** 本地数据已翻到底的会话：不再查本地库，直接走服务端 */
+const localExhausted = new Set<string>();
+
+/**
+ * 服务端已确认「该会话没有更早历史」的会话（跨刷新保留）。
+ * 只在用户真的滚到最早那条之后才会用到，避免每次打开都为「还有更早的吗」再问一次。
+ */
+const serverExhausted = new Set<string>();
+
+/** serverExhausted 快照的去抖定时器 */
+let exhaustedTimer: ReturnType<typeof setTimeout> | null = null;
+
+function markServerExhausted(peerId: string, done: boolean): void {
+  if (done) serverExhausted.add(peerId);
+  else serverExhausted.delete(peerId);
+  if (exhaustedTimer) clearTimeout(exhaustedTimer);
+  exhaustedTimer = setTimeout(() => {
+    exhaustedTimer = null;
+    const snap: Record<string, boolean> = {};
+    for (const id of serverExhausted) snap[id] = true;
+    void saveSnapshot('serverExhausted', snap);
+  }, 300);
+}
+
+let hydratePromise: Promise<void> | null = null;
+
 export const useChatStore = create<ChatState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       messages: {},
       loadingHistory: {},
       hasMoreHistory: {},
@@ -384,6 +457,7 @@ export const useChatStore = create<ChatState>()(
       clearMessages: (peerId) => {
         const msgs = get().messages[peerId] || [];
         msgs.forEach(m => { if (m.localUrl) URL.revokeObjectURL(m.localUrl); });
+        localExhausted.delete(peerId);
         set((s) => { const m = { ...s.messages }; delete m[peerId]; return { messages: m }; });
       },
 
@@ -392,7 +466,10 @@ export const useChatStore = create<ChatState>()(
         for (const msgs of Object.values(messages)) {
           msgs.forEach(m => { if (m.localUrl) URL.revokeObjectURL(m.localUrl); });
         }
+        localExhausted.clear();
         set({ messages: {}, hasMoreHistory: {}, loadingHistory: {} });
+        // 登出即清本地库：换账号登录/共用电脑时不能把上一账号的聊天记录留在磁盘上
+        void wipeChatCache();
       },
 
       loadMoreHistory: async (peerId, type = 'c2c') => {
@@ -405,13 +482,72 @@ export const useChatStore = create<ChatState>()(
 
         const msgs = state.messages[peerId] || [];
 
+        // 先翻本地库：早就同步下来的历史不必再问服务端（离线时也能翻）。
+        // 注意也要走 loadingHistory 的 true→false 周期：MessageList 靠这个信号
+        // 复位 prevScrollHeightRef，否则本地翻一页之后就再也触发不了加载更早历史。
+        // 本地不足一页说明本地到底了，继续往下走到服务端分支，同一次加载动作里补齐。
+        const localCursor = msgs.length > 0 ? msgs[0].timestamp ?? 0 : 0;
+        if (localCursor > 0 && !localExhausted.has(peerId)) {
+          set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
+          const local = await loadOlderFromDb(peerId, localCursor, LOCAL_PAGE);
+          if (local.length > 0) {
+            set((s) => {
+              const existing = s.messages[peerId] || [];
+              const existingIds = new Set(existing.map((m) => m.id));
+              const older = local.filter((m) => !existingIds.has(m.id));
+              return {
+                messages: older.length === 0
+                  ? s.messages
+                  : {
+                    ...s.messages,
+                    [peerId]: [...older, ...existing].sort((a, b) => a.timestamp - b.timestamp),
+                  },
+                loadingHistory: { ...s.loadingHistory, [peerId]: false },
+              };
+            });
+            if (local.length >= LOCAL_PAGE) return;
+          }
+          localExhausted.add(peerId);
+          // 本地到头 + 服务端此前已确认到头：这个会话真的没有更早的了，收工
+          if (serverExhausted.has(peerId)) {
+            set((s) => ({
+              loadingHistory: { ...s.loadingHistory, [peerId]: false },
+              hasMoreHistory: { ...s.hasMoreHistory, [peerId]: false },
+            }));
+            return;
+          }
+        } else if (localExhausted.has(peerId) && serverExhausted.has(peerId)) {
+          set((s) => ({
+            loadingHistory: { ...s.loadingHistory, [peerId]: false },
+            hasMoreHistory: { ...s.hasMoreHistory, [peerId]: false },
+          }));
+          return;
+        }
+
+        // 服务端分支的游标一律取「当前持有的最早一条」：本地翻页可能刚补进来更早的消息，
+        // 用调用开始时的旧游标会把已经拿到的这段又重新拉一遍
+        const serverCursor = () => {
+          const current = get().messages[peerId] || [];
+          return current.length > 0 ? current[0].timestamp ?? 0 : 0;
+        };
+        const serverSeqCursor = () => {
+          const current = get().messages[peerId] || [];
+          return current.length > 0 ? (current[0].seq ?? 0) : 0;
+        };
+
         // 群聊：用最早消息的 seq 作游标拉更早一页（backward=true）
         if (type === 'group') {
-          const oldestSeq = msgs.length > 0 ? (msgs[0].seq ?? 0) : 0;
-          if (oldestSeq === 0) return;
+          const oldestSeq = serverSeqCursor();
+          if (oldestSeq === 0) {
+            // 本地翻页已把 loadingHistory 置起：这里必须归位，否则再也触发不了加载
+            set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: false } }));
+            return;
+          }
           set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
           try {
             const res = await client.pullGroupMessages(peerId, oldestSeq, 50, true);
+          // 服务端说没有更早的了：记住结论，下次翻到本地尽头就不必再问
+          markServerExhausted(peerId, !res.hasMore);
             const historyMsgs: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
             set((s) => {
               const existing = s.messages[peerId] || [];
@@ -440,12 +576,16 @@ export const useChatStore = create<ChatState>()(
         }
 
         // 用已拥有最早消息的 createdAt 作时间游标，拉取更早一页（历史接口按 created_at 倒序回退）
-        const oldestTime = msgs.length > 0 ? msgs[0].timestamp ?? 0 : 0;
-        if (oldestTime === 0) return;
+        const serverOldest = serverCursor();
+        if (serverOldest === 0) {
+          set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: false } }));
+          return;
+        }
 
         set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
         try {
-          const res = await client.pullHistory(peerId, oldestTime);
+          const res = await client.pullHistory(peerId, serverOldest);
+          markServerExhausted(peerId, !res.hasMore);
           const historyMsgs: ChatMessage[] = (res.messages || []).map(m => ({
             id: String(m.id), senderId: m.senderId, recipientId: m.recipientId ?? '',
             senderUserName: m.senderUserName, senderNickname: m.senderNickname,
@@ -492,6 +632,7 @@ export const useChatStore = create<ChatState>()(
             set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
             try {
               const res = await client.pullGroupMessages(peerId, 0, 50, true);
+              markServerExhausted(peerId, !res.hasMore);
               const msgs: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
               // backward=true 返回 seq 降序，需反转为正序
               set((s) => ({
@@ -505,11 +646,9 @@ export const useChatStore = create<ChatState>()(
             }
             return;
           }
-          // 有缓存：用已读水位拉增量（seq > lastReadSeq）；无水位则拉最近历史。
-          // 拉取不推进水位——已读水位由群 ACK 在用户查看消息后更新。
-          const lastReadSeq = useGroupStore.getState().getLastReadSeq(peerId);
-          const backward = lastReadSeq <= 0;
-          const cursor = backward ? 0 : lastReadSeq;
+          // 有缓存：从**本地最大 seq** 往后增量拉（重复的按 id 去重，缺口也能被覆盖）。
+          // 不用已读水位：水位可能被其他端推到本地消息之前，用它当游标会永久跳过缺口。
+          const { cursor, backward } = groupPullCursor(cached);
           try {
             const res = await client.pullGroupMessages(peerId, cursor, 50, backward);
             const fresh: ChatMessage[] = (res.messages || []).map(m => toChatMessage(m, peerId));
@@ -545,6 +684,7 @@ export const useChatStore = create<ChatState>()(
           set((s) => ({ loadingHistory: { ...s.loadingHistory, [peerId]: true } }));
           try {
             const res = await client.pullHistory(peerId, 0);
+            markServerExhausted(peerId, !res.hasMore);
             const msgs: ChatMessage[] = (res.messages || []).map(m => ({
               id: String(m.id), senderId: m.senderId, recipientId: m.recipientId ?? '',
               senderUserName: m.senderUserName, senderNickname: m.senderNickname,
@@ -618,26 +758,59 @@ export const useChatStore = create<ChatState>()(
           return state;
         });
       },
-    }),
-    {
-      name: 'pomelo-chat',
-      partialize: (state) => ({
-        // localUrl 是会话内存活的 object URL，刷新后失效，不持久化
-        messages: Object.fromEntries(
-          Object.entries(state.messages).map(([pid, msgs]) => [
-            pid,
-            msgs.map(({ localUrl, ...rest }) => rest),
-          ]),
-        ),
-        hasMoreHistory: state.hasMoreHistory,
-      }),
-      // 历史版本遗留清洗：见 sanitizePersistedMessages 注释
-      onRehydrateStorage: () => (state) => {
-        if (!state?.messages) return;
-        const myId = useAuthStore.getState().user?.userId;
-        const { messages: cleaned, changed } = sanitizePersistedMessages(state.messages, myId);
-        if (changed) useChatStore.setState({ messages: cleaned });
+
+      /**
+       * 登录/刷新后从 IndexedDB 恢复：每个会话最近一页，先本地后网络。
+       * 恢复完再连网关，这样 openConversation 一进来就有内容、不需要为每个会话拉一页历史。
+       * 幂等：多次调用共享同一个 Promise（重连/重复挂载不会重复读库）。
+       */
+      hydrateFromDb: () => {
+        if (hydratePromise) return hydratePromise;
+        hydratePromise = (async () => {
+          const userId = useAuthStore.getState().user?.userId;
+          if (!userId) return;
+          const peerIds = Object.keys(useConversationStore.getState().conversations);
+          if (peerIds.length === 0) return;
+          localExhausted.clear();
+          const { messages: restored, hasOlderLocal, serverExhausted: exhausted } =
+            await hydrateChat(userId, peerIds);
+          for (const [peerId, done] of Object.entries(exhausted)) {
+            if (done) serverExhausted.add(peerId);
+          }
+          set((s) => {
+            const messages = { ...s.messages };
+            const hasMoreHistory = { ...s.hasMoreHistory };
+            for (const [peerId, rows] of Object.entries(restored)) {
+              if (rows.length === 0) continue;
+              // 本地副本与内存副本（hydrate 期间推送进来的新消息）按 id 合并
+              const existing = messages[peerId] || [];
+              const existingIds = new Set(existing.map((m) => m.id));
+              const older = rows.filter((m) => !existingIds.has(m.id));
+              const merged = [...older, ...existing].sort((a, b) => a.timestamp - b.timestamp);
+              // 登记为「已落库」，避免紧接着把这页原样回写一遍
+              seedPersisted(peerId, rows);
+              messages[peerId] = merged;
+              // 还能上翻 = 本地库里还有更早的，或者服务端上次没说到头
+              if (hasMoreHistory[peerId] === undefined) {
+                hasMoreHistory[peerId] = !!hasOlderLocal[peerId] || !serverExhausted.has(peerId);
+              }
+            }
+            const { messages: cleaned, changed } = sanitizePersistedMessages(messages, userId);
+            return { messages: changed ? cleaned : messages, hasMoreHistory };
+          });
+        })();
+        // 增量同步等这一步完成再算游标（游标依赖本地消息）
+        markHydration(hydratePromise);
+        return hydratePromise;
       },
-    }
-  )
+    })
 );
+
+/**
+ * 消息落库：订阅 store 变更，按会话增量写 IndexedDB（只写新增/改写的行）。
+ * 放在订阅里而不是每个 action 里：写点集中、不会漏，且新增 action 自动生效。
+ */
+useChatStore.subscribe((state, prev) => {
+  if (state.messages === prev.messages) return;
+  persistMessagesDiff(prev.messages, state.messages);
+});

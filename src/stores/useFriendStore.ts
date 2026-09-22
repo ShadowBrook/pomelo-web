@@ -3,6 +3,7 @@ import * as api from '@/utils/api';
 import type { FriendNotify, FriendDeleteNotify } from '@/sdk/types';
 import { getIMClient } from '@/hooks/useIMClient';
 import { sameOriginMediaUrl } from '@/utils/mediaUrl';
+import { dropSnapshot, loadSnapshot, saveSnapshot } from '@/utils/chatCache';
 
 export interface Friend {
   userId: string;
@@ -46,6 +47,8 @@ interface FriendState {
   clearSearchResults: () => void;
   clearError: () => void;
   clearAll: () => void;
+  /** 从 IndexedDB 恢复好友列表（首屏先用缓存渲染，随后被服务端结果覆盖） */
+  hydrateFromDb: () => Promise<void>;
 
   // Notify 处理（由 useIMClient 事件桥接调用）
   onFriendRequestReceived: (notify: FriendNotify) => void;
@@ -170,6 +173,20 @@ export const useFriendStore = create<FriendState>()((set) => ({
 
   clearAll: () => {
     set({ friends: [], pendingRequests: [], searchResults: [], loading: false, error: null });
+    void dropSnapshot('friends');
+    void dropSnapshot('pendingFriends');
+  },
+
+  hydrateFromDb: async () => {
+    const [friends, pending] = await Promise.all([
+      loadSnapshot<Friend[]>('friends'),
+      loadSnapshot<PendingRequest[]>('pendingFriends'),
+    ]);
+    set((s) => ({
+      // 内存里已有（本轮已从服务端拉到）就不覆盖
+      friends: s.friends.length > 0 ? s.friends : (friends || []),
+      pendingRequests: s.pendingRequests.length > 0 ? s.pendingRequests : (pending || []),
+    }));
   },
 
   // ================================================================
@@ -226,4 +243,17 @@ export const useFriendStore = create<FriendState>()((set) => ({
     }));
   },
 }));
+
+// 好友/申请列表落库：数据量小，变更即整体覆盖（去抖 300ms 避开连续 Notify）
+let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
+useFriendStore.subscribe((state, prev) => {
+  if (state === prev) return;
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  snapshotTimer = setTimeout(() => {
+    snapshotTimer = null;
+    const cur = useFriendStore.getState();
+    void saveSnapshot('friends', cur.friends);
+    void saveSnapshot('pendingFriends', cur.pendingRequests);
+  }, 300);
+});
 
