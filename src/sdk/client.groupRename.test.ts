@@ -104,6 +104,27 @@ describe('IMClient 群名修改', () => {
     await expect(done).resolves.toEqual({ code: 0, message: 'success' });
   });
 
+  it('updateGroupDescription：发送 UPDATE_REQ（仅携带 description），RESP code=0 时 resolve', async () => {
+    const fake = await connectClient();
+
+    const done = client.updateGroupDescription('500', '今晚八点开会');
+    await vi.waitFor(() => {
+      expect(fake.frames().map((f) => f.cmd)).toContain(Cmd.CMD_GROUP_UPDATE_REQ);
+    });
+    const reqFrame = fake.frames().find((f) => f.cmd === Cmd.CMD_GROUP_UPDATE_REQ);
+    const body = reqFrame ? plainBody(im.group.UpdateGroupReq, reqFrame) : null;
+    expect(body).toEqual({ groupId: '500', description: '今晚八点开会' });
+    expect((body as any)?.name).toBeUndefined();
+
+    fake.serverPush(encode(
+      Cmd.CMD_GROUP_UPDATE_RESP,
+      reqFrame!.messageId,
+      enc(im.group.TransferGroupResp, { code: 0, message: 'success' }),
+      '',
+    ));
+    await expect(done).resolves.toEqual({ code: 0, message: 'success' });
+  });
+
   it('INFO_UPDATED 推送解码为 groupMemberChange 事件（type=INFO_UPDATED，携带新群名）', async () => {
     const fake = await connectClient();
     const handler = vi.fn();

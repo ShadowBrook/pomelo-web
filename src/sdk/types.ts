@@ -331,6 +331,8 @@ export interface GroupMemberChangeNotify {
   nickname?: string;
   /** INFO_UPDATED 时为修改后的群名 */
   name?: string;
+  /** INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空） */
+  description?: string;
 }
 
 export interface GroupOpResp {

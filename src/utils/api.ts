@@ -58,12 +58,49 @@ async function request<T = any>(path: string, options?: RequestInit): Promise<Ap
   return res.json();
 }
 
-// 用户注册（入参 userName 替代原来的 userId）
-export async function register(userName: string, nickname: string, password: string, avatar?: string) {
+// 用户注册（入参 userName 替代原来的 userId；email 可选，用于找回密码）
+export async function register(userName: string, nickname: string, password: string, avatar?: string, email?: string) {
   return request('/user/register', {
     method: 'POST',
-    body: JSON.stringify({ userName, nickname, password, avatar: avatar || '' }),
+    body: JSON.stringify({ userName, nickname, password, avatar: avatar || '', email: email || '' }),
   });
+}
+
+// 服务条款（公开接口；登录页与设置菜单共用同一份文案，改文案只需改服务端）
+export async function getTerms() {
+  return request<{ title: string; version: string; content: string }>('/legal/terms');
+}
+
+/** 找回密码第一步：请求验证码（发到账号已绑定邮箱）。
+ *  用户名不存在 / 未绑定邮箱 / 未配置邮件服务分别返回 404/400/503，取其 message 展示即可。 */
+export async function requestPasswordReset(userName: string) {
+  return request<{ message: string; email: string; ttlSeconds: number }>('/user/password-reset/request', {
+    method: 'POST',
+    body: JSON.stringify({ userName }),
+  });
+}
+
+/** 找回密码第二步：校验验证码并重置密码。
+ *  验证码错误返回 401，故不走 request 助手（其把 401 一律按 token 过期登出处理）。 */
+export async function confirmPasswordReset(userName: string, code: string, newPassword: string) {
+  const res = await fetch(`${BASE_URL}/user/password-reset/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userName, code, newPassword }),
+  });
+  const body = await res.json().catch(() => ({ code: res.status, message: `HTTP ${res.status}` }));
+  return { code: body.code ?? res.status, message: body.message || '' };
+}
+
+/** 绑定/更换邮箱（找回密码用）：需登录态 */
+export async function bindEmail(token: string, email: string) {
+  const res = await fetch(`${BASE_URL}/user/bind-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email }),
+  });
+  const body = await res.json().catch(() => ({ code: res.status, message: `HTTP ${res.status}` }));
+  return { code: body.code ?? res.status, message: body.message || '', email: body.email as string | undefined };
 }
 
 // 用户登录（platform 写入 token，供 gateway setCodec 多端预留）

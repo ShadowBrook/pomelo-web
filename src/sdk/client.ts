@@ -623,10 +623,26 @@ export class IMClient {
 
   /** 修改群名（群主/管理员）。全体成员的各端会收到 INFO_UPDATED 推送（含操作者自己的其他端） */
   updateGroupName(groupId: string, name: string): Promise<GroupOpResp> {
+    return this.updateGroupInfo(groupId, { name });
+  }
+
+  /** 修改群公告（群主/管理员）；空串表示清空。全体成员的各端会收到 INFO_UPDATED */
+  updateGroupDescription(groupId: string, description: string): Promise<GroupOpResp> {
+    return this.updateGroupInfo(groupId, { description });
+  }
+
+  /** 修改群信息（群名/公告，未提供的字段保持不变）；群主/管理员 */
+  updateGroupInfo(
+    groupId: string,
+    patch: { name?: string; description?: string },
+  ): Promise<GroupOpResp> {
+    const body: Record<string, unknown> = { groupId };
+    if (patch.name !== undefined) body.name = patch.name;
+    if (patch.description !== undefined) body.description = patch.description;
     return this._sendGroupOp(
       Cmd.CMD_GROUP_UPDATE_REQ,
       Cmd.CMD_GROUP_UPDATE_RESP,
-      enc(im.group.UpdateGroupReq, { groupId, name }),
+      enc(im.group.UpdateGroupReq, body),
     ).then((raw: any) => ({ code: raw?.code ?? 0, message: raw?.message ?? '' }));
   }
 
@@ -1591,6 +1607,7 @@ export class IMClient {
           userName: n?.userName,
           nickname: n?.nickname,
           name: n?.name || undefined,
+          description: n?.description !== undefined ? (n.description as string) : undefined,
         };
         this._emit('groupMemberChange', notify);
         break;

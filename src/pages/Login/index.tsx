@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { toast } from '@/stores/useToastStore';
 import { ToastHost } from '@/components/ToastHost';
+import { TermsDialog } from '@/components/TermsDialog';
+import { confirmPasswordReset, requestPasswordReset } from '@/utils/api';
 
 type View = 'login' | 'register' | 'forgot';
 
@@ -69,6 +71,14 @@ export default function LoginPage() {
   const [gender, setGender] = useState<'male' | 'female'>('male'); // 仅 UI，不上送
   const [agreedTerms, setAgreedTerms] = useState(true);
   const [email, setEmail] = useState('');
+  // 服务条款弹窗（注册勾选处与页脚共用）
+  const [termsOpen, setTermsOpen] = useState(false);
+  // 找回密码：request=填用户名发验证码；confirm=填验证码+新密码
+  const [resetStep, setResetStep] = useState<'request' | 'confirm'>('request');
+  const [resetCode, setResetCode] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetPassword2, setResetPassword2] = useState('');
+  const [resetHint, setResetHint] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -78,6 +88,64 @@ export default function LoginPage() {
   const switchView = (v: View) => {
     setView(v);
     setError('');
+    if (v !== 'forgot') {
+      setResetStep('request');
+      setResetCode('');
+      setResetPassword('');
+      setResetPassword2('');
+      setResetHint('');
+    }
+  };
+
+  /** 找回密码第一步：请求验证码（发到账号已绑定邮箱） */
+  const handleRequestReset = async () => {
+    if (!userName.trim()) {
+      setError('请输入用户名');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const res = await requestPasswordReset(userName.trim());
+      setResetHint(res.message || '验证码已发送，请查收邮件');
+      setResetStep('confirm');
+    } catch (err: any) {
+      setError(err.message || '发送失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /** 找回密码第二步：校验验证码并改密 */
+  const handleConfirmReset = async () => {
+    if (!resetCode.trim()) {
+      setError('请输入验证码');
+      return;
+    }
+    if (resetPassword.length < 6) {
+      setError('新密码至少 6 位');
+      return;
+    }
+    if (resetPassword !== resetPassword2) {
+      setError('两次输入的新密码不一致');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const res = await confirmPasswordReset(userName.trim(), resetCode.trim(), resetPassword);
+      if (res.code !== 0) {
+        setError(res.message || '重置失败');
+        return;
+      }
+      toast(res.message || '密码已重置，请用新密码登录');
+      switchView('login');
+      setPassword('');
+    } catch (err: any) {
+      setError(err.message || '重置失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async (e: FormEvent) => {
@@ -111,7 +179,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await register(userName.trim(), nickname.trim() || userName.trim(), password);
+      await register(userName.trim(), nickname.trim() || userName.trim(), password, undefined, email.trim());
       navigate('/chat', { replace: true });
     } catch (err: any) {
       setError(err.message || '注册失败');
@@ -196,6 +264,7 @@ export default function LoginPage() {
               {passwordTooShort && <p className="text-danger text-xs mt-1 ml-16">* 密码长度最少6位!</p>}
             </div>
             <InlineInput label="确认密码：" placeholder="请再次输入密码" type="password" value={confirmPassword} onChange={setConfirmPassword} />
+            <InlineInput label="邮箱：" placeholder="选填，用于找回密码" type="email" value={email} onChange={setEmail} />
             <div className="flex items-center gap-4 pl-16">
               <span className="text-sm text-text-main">性别：</span>
               <label className="flex items-center gap-1.5 text-sm text-text-main cursor-pointer">
@@ -232,7 +301,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    toast('功能开发中');
+                    setTermsOpen(true);
                   }}
                   className="text-accent hover:underline cursor-pointer"
                 >
@@ -261,22 +330,61 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* 忘记密码态 */}
-        {view === 'forgot' && (
+        {/* 忘记密码态：两步（发验证码 → 填验证码 + 新密码） */}
+        {view === 'forgot' && resetStep === 'request' && (
           <div className="space-y-3">
             <h2 className="text-sm font-medium text-text-sub tracking-wider">FIND YOUR ACCOUNT</h2>
-            <IconInput icon={MailIcon} placeholder="请输入注册邮箱" type="email" value={email} onChange={setEmail} />
+            <IconInput icon={MailIcon} placeholder="请输入用户名" value={userName} onChange={setUserName} />
             <p className="text-xs text-text-sub leading-5">
-              输入注册时使用的邮箱，我们将向您发送重置密码的链接。
+              输入用户名，我们会向该账号已绑定的邮箱发送 6 位验证码。
+              <br />
+              未绑定邮箱？请先登录后在「设置 → 绑定邮箱」中补全。
             </p>
             <button
               type="button"
-              onClick={() => toast('功能开发中')}
-              className="w-full h-10 rounded-md bg-primary hover:bg-primary-dark text-white text-sm font-medium transition-colors cursor-pointer"
+              onClick={handleRequestReset}
+              disabled={loading}
+              className="w-full h-10 rounded-md bg-primary hover:bg-primary-dark text-white text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              发送邮件
+              {loading ? '发送中...' : '发送验证码'}
             </button>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
             <p className="text-center text-sm text-text-sub pt-1">
+              <button
+                type="button"
+                onClick={() => switchView('login')}
+                className="text-accent hover:underline cursor-pointer"
+              >
+                返回登录界面
+              </button>
+            </p>
+          </div>
+        )}
+
+        {view === 'forgot' && resetStep === 'confirm' && (
+          <div className="space-y-3">
+            <h2 className="text-sm font-medium text-text-sub tracking-wider">RESET PASSWORD</h2>
+            {resetHint && <p className="text-xs text-accent leading-5">{resetHint}</p>}
+            <InlineInput label="验证码：" placeholder="邮件中的 6 位数字" value={resetCode} onChange={setResetCode} />
+            <InlineInput label="新密码：" placeholder="至少 6 位" type="password" value={resetPassword} onChange={setResetPassword} />
+            <InlineInput label="确认新密码：" placeholder="请再次输入新密码" type="password" value={resetPassword2} onChange={setResetPassword2} />
+            <button
+              type="button"
+              onClick={handleConfirmReset}
+              disabled={loading}
+              className="w-full h-10 rounded-md bg-primary hover:bg-primary-dark text-white text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? '重置中...' : '重置密码'}
+            </button>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <p className="text-center text-sm text-text-sub pt-1 space-x-4">
+              <button
+                type="button"
+                onClick={() => { setResetStep('request'); setError(''); }}
+                className="text-accent hover:underline cursor-pointer"
+              >
+                重新发送
+              </button>
               <button
                 type="button"
                 onClick={() => switchView('login')}
@@ -293,6 +401,14 @@ export default function LoginPage() {
       <div className="absolute bottom-4 inset-x-0 text-center text-xs text-text-sub space-y-1">
         <p>确保使用 Chrome、FireFox、Safari、Edge 等新式浏览器，以便获得更好地体验。</p>
         <p>
+          <button
+            type="button"
+            onClick={() => setTermsOpen(true)}
+            className="text-accent hover:underline cursor-pointer"
+          >
+            服务条款
+          </button>
+          <span className="mx-1.5">·</span>
           © 2026 Pomelo Chat
           {BEIAN && (
             <>
@@ -309,6 +425,9 @@ export default function LoginPage() {
           )}
         </p>
       </div>
+
+      {/* 服务条款弹窗（登录页注册勾选处 / 页脚入口共用） */}
+      {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
 
       <ToastHost />
     </div>

@@ -15474,6 +15474,7 @@ export const im = $root.im = (() => {
              * @property {string|null} [userName] GroupMemberChangeNotify userName
              * @property {string|null} [nickname] GroupMemberChangeNotify nickname
              * @property {string|null} [name] GroupMemberChangeNotify name
+             * @property {string|null} [description] GroupMemberChangeNotify description
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -15561,12 +15562,26 @@ export const im = $root.im = (() => {
              */
             GroupMemberChangeNotify.prototype.name = null;
 
+            /**
+             * GroupMemberChangeNotify description.
+             * @member {string|null|undefined} description
+             * @memberof im.group.GroupMemberChangeNotify
+             * @instance
+             */
+            GroupMemberChangeNotify.prototype.description = null;
+
             // OneOf field names bound to virtual getters and setters
             let $oneOfFields;
 
             // Virtual OneOf for proto3 optional field
             $Object.defineProperty(GroupMemberChangeNotify.prototype, "_name", {
                 get: $util.oneOfGetter($oneOfFields = ["name"]),
+                set: $util.oneOfSetter($oneOfFields)
+            });
+
+            // Virtual OneOf for proto3 optional field
+            $Object.defineProperty(GroupMemberChangeNotify.prototype, "_description", {
+                get: $util.oneOfGetter($oneOfFields = ["description"]),
                 set: $util.oneOfSetter($oneOfFields)
             });
 
@@ -15616,6 +15631,8 @@ export const im = $root.im = (() => {
                     writer.uint32(/* id 6, wireType 2 =*/50).string(message.nickname);
                 if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
                     writer.uint32(/* id 7, wireType 2 =*/58).string(message.name);
+                if (message.description != null && $Object.hasOwnProperty.call(message, "description"))
+                    writer.uint32(/* id 8, wireType 2 =*/66).string(message.description);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -15734,6 +15751,13 @@ export const im = $root.im = (() => {
                             message._name = "name";
                             continue;
                         }
+                    case 8: {
+                            if (wireType !== 2)
+                                break;
+                            message.description = reader.stringVerify();
+                            message._description = "description";
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -15805,6 +15829,11 @@ export const im = $root.im = (() => {
                     properties._name = 1;
                     if (!$util.isString(message.name))
                         return "name: string expected";
+                }
+                if (message.description != null && $Object.hasOwnProperty.call(message, "description")) {
+                    properties._description = 1;
+                    if (!$util.isString(message.description))
+                        return "description: string expected";
                 }
                 return null;
             };
@@ -15903,6 +15932,8 @@ export const im = $root.im = (() => {
                         message.nickname = $String(object.nickname);
                 if (object.name != null)
                     message.name = $String(object.name);
+                if (object.description != null)
+                    message.description = $String(object.description);
                 return message;
             };
 
@@ -15972,6 +16003,8 @@ export const im = $root.im = (() => {
                     object.nickname = message.nickname;
                 if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
                     object.name = message.name;
+                if (message.description != null && $Object.hasOwnProperty.call(message, "description"))
+                    object.description = message.description;
                 return object;
             };
 
@@ -16036,6 +16069,7 @@ export const im = $root.im = (() => {
              * @typedef {Object} im.group.UpdateGroupReq.$Properties
              * @property {number|Long|null} [groupId] UpdateGroupReq groupId
              * @property {string|null} [name] UpdateGroupReq name
+             * @property {string|null} [description] UpdateGroupReq description
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -16077,11 +16111,34 @@ export const im = $root.im = (() => {
 
             /**
              * UpdateGroupReq name.
-             * @member {string} name
+             * @member {string|null|undefined} name
              * @memberof im.group.UpdateGroupReq
              * @instance
              */
-            UpdateGroupReq.prototype.name = "";
+            UpdateGroupReq.prototype.name = null;
+
+            /**
+             * UpdateGroupReq description.
+             * @member {string|null|undefined} description
+             * @memberof im.group.UpdateGroupReq
+             * @instance
+             */
+            UpdateGroupReq.prototype.description = null;
+
+            // OneOf field names bound to virtual getters and setters
+            let $oneOfFields;
+
+            // Virtual OneOf for proto3 optional field
+            $Object.defineProperty(UpdateGroupReq.prototype, "_name", {
+                get: $util.oneOfGetter($oneOfFields = ["name"]),
+                set: $util.oneOfSetter($oneOfFields)
+            });
+
+            // Virtual OneOf for proto3 optional field
+            $Object.defineProperty(UpdateGroupReq.prototype, "_description", {
+                get: $util.oneOfGetter($oneOfFields = ["description"]),
+                set: $util.oneOfSetter($oneOfFields)
+            });
 
             /**
              * Creates a new UpdateGroupReq instance using the specified properties.
@@ -16117,8 +16174,10 @@ export const im = $root.im = (() => {
                     throw $Error("max depth exceeded");
                 if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId") && (typeof message.groupId === "object" ? message.groupId.low || message.groupId.high : message.groupId !== 0))
                     writer.uint32(/* id 1, wireType 0 =*/8).int64(message.groupId);
-                if (message.name != null && $Object.hasOwnProperty.call(message, "name") && message.name !== "")
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
                     writer.uint32(/* id 2, wireType 2 =*/18).string(message.name);
+                if (message.description != null && $Object.hasOwnProperty.call(message, "description"))
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.description);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -16188,10 +16247,15 @@ export const im = $root.im = (() => {
                     case 2: {
                             if (wireType !== 2)
                                 break;
-                            if ((value = reader.stringVerify()).length)
-                                message.name = value;
-                            else
-                                delete message.name;
+                            message.name = reader.stringVerify();
+                            message._name = "name";
+                            continue;
+                        }
+                    case 3: {
+                            if (wireType !== 2)
+                                break;
+                            message.description = reader.stringVerify();
+                            message._description = "description";
                             continue;
                         }
                     }
@@ -16242,12 +16306,20 @@ export const im = $root.im = (() => {
                     _depth = 0;
                 if (_depth > $util.recursionLimit)
                     return "max depth exceeded";
+                let properties = {};
                 if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
                     if (!$util.isInteger(message.groupId) && !(message.groupId && $util.isInteger(message.groupId.low) && $util.isInteger(message.groupId.high)))
                         return "groupId: integer|Long expected";
-                if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name")) {
+                    properties._name = 1;
                     if (!$util.isString(message.name))
                         return "name: string expected";
+                }
+                if (message.description != null && $Object.hasOwnProperty.call(message, "description")) {
+                    properties._description = 1;
+                    if (!$util.isString(message.description))
+                        return "description: string expected";
+                }
                 return null;
             };
 
@@ -16280,8 +16352,9 @@ export const im = $root.im = (() => {
                         else if (typeof object.groupId === "object")
                             message.groupId = new $util.LongBits(object.groupId.low >>> 0, object.groupId.high >>> 0).toNumber();
                 if (object.name != null)
-                    if (typeof object.name !== "string" || object.name.length)
-                        message.name = $String(object.name);
+                    message.name = $String(object.name);
+                if (object.description != null)
+                    message.description = $String(object.description);
                 return message;
             };
 
@@ -16302,14 +16375,12 @@ export const im = $root.im = (() => {
                 if (_depth > $util.recursionLimit)
                     throw $Error("max depth exceeded");
                 let object = {};
-                if (options.defaults) {
+                if (options.defaults)
                     if ($util.Long) {
                         let long = new $util.Long(0, 0, false);
                         object.groupId = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                     } else
                         object.groupId = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
-                    object.name = "";
-                }
                 if (message.groupId != null && $Object.hasOwnProperty.call(message, "groupId"))
                     if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
                         object.groupId = typeof message.groupId === "number" ? $BigInt(message.groupId) : $util.Long.fromBits(message.groupId.low >>> 0, message.groupId.high >>> 0, false).toBigInt();
@@ -16319,6 +16390,8 @@ export const im = $root.im = (() => {
                         object.groupId = options.longs === $String ? $util.Long.prototype.toString.call(message.groupId) : options.longs === $Number ? new $util.LongBits(message.groupId.low >>> 0, message.groupId.high >>> 0).toNumber() : message.groupId;
                 if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
                     object.name = message.name;
+                if (message.description != null && $Object.hasOwnProperty.call(message, "description"))
+                    object.description = message.description;
                 return object;
             };
 

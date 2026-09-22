@@ -111,6 +111,10 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
   const [inviteOpen, setInviteOpen] = useState(false);
   // 群名修改：弹窗 + 输入 + 提交中
   const [renameOpen, setRenameOpen] = useState(false);
+  // 群公告编辑：弹窗 + 输入 + 提交中
+  const [descOpen, setDescOpen] = useState(false);
+  const [descInput, setDescInput] = useState('');
+  const [descSaving, setDescSaving] = useState(false);
   const [renameInput, setRenameInput] = useState('');
   const [renaming, setRenaming] = useState(false);
   // 群主转让：目标选择弹窗；解散：二次确认
@@ -215,6 +219,29 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
       if (!conv) return s;
       return { conversations: { ...s.conversations, [peerId]: { ...conv, nickname: name } } };
     });
+  };
+
+  const openDescEditor = () => {
+    setDescInput(group?.description ?? '');
+    setDescOpen(true);
+  };
+
+  const submitDesc = async () => {
+    const client = getIMClient();
+    if (!client || descSaving) return;
+    setDescSaving(true);
+    try {
+      const text = descInput.trim();
+      await client.updateGroupDescription(peerId, text);
+      // 本地即时反馈；INFO_UPDATED 推送（含本机）随后到达，幂等
+      useGroupStore.getState().updateGroup(peerId, { description: text });
+      toast(text ? '公告已更新' : '公告已清空');
+      setDescOpen(false);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : '更新失败');
+    } finally {
+      setDescSaving(false);
+    }
   };
 
   const submitRename = async () => {
@@ -329,16 +356,32 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
               </section>
 
               <section>
-                <SectionTitle text="本群公告" />
+                <div className="flex items-start justify-between gap-2">
+                  <SectionTitle text="本群公告" />
+                  {canRename && (
+                    <button
+                      onClick={openDescEditor}
+                      title={group?.description ? '编辑公告' : '设置公告'}
+                      className="w-5 h-5 flex-shrink-0 rounded flex items-center justify-center text-text-sub hover:text-primary hover:bg-primary/10"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
                 {group?.description ? (
                   <p className="text-xs text-text-main leading-6 break-all whitespace-pre-wrap">{group.description}</p>
-                ) : (
+                ) : canRename ? (
                   <button
-                    onClick={() => toast('功能开发中')}
+                    onClick={openDescEditor}
                     className="text-xs text-text-sub leading-6 text-left hover:text-primary"
                   >
-                    还没有设置公告，群主可点击进行设置！
+                    还没有设置公告，点击此处设置
                   </button>
+                ) : (
+                  <p className="text-xs text-text-sub leading-6">群主/管理员还没有设置公告</p>
                 )}
               </section>
 
@@ -523,6 +566,44 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
                 className="flex-1 py-1.5 text-xs rounded bg-danger text-white hover:opacity-90 disabled:opacity-60"
               >
                 {dissolving ? '解散中…' : '确认解散'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑群公告弹窗 */}
+      {descOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 z-[9999] flex items-center justify-center"
+          onClick={() => { if (!descSaving) setDescOpen(false); }}
+        >
+          <div className="bg-panel rounded-lg shadow-xl w-[320px] p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-medium text-text-main mb-3">编辑群公告</div>
+            <textarea
+              autoFocus
+              value={descInput}
+              onChange={(e) => setDescInput(e.target.value)}
+              maxLength={500}
+              rows={5}
+              placeholder="输入群公告（最多 500 字；留空表示清空公告）"
+              className="w-full px-2 py-1.5 mb-1 text-xs rounded border border-line bg-bg-page text-text-main focus:outline-none focus:border-primary resize-none"
+            />
+            <div className="text-[11px] text-text-sub mb-3 text-right">{descInput.length}/500</div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDescOpen(false)}
+                disabled={descSaving}
+                className="flex-1 py-1.5 text-xs rounded border border-line text-text-sub hover:text-text-main disabled:opacity-60"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => void submitDesc()}
+                disabled={descSaving}
+                className="flex-1 py-1.5 text-xs rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {descSaving ? '保存中…' : '保存'}
               </button>
             </div>
           </div>

@@ -6,10 +6,12 @@ import { toast } from '@/stores/useToastStore';
 import { getIMClient } from '@/hooks/useIMClient';
 import { MsgType } from '@/sdk/types';
 import * as api from '@/utils/api';
+import { bindEmail } from '@/utils/api';
 import { AvatarCropperDialog } from '@/components/AvatarCropperDialog';
+import { TermsDialog } from '@/components/TermsDialog';
 
 import { CachedImg } from '@/components/CachedImg';
-type MenuKey = 'profile' | 'signature' | 'password' | 'logout' | 'about' | 'help';
+type MenuKey = 'profile' | 'signature' | 'password' | 'bindEmail' | 'logout' | 'about' | 'help' | 'terms';
 
 /** 头像图片上限：头像走通用媒体上传通道，客户端先做体积约束 */
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -19,7 +21,7 @@ export function UserCardTitle() {
   const user = useAuthStore((s) => s.user);
   const connState = useConnStore((s) => s.state);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [dialog, setDialog] = useState<'profile' | 'logout' | 'password' | 'about' | 'help' | 'signature' | null>(null);
+  const [dialog, setDialog] = useState<'profile' | 'logout' | 'password' | 'about' | 'help' | 'signature' | 'bindEmail' | 'terms' | null>(null);
   const [signatureDraft, setSignatureDraft] = useState('');
   const [savingSignature, setSavingSignature] = useState(false);
   const [pwdOld, setPwdOld] = useState('');
@@ -27,6 +29,10 @@ export function UserCardTitle() {
   const [pwdConfirm, setPwdConfirm] = useState('');
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [changingPwd, setChangingPwd] = useState(false);
+  // 绑定邮箱（找回密码用）：预填当前邮箱，保存后回填本地用户态
+  const [emailDraft, setEmailDraft] = useState('');
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   // 待裁剪的原图：选图先进入裁剪弹窗，确认后才走上传
   const [pickedFile, setPickedFile] = useState<File | null>(null);
@@ -44,6 +50,10 @@ export function UserCardTitle() {
       setPwdNew('');
       setPwdConfirm('');
       setPwdError(null);
+    }
+    if (key === 'bindEmail') {
+      setEmailDraft(user?.email || '');
+      setEmailError(null);
     }
     setDialog(key);
   };
@@ -144,9 +154,11 @@ export function UserCardTitle() {
   const menuItems: Array<{ key: MenuKey; label: string; danger?: boolean }> = [
     { key: 'profile', label: '个人信息' },
     { key: 'password', label: '修改密码' },
+    { key: 'bindEmail', label: '绑定邮箱' },
     { key: 'logout', label: '退出登陆', danger: true },
     { key: 'about', label: '关于我们' },
     { key: 'help', label: '帮助中心' },
+    { key: 'terms', label: '服务条款' },
   ];
 
   return (
@@ -355,6 +367,62 @@ export function UserCardTitle() {
           </div>,
           document.body,
         )}
+
+      {/* 绑定邮箱弹窗 */}
+      {dialog === 'bindEmail' &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setDialog(null)}>
+            <div className="bg-panel rounded-lg shadow-xl w-[320px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">绑定邮箱</div>
+              <div className="p-4 space-y-2">
+                <p className="text-xs text-text-sub leading-5">
+                  邮箱用于「忘记密码」时接收验证码；当前暂不做邮件验证，请填写真实可收信的地址。
+                </p>
+                <input
+                  type="email"
+                  value={emailDraft}
+                  onChange={(e) => setEmailDraft(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full h-9 px-2.5 rounded border border-line bg-bg-page text-sm text-text-main focus:outline-none focus:border-primary"
+                />
+                {emailError && <p className="text-xs text-danger">{emailError}</p>}
+              </div>
+              <div className="border-t border-line p-3 flex justify-end gap-2">
+                <button onClick={() => setDialog(null)} className="px-3 py-1.5 text-sm rounded border border-line text-text-sub hover:text-text-main">
+                  取消
+                </button>
+                <button
+                  disabled={emailSaving || !emailDraft.trim()}
+                  onClick={async () => {
+                    const token = useAuthStore.getState().token;
+                    if (!token) { setEmailError('登录已过期，请重新登录'); return; }
+                    setEmailSaving(true);
+                    setEmailError(null);
+                    try {
+                      const res = await bindEmail(token, emailDraft.trim());
+                      if (res.code !== 0) { setEmailError(res.message || '绑定失败'); return; }
+                      useAuthStore.getState().setEmail(res.email || emailDraft.trim());
+                      toast('邮箱已绑定');
+                      setDialog(null);
+                    } catch (e: any) {
+                      setEmailError(e?.message || '绑定失败');
+                    } finally {
+                      setEmailSaving(false);
+                    }
+                  }}
+                  className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:bg-primary-dark disabled:opacity-50"
+                >
+                  {emailSaving ? '保存中…' : '保存'}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {/* 服务条款弹窗（文案由服务端下发，三端共用） */}
+      {dialog === 'terms' &&
+        createPortal(<TermsDialog onClose={() => setDialog(null)} />, document.body)}
 
       {/* 关于我们弹窗 */}
       {dialog === 'about' &&
