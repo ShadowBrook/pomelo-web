@@ -151,18 +151,10 @@ export function useIMClient() {
         client.getMyGroups()
           .then((list) => {
             useGroupStore.getState().setGroups(list);
-            const convs = useConversationStore.getState().conversations;
+            // 群名以服务端列表为准回填会话昵称：改名可能发生在别的端/本机离线期间，
+            // 那时只有推送或什么都没有，不回填的话会话列表会一直停在旧群名
+            useConversationStore.getState().applyGroupNames(list);
             for (const g of list) {
-              // 纠正历史遗留：会话昵称被写成 groupId 的，改回群名
-              const conv = convs[g.groupId];
-              if (conv && conv.nickname === g.groupId && g.name) {
-                useConversationStore.setState((s) => ({
-                  conversations: {
-                    ...s.conversations,
-                    [g.groupId]: { ...s.conversations[g.groupId], nickname: g.name },
-                  },
-                }));
-              }
               // 群聊离线增量（首次登录时序：连接先建立、群列表后到，旧逻辑在此处会空跑）
               syncGroupMessages(g.groupId);
             }

@@ -28,6 +28,12 @@ interface ConversationState {
   updateDraft: (peerId: string, text: string) => void;
   onNewMessage: (msg: IncomingMessage, selfUserId: string) => void;
   createConversation: (peerId: string, nickname?: string, avatar?: string, type?: ConversationType) => void;
+  /**
+   * 把群列表里的权威群名镜像到群会话昵称（列表项、聊天窗标题都读 nickname）。
+   * 改名可能发生在别的端/别的时段：那时本机只拿到推送（在线）或什么也没有（离线），
+   * 登录后拉回的群列表是唯一的权威来源，必须回填一次，否则会话列表会一直显示旧群名。
+   */
+  applyGroupNames: (groups: Array<{ groupId: string; name?: string }>) => void;
   removeConversation: (peerId: string) => void;
   clearAll: () => void;
   getSortedList: () => string[];
@@ -132,6 +138,25 @@ export const useConversationStore = create<ConversationState>()(
           },
         },
       };
+    });
+  },
+
+  applyGroupNames: (groups) => {
+    set((state) => {
+      const conversations = { ...state.conversations };
+      let changed = false;
+      for (const g of groups) {
+        const name = g.name?.trim();
+        if (!name) continue;
+        const conv = conversations[g.groupId];
+        if (!conv) continue;
+        // 历史遗留：群会话被写成 groupId 当昵称（类型也可能是 c2c），同样按群名纠正
+        const isGroupConv = conv.type === 'group' || conv.nickname === g.groupId;
+        if (!isGroupConv || conv.nickname === name) continue;
+        conversations[g.groupId] = { ...conv, nickname: name };
+        changed = true;
+      }
+      return changed ? { conversations } : state;
     });
   },
 
