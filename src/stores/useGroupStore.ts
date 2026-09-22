@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { GroupInfo, GroupMember } from '@/sdk/types';
 import { sameOriginMediaUrl } from '@/utils/mediaUrl';
+import { dropSnapshot, loadSnapshot, saveSnapshot } from '@/utils/chatCache';
 
 interface GroupState {
   groups: Record<string, GroupInfo>;
@@ -23,8 +24,13 @@ interface GroupState {
   removeMember: (groupId: string, userId: string) => void;
   updateLastReadSeq: (groupId: string, seq: number) => void;
   getLastReadSeq: (groupId: string) => number;
+  /** 从 IndexedDB 恢复群列表/成员/已读水位（登录时先本地后网络） */
+  hydrateFromDb: () => Promise<void>;
   clearAll: () => void;
 }
+
+/** 快照键：群列表 / 成员 / 已读水位 / 移出标记 */
+const SNAP_KEYS = ['groups', 'members', 'readSeq', 'removed'] as const;
 
 export const useGroupStore = create<GroupState>()((set, get) => ({
   groups: {},
@@ -119,5 +125,42 @@ export const useGroupStore = create<GroupState>()((set, get) => ({
 
   getLastReadSeq: (groupId) => get().groupLastReadSeq[groupId] || 0,
 
-  clearAll: () => set({ groups: {}, groupMembers: {}, groupLastReadSeq: {}, removedGroups: {}, groupsLoaded: false }),
+  hydrateFromDb: async () => {
+    const [groups, members, readSeq, removed] = await Promise.all([
+      loadSnapshot<Record<string, GroupInfo>>('groups'),
+      loadSnapshot<Record<string, GroupMember[]>>('members'),
+      loadSnapshot<Record<string, number>>('readSeq'),
+      loadSnapshot<Record<string, boolean>>('removed'),
+    ]);
+    set((s) => ({
+      // 服务端已返回过列表时不覆盖（本地只是首屏兜底，服务端才是权威）
+      groups: s.groupsLoaded ? s.groups : { ...(groups || {}) },
+      groupMembers: Object.keys(s.groupMembers).length > 0 ? s.groupMembers : { ...(members || {}) },
+      groupLastReadSeq: { ...(readSeq || {}), ...s.groupLastReadSeq },
+      removedGroups: { ...(removed || {}), ...s.removedGroups },
+    }));
+  },
+
+  clearAll: () => {
+    set({ groups: {}, groupMembers: {}, groupLastReadSeq: {}, removedGroups: {}, groupsLoaded: false });
+    for (const key of SNAP_KEYS) void dropSnapshot(key);
+  },
 }));
+
+/**
+ * 群数据落库：快照整体覆盖（数据量小，且服务端为准），
+ * 去抖 300ms——已读水位随消息滚动高频更新，没必要每次都写。
+ */
+let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
+useGroupStore.subscribe((state, prev) => {
+  if (state === prev) return;
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  snapshotTimer = setTimeout(() => {
+    snapshotTimer = null;
+    const cur = useGroupStore.getState();
+    void saveSnapshot('groups', cur.groups);
+    void saveSnapshot('members', cur.groupMembers);
+    void saveSnapshot('readSeq', cur.groupLastReadSeq);
+    void saveSnapshot('removed', cur.removedGroups);
+  }, 300);
+});
