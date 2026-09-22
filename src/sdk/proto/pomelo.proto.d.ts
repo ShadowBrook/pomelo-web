@@ -5753,6 +5753,9 @@ export namespace im {
             /** GroupMemberChangeNotify name. */
             name?: (string|null);
 
+            /** GroupMemberChangeNotify description. */
+            description?: (string|null);
+
             /**
              * Creates a new GroupMemberChangeNotify instance using the specified properties.
              * @param [properties] Properties to set
@@ -5858,6 +5861,9 @@ export namespace im {
                 /** GroupMemberChangeNotify name */
                 name?: (string|null);
 
+                /** GroupMemberChangeNotify description */
+                description?: (string|null);
+
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
@@ -5917,7 +5923,10 @@ export namespace im {
             groupId: (number|Long);
 
             /** UpdateGroupReq name. */
-            name: string;
+            name?: (string|null);
+
+            /** UpdateGroupReq description. */
+            description?: (string|null);
 
             /**
              * Creates a new UpdateGroupReq instance using the specified properties.
@@ -6008,6 +6017,9 @@ export namespace im {
 
                 /** UpdateGroupReq name */
                 name?: (string|null);
+
+                /** UpdateGroupReq description */
+                description?: (string|null);
 
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];

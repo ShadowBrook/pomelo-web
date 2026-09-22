@@ -9,6 +9,7 @@ interface UserInfo {
   nickname: string;
   avatar: string;
   signature: string; // 个性签名
+  email?: string;   // 已绑定邮箱（找回密码用；未绑定为空）
 }
 
 interface AuthState {
@@ -18,13 +19,15 @@ interface AuthState {
 
   // Actions
   login: (userName: string, password: string) => Promise<void>;
-  register: (userName: string, nickname: string, password: string, avatar?: string) => Promise<void>;
+  register: (userName: string, nickname: string, password: string, avatar?: string, email?: string) => Promise<void>;
   logout: () => void;
   restoreSession: () => void;
   /** 头像更新成功后回填（avatar 为读侧预签名 URL） */
   updateAvatar: (avatar: string) => void;
   /** 个性签名更新成功后回填 */
   updateSignature: (signature: string) => void;
+  /** 绑定邮箱成功后回填 */
+  setEmail: (email: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -44,6 +47,7 @@ export const useAuthStore = create<AuthState>()(
               nickname: res.nickname || userName,
               avatar: sameOriginMediaUrl(res.avatar || ''),
               signature: res.signature || '',
+              email: res.email || '',
             },
             token: res.token || 'test-token',
             isLoggedIn: true,
@@ -94,6 +98,9 @@ export const useAuthStore = create<AuthState>()(
 
       updateSignature: (signature) => {
         set((state) => (state.user ? { user: { ...state.user, signature } } : state));
+      },
+      setEmail: (email: string) => {
+        set((state) => (state.user ? { user: { ...state.user, email } } : state));
       },
     }),
     {
