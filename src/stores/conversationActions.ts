@@ -10,6 +10,7 @@ import { useWindowStore } from './useWindowStore';
 export function openConversation(peerId: string): void {
   useConversationStore.getState().setActivePeer(peerId);
   useWindowStore.getState().openChat(peerId);
+  useWindowStore.getState().openMobileChat();
 }
 
 /**
@@ -22,6 +23,9 @@ export function openConversation(peerId: string): void {
 export function openMostRecentConversation(): void {
   const sorted = useConversationStore.getState().getSortedList();
   if (sorted.length > 0) {
-    openConversation(sorted[0]);
+    // 登录/刷新入口只补选中态与聊天窗目标，不置 mobileChatOpen——
+    // 手机端落地页应是会话列表，聊天窗等用户点击时再进。
+    useConversationStore.getState().setActivePeer(sorted[0]);
+    useWindowStore.getState().openChat(sorted[0]);
   }
 }

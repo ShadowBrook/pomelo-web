@@ -62,7 +62,7 @@ export function CreateGroupDialog({ open, onClose, onGroupCreated, preSelectedFr
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
          onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-[360px] max-h-[500px] flex flex-col"
+      <div className="bg-white rounded-lg shadow-xl w-[min(360px,92vw)] max-h-[500px] flex flex-col"
            onClick={(e) => e.stopPropagation()}>
         {/* 标题 */}
         <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">

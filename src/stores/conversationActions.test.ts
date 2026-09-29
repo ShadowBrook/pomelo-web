@@ -37,6 +37,12 @@ describe('openConversation', () => {
     expect(useWindowStore.getState().chatPeerId).toBe('peer-1');
     expect(useConversationStore.getState().activePeerId).toBe('peer-1');
   });
+
+  it('移动端视图跟随打开（mobileChatOpen，桌面端布局不受影响）', () => {
+    openConversation('peer-1');
+
+    expect(useWindowStore.getState().mobileChatOpen).toBe(true);
+  });
 });
 
 describe('openMostRecentConversation', () => {
@@ -53,6 +59,13 @@ describe('openMostRecentConversation', () => {
 
     expect(useWindowStore.getState().chatPeerId).toBe('newer');
     expect(useConversationStore.getState().activePeerId).toBe('newer');
+  });
+
+  it('登录入口不推入移动端聊天视图（手机落地在会话列表）', () => {
+    seedConversation('a', 1000);
+    openMostRecentConversation();
+
+    expect(useWindowStore.getState().mobileChatOpen).toBe(false);
   });
 
   it('选中态与聊天窗必须指向同一个会话', () => {

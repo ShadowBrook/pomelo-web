@@ -593,7 +593,7 @@ export function ChatDetailPanel({ peerId, isGroup }: Props) {
           className="fixed inset-0 bg-black/20 z-[9999] flex items-center justify-center"
           onClick={() => { if (!descSaving) setDescOpen(false); }}
         >
-          <div className="bg-panel rounded-lg shadow-xl w-[320px] p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-panel rounded-lg shadow-xl w-[min(320px,92vw)] p-4" onClick={(e) => e.stopPropagation()}>
             <div className="text-sm font-medium text-text-main mb-3">编辑群公告</div>
             <textarea
               autoFocus

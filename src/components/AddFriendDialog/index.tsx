@@ -31,7 +31,7 @@ export function AddFriendDialog({ open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center pt-20" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-[420px] max-h-[500px] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-lg shadow-xl w-[min(420px,92vw)] max-h-[500px] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-3 border-b">
           <h3 className="text-base font-medium text-text-main">添加好友</h3>

@@ -321,7 +321,7 @@ function ForwardCard({ content }: { content: string }) {
       </div>
       {open && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => setOpen(false)}>
-          <div className="bg-panel rounded-lg shadow-2xl w-[420px] max-h-[80vh] overflow-y-auto p-3" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-panel rounded-lg shadow-2xl w-[min(420px,92vw)] max-h-[80vh] overflow-y-auto p-3" onClick={(e) => e.stopPropagation()}>
             <div className="text-sm font-medium text-text-main mb-2 pb-2 border-b border-line">{title}</div>
             {items.map((it, i) => (
               <div key={i} className="mb-2 text-xs">
@@ -520,7 +520,7 @@ export const MessageBubble = React.memo(function MessageBubble({
         </div>
       )}
 
-      <div className={`flex flex-col max-w-[60%] ${isSelf ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col max-w-[80%] md:max-w-[60%] ${isSelf ? 'items-end' : 'items-start'}`}>
         {/* 气泡行：状态/已读槽紧贴气泡，避免被下方 hover 操作行撑宽而远离 */}
         <div className="flex items-start gap-1">
           {isSelf && !selecting && (

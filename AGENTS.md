@@ -84,10 +84,19 @@ Two lazy-loaded routes: `/login` (public) and `/chat` (protected via `ProtectedR
 
 ### Components
 
-- **Chat page** (`src/pages/Chat/index.tsx`): Main layout — 280px sidebar (conversation list or friends panel via tabs) + message area. Handles conversation selection, search, draft sync, logout (disconnects WebSocket → clears all stores → clears auth)
+- **Chat page** (`src/pages/Chat/index.tsx`): Main layout — sidebar (conversation list or friends panel via tabs) + message area. Handles conversation selection, search, draft sync, logout (disconnects WebSocket → clears all stores → clears auth)
 - **Login page** (`src/pages/Login/index.tsx`): Tabbed login/register form
 - **MessageList**: Renders message bubbles, triggers `onLoadMore` when scrolled to top, auto-scrolls to bottom on new messages
 - **MessageBubble**: Renders text/image/file messages with WeChat-style bubbles and status indicators (sending/sent/delivered/seen/failed with retry)
+
+### Responsive Layout (`useIsMobile` + Tailwind `md:` 断点)
+
+以 768px（Tailwind `md`）为界，单代码库双形态：
+
+- **桌面（≥768px）**：`IMShell` 恒双列——300px 侧栏（`md:w-[300px]`）+ 聊天列，聊天窗右侧 260px 详情栏内联展开。
+- **移动（<768px）**：列表 / 聊天窗二选一全屏。由 `useWindowStore.mobileChatOpen` 驱动（`openConversation()` 置 true，聊天窗头部返回按钮置 false；`openMostRecentConversation` 登录入口刻意不置位，手机落地在列表页）。`showChat = mobileChatOpen && chatPeerId` 同时要求会话存在，防止删会话后两侧空白。
+- `useIsMobile`（`matchMedia('(max-width: 767px)')`）只服务 JS 分叉（详情栏初始态、全屏按钮裁剪）；布局可见性一律走 CSS 断点 class。移动端详情栏以 `fixed inset-0` 覆盖层呈现。
+- 视口用 `h-dvh`（非 `h-screen`）+ `viewport-fit=cover` + `env(safe-area-inset-*)` 适配手机地址栏与刘海；弹窗宽度统一 `w-[min(NNNpx,92vw)]` 兜底。
 
 ### Vite Config (`vite.config.ts`)
 

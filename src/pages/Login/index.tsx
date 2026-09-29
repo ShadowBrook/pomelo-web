@@ -193,7 +193,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 relative"
+      className="min-h-dvh flex flex-col items-center justify-center px-4 pb-16 md:pb-0 relative"
       style={{ backgroundColor: '#eef0f4', backgroundImage: 'radial-gradient(#d9dce3 1px, transparent 1px)', backgroundSize: '16px 16px' }}
     >
       <div className="w-full max-w-[360px]">

@@ -17,7 +17,7 @@ interface Props {
 
 export function EmojiPicker({ onSelect, onCustomEmoji, onClose }: Props) {
   return (
-    <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-[280px] z-50">
+    <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-[280px] max-w-[calc(100vw-1.5rem)] z-50">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium text-gray-600">表情</span>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>

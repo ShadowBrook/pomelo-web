@@ -225,7 +225,7 @@ export function UserCardTitle() {
       {dialog === 'profile' &&
         createPortal(
           <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setDialog(null)}>
-            <div className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-panel rounded-lg shadow-xl w-[min(300px,92vw)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main flex items-center justify-between">
                 我的个人信息
                 <button onClick={() => setDialog(null)} className="text-text-sub hover:text-text-main text-base leading-none">✕</button>
@@ -289,7 +289,7 @@ export function UserCardTitle() {
       {dialog === 'signature' &&
         createPortal(
           <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setDialog(null)}>
-            <div className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-panel rounded-lg shadow-xl w-[min(300px,92vw)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">编辑个性签名</div>
               <div className="p-4">
                 <textarea
@@ -324,7 +324,7 @@ export function UserCardTitle() {
       {dialog === 'password' &&
         createPortal(
           <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setDialog(null)}>
-            <div className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-panel rounded-lg shadow-xl w-[min(300px,92vw)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">修改密码</div>
               <div className="p-4 flex flex-col gap-2">
                 <input
@@ -372,7 +372,7 @@ export function UserCardTitle() {
       {dialog === 'bindEmail' &&
         createPortal(
           <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setDialog(null)}>
-            <div className="bg-panel rounded-lg shadow-xl w-[320px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-panel rounded-lg shadow-xl w-[min(320px,92vw)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">绑定邮箱</div>
               <div className="p-4 space-y-2">
                 <p className="text-xs text-text-sub leading-5">
@@ -428,7 +428,7 @@ export function UserCardTitle() {
       {dialog === 'about' &&
         createPortal(
           <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setDialog(null)}>
-            <div className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-panel rounded-lg shadow-xl w-[min(300px,92vw)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">关于我们</div>
               <div className="p-5 flex flex-col items-center gap-1.5 text-center">
                 <div className="w-14 h-14 rounded-xl bg-primary text-white flex items-center justify-center text-2xl font-bold mb-1">柚</div>
@@ -451,7 +451,7 @@ export function UserCardTitle() {
       {dialog === 'help' &&
         createPortal(
           <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setDialog(null)}>
-            <div className="bg-panel rounded-lg shadow-xl w-[320px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-panel rounded-lg shadow-xl w-[min(320px,92vw)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">帮助中心</div>
               <div className="p-4 flex flex-col gap-2 text-xs text-text-sub leading-relaxed">
                 <p><span className="text-text-main font-medium">添加好友：</span>通讯录右上角搜索用户名，发送申请，对方同意后成为好友。</p>
@@ -474,7 +474,7 @@ export function UserCardTitle() {
       {dialog === 'logout' &&
         createPortal(
           <div className="fixed inset-0 bg-black/30 z-[10000] flex items-center justify-center" onClick={() => setDialog(null)}>
-            <div className="bg-panel rounded-lg shadow-xl w-[300px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-panel rounded-lg shadow-xl w-[min(300px,92vw)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="px-5 py-5 text-center">
                 <p className="text-sm text-text-main">确认退出登录吗？</p>
               </div>
