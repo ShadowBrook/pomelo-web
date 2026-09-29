@@ -89,7 +89,7 @@ export default function ChatPage() {
   }, [handleLogout]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-panel">
+    <div className="h-dvh w-screen overflow-hidden bg-panel pt-[env(safe-area-inset-top)]">
       {/* 错误提示 toast */}
       {errorMessage && (
         <div className="fixed top-4 right-4 bg-danger text-white px-4 py-2 rounded-lg shadow-lg z-[9999]">

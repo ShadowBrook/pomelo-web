@@ -49,7 +49,7 @@ export function ForwardDialog({ source, onForward, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-panel rounded-lg shadow-2xl w-[360px] max-h-[70vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-panel rounded-lg shadow-2xl w-[min(360px,92vw)] max-h-[70vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">
           转发消息
           <div className="text-[11px] text-text-sub mt-0.5 truncate">{preview}</div>

@@ -67,7 +67,7 @@ export function GroupCallDialog({ groupId, onClose, onStart }: Props) {
   return (
     <div className="fixed inset-0 bg-black/20 z-[9999] flex items-center justify-center" onClick={onClose}>
       <div
-        className="bg-panel rounded-lg shadow-xl w-[280px] max-h-[400px] flex flex-col"
+        className="bg-panel rounded-lg shadow-xl w-[min(280px,92vw)] max-h-[400px] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">发起群聊通话</div>

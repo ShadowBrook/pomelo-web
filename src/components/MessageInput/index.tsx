@@ -316,7 +316,7 @@ export function MessageInput({
   };
 
   return (
-    <div className="bg-panel border-t border-line px-3 pt-2 pb-2">
+    <div className="bg-panel border-t border-line px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       {/* 工具栏：参考图 8 图标 + 麦克风（保留录音能力）；只读会话整体 inert */}
       <div className={`flex items-center gap-1 mb-1.5 ${disabled ? 'opacity-40' : ''}`} inert={disabled}>
         <div className="relative">
@@ -327,7 +327,7 @@ export function MessageInput({
             </svg>
           </ToolButton>
           {showEmoji && (
-            <Suspense fallback={<div className="absolute bottom-full left-0 mb-2 w-[280px] h-[200px] bg-white border rounded-lg animate-pulse" />}>
+            <Suspense fallback={<div className="absolute bottom-full left-0 mb-2 w-[280px] max-w-[calc(100vw-1.5rem)] h-[200px] bg-white border rounded-lg animate-pulse" />}>
               <EmojiPicker
                 onSelect={(emoji) => {
                   setText(prev => prev + emoji);

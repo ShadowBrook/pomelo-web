@@ -61,7 +61,7 @@ export function AvatarCropperDialog({ file, onConfirm, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/30 z-[10010] flex items-center justify-center" onClick={onClose}>
-      <div className="bg-panel rounded-lg shadow-xl w-[320px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-panel rounded-lg shadow-xl w-[min(320px,92vw)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="px-4 py-3 border-b border-line text-sm font-medium text-text-main">裁剪头像</div>
         <div className="p-4 flex flex-col items-center gap-3">
           <div className="relative w-full h-64 rounded-md overflow-hidden bg-bg-page">

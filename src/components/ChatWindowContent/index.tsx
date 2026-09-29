@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useChatSession } from '@/hooks/useChatSession';
 import { useGroupReadCounts } from '@/hooks/useGroupReadCounts';
 import { useBrowserFullscreen } from '@/hooks/useBrowserFullscreen';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useCallStore } from '@/stores/useCallStore';
 import { useConversationStore } from '@/stores/useConversationStore';
@@ -32,7 +33,13 @@ interface ReadStatus {
 export function ChatWindowContent({ peerId }: { peerId: string }) {
   const s = useChatSession(peerId);
   const { isFullscreen, toggle: toggleFullscreen } = useBrowserFullscreen();
-  const [detailOpen, setDetailOpen] = useState(true);
+  const isMobile = useIsMobile();
+  // 详情栏桌面默认展开，移动端默认收起（展开时为全屏覆盖层）；拖窗跨断点时跟随重置
+  const [detailOpen, setDetailOpen] = useState(!isMobile);
+
+  useEffect(() => {
+    setDetailOpen(!isMobile);
+  }, [isMobile]);
 
   // 头像懒刷新：进入单聊时拉一次最新资料（服务端读侧签名），回填好友与会话缓存。
   // 不做变更扇出推送；群聊成员头像由 ChatDetailPanel 打开时的 getGroupMembers 刷新。
@@ -138,6 +145,16 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
     <div className="flex-1 flex flex-col min-h-0">
       {/* 头部行：标题段(蓝) + 右上角窗控图标 */}
       <div className="h-16 flex items-stretch bg-titlebar-chat flex-shrink-0 select-none">
+        {/* 移动端返回列表：只关聊天窗视图，保留 chatPeerId，再进秒开 */}
+        <button
+          onClick={() => useWindowStore.getState().closeMobileChat()}
+          title="返回会话列表"
+          className="md:hidden w-10 h-full flex-shrink-0 flex items-center justify-center text-white/85 hover:bg-white/15"
+        >
+          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M15 4l-8 8 8 8" />
+          </svg>
+        </button>
         <ChatWindowHeader peerId={peerId} />
         <div className="flex-1" />
         <div className="h-full flex items-start justify-end gap-1 px-2 pt-1 flex-shrink-0">
@@ -160,6 +177,18 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
               <path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM16 10l5-3v10l-5-3" />
             </svg>
           </button>
+          {/* 移动端详情入口：覆盖层形态打开群/好友资料 */}
+          <button
+            onClick={() => setDetailOpen(true)}
+            title={`查看${detailLabel(s.isGroup, !!friend)}`}
+            className="md:hidden w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" stroke="none">
+              <circle cx="5" cy="12" r="1.6" />
+              <circle cx="12" cy="12" r="1.6" />
+              <circle cx="19" cy="12" r="1.6" />
+            </svg>
+          </button>
           <button
             onClick={() => { setSoundOn((v) => !v); toast(soundOn ? '提示音已关' : '提示音已开'); }}
             title={soundOn ? '关闭提示音' : '开启提示音'}
@@ -173,7 +202,7 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? '退出全屏' : '全屏（Esc 退出）'}
-            className="w-7 h-7 rounded text-white/85 hover:bg-white/15 flex items-center justify-center"
+            className="hidden md:flex w-7 h-7 rounded text-white/85 hover:bg-white/15 items-center justify-center"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
@@ -243,28 +272,36 @@ export function ChatWindowContent({ peerId }: { peerId: string }) {
           />
         </div>
         {kicked ? (
-          <div className="w-[260px] flex-shrink-0 border-l border-line bg-panel flex flex-col items-center justify-center gap-2 px-6 text-center">
+          <div className="w-full md:w-[260px] flex-shrink-0 border-l border-line bg-panel flex flex-col items-center justify-center gap-2 px-6 text-center">
             <span className="text-sm text-text-main">您已被移出群聊</span>
             <span className="text-xs text-text-sub leading-5">群资料与成员列表已不可见，如需继续参与请让群主重新邀请你</span>
           </div>
+        ) : !isMobile ? (
+          detailOpen ? (
+            <div className="w-[260px] flex-shrink-0 border-l border-line bg-panel flex flex-col min-h-0">
+              <DetailTabs label={detailLabel(s.isGroup, !!friend)} onToggle={() => setDetailOpen(false)} />
+              <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} />
+            </div>
+          ) : (
+            <button
+              onClick={() => setDetailOpen(true)}
+              aria-expanded={false}
+              title={`展开${detailLabel(s.isGroup, !!friend)}`}
+              className="w-9 flex-shrink-0 border-l border-line bg-panel flex flex-col items-center gap-2 py-3 text-xs text-text-main hover:text-primary transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+              <span className="[writing-mode:vertical-rl] tracking-widest">{detailLabel(s.isGroup, !!friend)}</span>
+            </button>
+          )
         ) : detailOpen ? (
-          <div className="w-[260px] flex-shrink-0 border-l border-line bg-panel flex flex-col min-h-0">
+          // 移动端：详情栏以全屏覆盖层呈现，DetailTabs 充当关闭头
+          <div className="fixed inset-0 z-40 bg-panel flex flex-col pt-[env(safe-area-inset-top)]">
             <DetailTabs label={detailLabel(s.isGroup, !!friend)} onToggle={() => setDetailOpen(false)} />
             <ChatDetailPanel peerId={peerId} isGroup={s.isGroup} />
           </div>
-        ) : (
-          <button
-            onClick={() => setDetailOpen(true)}
-            aria-expanded={false}
-            title={`展开${detailLabel(s.isGroup, !!friend)}`}
-            className="w-9 flex-shrink-0 border-l border-line bg-panel flex flex-col items-center gap-2 py-3 text-xs text-text-main hover:text-primary transition-colors"
-          >
-            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M15 6l-6 6 6 6" />
-            </svg>
-            <span className="[writing-mode:vertical-rl] tracking-widest">{detailLabel(s.isGroup, !!friend)}</span>
-          </button>
-        )}
+        ) : null}
       </div>
 
       {/* 转发目标选择弹窗 */}

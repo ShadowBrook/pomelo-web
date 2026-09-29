@@ -19,7 +19,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+      <Suspense fallback={<div className="flex items-center justify-center h-dvh">Loading...</div>}>
         <Routes>
           <Route path="/" element={<Navigate to={isLoggedIn ? '/chat' : '/login'} replace />} />
           <Route path="/login" element={<LoginPage />} />
