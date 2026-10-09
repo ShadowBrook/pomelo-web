@@ -38,6 +38,8 @@ export interface ChatMessage {
   seq?: number;
   /** 发送方本地媒体预览（object URL），不持久化 */
   localUrl?: string;
+  /** 发送方本地视频封面（object URL），不持久化：签名 thumbUrl 要等服务端读侧注入 */
+  localThumbUrl?: string;
 }
 
 interface ChatState {
@@ -308,6 +310,9 @@ export const useChatStore = create<ChatState>()(
             if (msgType === MsgType.VIDEO) {
               try {
                 const poster = await captureVideoPoster(file);
+                // 本地封面立即挂上：部分 WebView（如 Via）不为 preload=metadata 解码首帧，
+                // 靠 <video> 兜底会白屏；签名 thumbUrl 需等服务端读侧注入
+                patchPlaceholder({ localThumbUrl: URL.createObjectURL(poster.blob) });
                 if ((duration == null || duration <= 0) && poster.durationMs > 0) {
                   duration = poster.durationMs;
                 }
@@ -456,7 +461,10 @@ export const useChatStore = create<ChatState>()(
 
       clearMessages: (peerId) => {
         const msgs = get().messages[peerId] || [];
-        msgs.forEach(m => { if (m.localUrl) URL.revokeObjectURL(m.localUrl); });
+        msgs.forEach(m => {
+          if (m.localUrl) URL.revokeObjectURL(m.localUrl);
+          if (m.localThumbUrl) URL.revokeObjectURL(m.localThumbUrl);
+        });
         localExhausted.delete(peerId);
         set((s) => { const m = { ...s.messages }; delete m[peerId]; return { messages: m }; });
       },
@@ -464,7 +472,10 @@ export const useChatStore = create<ChatState>()(
       clearAll: () => {
         const { messages } = get();
         for (const msgs of Object.values(messages)) {
-          msgs.forEach(m => { if (m.localUrl) URL.revokeObjectURL(m.localUrl); });
+          msgs.forEach(m => {
+            if (m.localUrl) URL.revokeObjectURL(m.localUrl);
+            if (m.localThumbUrl) URL.revokeObjectURL(m.localThumbUrl);
+          });
         }
         localExhausted.clear();
         set({ messages: {}, hasMoreHistory: {}, loadingHistory: {} });

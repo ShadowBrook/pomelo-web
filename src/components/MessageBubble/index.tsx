@@ -18,11 +18,12 @@ import { useGroupStore } from '@/stores/useGroupStore';
 import { sameOriginMediaUrl } from '@/utils/mediaUrl';
 
 /** 视频消息：封面缩略图 + 播放浮层 + 时长角标，点击弹出全屏播放页 */
-function VideoMessage({ url, thumbUrl, durationMs }: { url?: string; thumbUrl?: string; durationMs?: number }) {
+function VideoMessage({ url, thumbUrl, localThumbUrl, durationMs }: { url?: string; thumbUrl?: string; localThumbUrl?: string; durationMs?: number }) {
   const [open, setOpen] = useState(false);
   const duration = formatDuration(durationMs);
 
-  // 上传完成前（localUrl 阶段）或无封面降级：用 video preload=metadata 展示首帧
+  // 上传完成前（localUrl 阶段）或无封面降级：用 video preload=metadata 展示首帧。
+  // #t=0.1 媒体片段让 iOS/旧 WebView 也解码绘制该帧（否则只有部分浏览器出首帧）
   if (!url) {
     return <span className="text-xs text-gray-400">[视频]</span>;
   }
@@ -37,8 +38,10 @@ function VideoMessage({ url, thumbUrl, durationMs }: { url?: string; thumbUrl?: 
       >
         {thumbUrl ? (
           <CachedImg url={thumbUrl} alt="视频封面" className="w-full h-full object-cover" />
+        ) : localThumbUrl ? (
+          <img src={localThumbUrl} alt="视频封面" className="w-full h-full object-cover" />
         ) : (
-          <video src={url} preload="metadata" muted className="w-full h-full object-cover" />
+          <video src={`${url}#t=0.1`} preload="metadata" muted playsInline className="w-full h-full object-cover" />
         )}
         {/* 播放浮层 */}
         <div className="absolute inset-0 flex items-center justify-center">
@@ -382,8 +385,8 @@ function renderTextWithMentions(content: string): React.ReactNode {
   );
 }
 
-/** 按类型渲染消息正文（引用解包后递归复用） */
-function renderInner(msgType: number, content: string, url?: string, thumbUrl?: string): React.ReactNode {
+/** 按类型渲染消息正文（引用解包后递归复用）；localThumbUrl 是发送方本地视频封面 */
+function renderInner(msgType: number, content: string, url?: string, thumbUrl?: string, localThumbUrl?: string): React.ReactNode {
   switch (msgType) {
     case MsgType.TEXT:
       return <p className="whitespace-pre-wrap">{renderTextWithMentions(content)}</p>;
@@ -417,7 +420,7 @@ function renderInner(msgType: number, content: string, url?: string, thumbUrl?: 
     case MsgType.VIDEO: {
       const durationMs = parseMediaContent(content)?.duration;
       return (
-        <VideoMessage url={url} thumbUrl={getMediaThumbUrl({ content })} durationMs={durationMs} />
+        <VideoMessage url={url} thumbUrl={getMediaThumbUrl({ content })} localThumbUrl={localThumbUrl} durationMs={durationMs} />
       );
     }
 
@@ -470,12 +473,13 @@ function Body({ message }: { message: ChatMessage }) {
           inner.body.content,
           innerMedia?.url ?? message.localUrl,
           innerMedia?.thumbUrl,
+          message.localThumbUrl,
         )}
       </>
     );
   }
 
-  return renderInner(message.msgType, message.content, url, thumbUrl);
+  return renderInner(message.msgType, message.content, url, thumbUrl, message.localThumbUrl);
 }
 
 export const MessageBubble = React.memo(function MessageBubble({
