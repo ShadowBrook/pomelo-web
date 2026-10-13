@@ -57,16 +57,28 @@ export function MessageList({
   // 加载历史前的滚动位置（用于加载完成后恢复，避免内容跳动）
   const prevScrollHeightRef = useRef(0);
   const prevScrollTopRef = useRef(0);
+  // 一次「加载更早历史」的完整生命周期：触发时置位，恢复滚动位置后清除。
+  // 期间忽略 scroll 事件（恢复位置本身也会产生 scrollTop<50 的滚动事件，不当触发源）
+  const pendingLoadRef = useRef(false);
+  const pendingLoadTimerRef = useRef<number | undefined>(undefined);
+  // 历史页恢复后压制同一次提交里的自动滚底：恢复 effect 与自动滚底 effect 在同一次
+  // 提交中先后执行，恢复先把标记清零的话，自动滚底会误判为新消息把视口拽回底部
+  const suppressAutoScrollRef = useRef(false);
 
   // 滚动事件：到顶部时触发加载更早的历史
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     if (!el) return;
+    if (pendingLoadRef.current) return;
     // 50px 阈值，避免边界抖动
-    if (el.scrollTop < 50 && onLoadMore && !loadingHistory && hasMore && prevScrollHeightRef.current === 0) {
+    if (el.scrollTop < 50 && onLoadMore && !loadingHistory && hasMore) {
       // 保存加载前的滚动尺寸，便于加载后恢复
+      pendingLoadRef.current = true;
       prevScrollHeightRef.current = el.scrollHeight;
       prevScrollTopRef.current = el.scrollTop;
+      // 兜底：store 早退（如连接断开）不会走 loadingHistory 周期，超时后自行解锁
+      window.clearTimeout(pendingLoadTimerRef.current);
+      pendingLoadTimerRef.current = window.setTimeout(() => { pendingLoadRef.current = false; }, 15000);
       onLoadMore();
     }
   };
@@ -75,19 +87,25 @@ export function MessageList({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    if (!loadingHistory && prevScrollHeightRef.current > 0) {
+    if (!loadingHistory && pendingLoadRef.current) {
       const newScrollHeight = el.scrollHeight;
       el.scrollTop = newScrollHeight - prevScrollHeightRef.current + prevScrollTopRef.current;
       prevScrollHeightRef.current = 0;
       prevScrollTopRef.current = 0;
+      suppressAutoScrollRef.current = true;
+      pendingLoadRef.current = false;
+      window.clearTimeout(pendingLoadTimerRef.current);
     }
   }, [loadingHistory]);
 
   // 新消息到达时自动滚动到底部；历史加载恢复期间不滚动，避免跳动
   useEffect(() => {
-    if (prevScrollHeightRef.current === 0) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (pendingLoadRef.current) return;
+    if (suppressAutoScrollRef.current) {
+      suppressAutoScrollRef.current = false;
+      return;
     }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
@@ -101,10 +119,15 @@ export function MessageList({
 
   return (
     <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto py-3 bg-chat-bg">
-      {/* 顶部加载提示 */}
+      {/* 顶部状态：加载中提示 / 服务端确认无更早历史 */}
       {loadingHistory && (
         <div className="text-center py-2">
           <span className="text-xs text-text-sub">加载历史消息...</span>
+        </div>
+      )}
+      {!loadingHistory && !hasMore && (
+        <div className="text-center py-2">
+          <span className="text-xs text-text-sub">没有更早的消息了</span>
         </div>
       )}
       {messages.map((msg, idx) => {
